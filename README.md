@@ -69,10 +69,10 @@ php artisan serve
 
 ## 3. Što seed automatski postavlja
 
-- tablicu stilova (`stilovis`) bez "Standardni luk" (`id = 7`)
+- tablicu stilova (`stilovis`)
 - kategorije (`kategorijes`)
 - tipove turnira (`tipovi_turniras`) i pripadajuća polja (`polja_za_tipove_turniras`)
-- predefinirane teme (bez SKDubrava), default aktivna tema: **Zelena (light)**
+- predefinirane teme, default aktivna tema: **Zelena (light)**
 - globalni logo/favicon: streličarska meta (svijetla i tamna varijanta)
 - početnog bootstrap admin korisnika:
   - email: `administrator@archery.local`
@@ -84,10 +84,11 @@ Bootstrap korisnik `Administrator` je samo za inicijalno postavljanje.
 
 Nakon instalacije:
 
-1. Ulogiraj se kao `Administrator`.
-2. Kreiraj/uredi stvarnog korisnika kluba (registrirani član).
-3. U Admin > Korisnici postavi tom korisniku rolu **Administrator**.
-4. Aplikacija automatski:
+1. Napravi registraciju stvarnog korisnika kluba (člana).
+2. Ulogiraj se kao privremeni `Administrator`.
+3. Nakon prijave otvara se Admin > Korisnici.
+4. U Admin > Korisnici postavi registriranom korisniku rolu **Administrator**.
+5. Aplikacija automatski:
    - odjavljuje bootstrap korisnika,
    - briše bootstrap korisnika iz baze,
    - novi korisnik ostaje administrator.
