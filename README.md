@@ -1,4 +1,4 @@
-# SKDubrava (Open Club Edition)
+# Streličarski klub - WEB sjedište
 
 Laravel aplikacija za vođenje streličarskog kluba:
 - članovi i dokumenti
