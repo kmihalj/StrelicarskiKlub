@@ -45,6 +45,7 @@ class ThemeService
             'danger' => '#dc3545',
             'warning' => '#ffc107',
             'info' => '#0dcaf0',
+            'link' => '#0d6efd',
             'light' => '#f8f9fa',
             'dark' => '#212529',
             'secondary_subtle' => '#e2e3e5',
@@ -75,6 +76,7 @@ class ThemeService
             'danger' => '#ff6b6b',
             'warning' => '#ffd166',
             'info' => '#4cc9f0',
+            'link' => '#8fc3ff',
             'light' => '#f1f3f5',
             'dark' => '#1f242b',
             'secondary_subtle' => '#1f252c',
@@ -110,6 +112,7 @@ class ThemeService
             'danger',
             'warning',
             'info',
+            'link',
             'light',
             'dark',
             'secondary_subtle',
@@ -216,6 +219,11 @@ class ThemeService
             ? $colors['body_bg']
             : $colors['secondary_subtle'];
         $bootstrapBodyBackground = $isDarkMode ? $colors['body_bg'] : '#f8fafc';
+        $linkColor = $this->normalizeHexColor(
+            (string)($colors['link'] ?? ($isDarkMode ? '#8fc3ff' : '#0d6efd')),
+            $isDarkMode ? '#8fc3ff' : '#0d6efd'
+        );
+        $linkHoverColor = $this->shiftHexColor($linkColor, $isDarkMode ? 24 : -24);
 
         return [
             '--theme-body-bg' => $themeBodyBackground,
@@ -232,6 +240,8 @@ class ThemeService
             '--theme-nav-dropdown-text' => $colors['nav_dropdown_text'],
             '--theme-nav-dropdown-hover-bg' => $colors['nav_dropdown_hover_bg'],
             '--theme-nav-dropdown-hover-text' => $colors['nav_dropdown_hover_text'],
+            '--theme-link-color' => $linkColor,
+            '--theme-link-hover-color' => $linkHoverColor,
 
             '--bs-primary' => $colors['primary'],
             '--bs-primary-rgb' => $this->rgbCsv($colors['primary']),
@@ -249,6 +259,10 @@ class ThemeService
             '--bs-light-rgb' => $this->rgbCsv($colors['light']),
             '--bs-dark' => $colors['dark'],
             '--bs-dark-rgb' => $this->rgbCsv($colors['dark']),
+            '--bs-link-color' => $linkColor,
+            '--bs-link-color-rgb' => $this->rgbCsv($linkColor),
+            '--bs-link-hover-color' => $linkHoverColor,
+            '--bs-link-hover-color-rgb' => $this->rgbCsv($linkHoverColor),
             '--bs-body-bg' => $bootstrapBodyBackground,
             '--bs-body-color' => $colors['body_text'],
             '--bs-secondary-bg-subtle' => $colors['secondary_subtle'],
@@ -680,5 +694,16 @@ class ThemeService
         }
 
         return strtolower($candidate);
+    }
+
+    private function shiftHexColor(string $hexColor, int $delta): string
+    {
+        [$r, $g, $b] = $this->hexToRgb($hexColor);
+
+        $r = max(0, min(255, $r + $delta));
+        $g = max(0, min(255, $g + $delta));
+        $b = max(0, min(255, $b + $delta));
+
+        return sprintf('#%02x%02x%02x', $r, $g, $b);
     }
 }

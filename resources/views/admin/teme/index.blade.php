@@ -153,6 +153,7 @@
                             'danger' => 'Danger',
                             'warning' => 'Warning',
                             'info' => 'Info',
+                            'link' => 'Boja linkova',
                             'light' => 'Light',
                             'dark' => 'Dark',
                             'secondary_subtle' => 'Secondary subtle',
@@ -346,6 +347,10 @@
                                 <div id="themePreviewBody" class="p-3">
                                     <h6 class="mb-2">Preview sadržaja</h6>
                                     <p class="mb-3">Ovdje vidiš kako se boje ponašaju prije spremanja.</p>
+                                    <p class="mb-3">
+                                        Primjer linka:
+                                        <a href="#" id="themePreviewLink" class="fw-semibold text-decoration-none">Profil člana</a>
+                                    </p>
                                     <div class="d-flex flex-wrap gap-2 mb-3">
                                         <button type="button" id="previewPrimary" class="btn btn-sm">Primary</button>
                                         <button type="button" id="previewDanger" class="btn btn-sm">Danger</button>
@@ -379,6 +384,7 @@
                 navBadge: document.getElementById('themePreviewNavBadge'),
                 body: document.getElementById('themePreviewBody'),
                 dropdown: document.getElementById('themePreviewDropdown'),
+                link: document.getElementById('themePreviewLink'),
                 buttons: {
                     primary: document.getElementById('previewPrimary'),
                     danger: document.getElementById('previewDanger'),
@@ -407,6 +413,15 @@
                 return luminance > 0.58 ? '#111111' : '#ffffff';
             }
 
+            function shiftHex(hex, delta) {
+                const h = normalizeHex(hex, '#000000').replace('#', '');
+                const r = Math.max(0, Math.min(255, parseInt(h.substring(0, 2), 16) + delta));
+                const g = Math.max(0, Math.min(255, parseInt(h.substring(2, 4), 16) + delta));
+                const b = Math.max(0, Math.min(255, parseInt(h.substring(4, 6), 16) + delta));
+
+                return '#' + [r, g, b].map((value) => value.toString(16).padStart(2, '0')).join('');
+            }
+
             function value(id, fallback) {
                 const el = document.getElementById(id);
                 return normalizeHex(el ? el.value : fallback, fallback);
@@ -426,12 +441,14 @@
                     danger: value('danger', '#dc3545'),
                     success: value('success', '#198754'),
                     warning: value('warning', '#ffc107'),
+                    link: value('link', '#0d6efd'),
                 };
 
                 const navTextColor = value('nav_item_text', contrastColor(colors.navMid));
                 const navHoverTextColor = contrastColor(colors.navHoverBg);
                 const dropdownTextColor = contrastColor(colors.dropdownBg);
                 const dropdownHoverTextColor = contrastColor(colors.dropdownHoverBg);
+                const linkHoverColor = shiftHex(colors.link, contrastColor(colors.link) === '#ffffff' ? 24 : -24);
 
                 preview.root.style.backgroundColor = colors.bodyBg;
                 preview.root.style.color = colors.bodyText;
@@ -453,6 +470,14 @@
                 preview.dropdown.onmouseleave = () => {
                     preview.dropdown.style.backgroundColor = colors.dropdownBg;
                     preview.dropdown.style.color = dropdownTextColor;
+                };
+
+                preview.link.style.color = colors.link;
+                preview.link.onmouseenter = () => {
+                    preview.link.style.color = linkHoverColor;
+                };
+                preview.link.onmouseleave = () => {
+                    preview.link.style.color = colors.link;
                 };
 
                 preview.buttons.primary.style.backgroundColor = colors.primary;
