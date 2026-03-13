@@ -82,7 +82,7 @@ jobs:
           DB_DATABASE: skd_test
           DB_USERNAME: skd
           DB_PASSWORD: skd
-        run: php artisan test --no-interaction
+        run: php artisan test
 
   frontend-build:
     runs-on: ubuntu-latest
