@@ -53,7 +53,27 @@ Na profilu polaznika admin vodi:
 
 ![Dashboard plaćanja](screenshots/admin/07-admin-payments-dashboard.png)
 
-## 6. Teme, logo i favicon
+Otvoreni setup blok (`Praćenje plaćanja članarina`) služi za:
+- uključivanje/isključivanje praćenja plaćanja
+- unos školarine punoljetni/maloljetni
+- definiranje modela plaćanja (naziv, tip razdoblja, sidro sezone, naplata, iznos, dostupnost)
+- dodavanje novih modela plaćanja.
+
+![Setup plaćanja - otvoren](screenshots/admin/13-admin-payments-setup-open.png)
+
+## 6. Podaci o klubu i barkod
+
+`Admin > Klub` je mjesto gdje se postavljaju službeni podaci kluba:
+- naziv
+- adresa
+- kontakt
+- IBAN.
+
+![Podaci o klubu](screenshots/admin/14-admin-klub-podaci.png)
+
+Ti podaci se koriste kod generiranja barkoda i podataka za uplatu na ekranu plaćanja člana.
+
+## 7. Teme, logo i favicon
 
 `Admin > Teme`:
 - odabir aktivne teme
@@ -63,7 +83,7 @@ Na profilu polaznika admin vodi:
 
 ![Administracija tema](screenshots/admin/08-admin-themes.png)
 
-## 7. Članci i sadržaj
+## 8. Članci i sadržaj
 
 `Admin > Članci` prikazuje sve sadržaje.
 
@@ -73,7 +93,7 @@ Kreiranje članka koristi CKEditor (sadržaj, menu, Facebook link, mediji).
 
 ![Unos članka](screenshots/admin/10-admin-article-create.png)
 
-## 8. Turniri i rezultati
+## 9. Turniri i rezultati
 
 `Admin > Turniri` za kreiranje i pregled turnira:
 

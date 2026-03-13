@@ -34,7 +34,22 @@ Profil prikazuje osobne podatke, rezultate, dokumente i pripadajuće funkcionaln
 
 ![Moji treninzi](screenshots/member/04-member-trainings.png)
 
-## 5. Rezultati
+## 5. Unos treninga
+
+Za svaki novi trening član otvara ekran unosa (`dvoranski` ili `vanjski`) i unosi serije/pogotke.
+
+![Unos dvoranskog treninga](screenshots/member/06-member-training-entry.png)
+
+## 6. Pregled dokumenata
+
+Na profilu člana, u bloku `Pregled dokumenata`, vidljiv je:
+- pregled osnovnih podataka
+- liječnički status
+- lista dokumenata člana s linkom `Pregled`.
+
+![Pregled dokumenata člana](screenshots/member/07-member-documents-section.png)
+
+## 7. Rezultati
 
 Član može pregledavati turnire i ostvarene rezultate.
 
