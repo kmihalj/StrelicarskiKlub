@@ -42,7 +42,7 @@
 
                     <div class="table-responsive mb-2">
                         <table class="table table-hover align-middle mb-0 border">
-                            <thead style="--bs-table-bg:#f23f44;">
+                            <thead class="theme-thead-accent">
                             <tr>
                                 <th class="text-white">Serija</th>
                                 <th class="text-white">1</th>

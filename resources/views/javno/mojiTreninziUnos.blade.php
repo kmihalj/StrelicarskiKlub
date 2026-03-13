@@ -50,7 +50,7 @@
 
                     <div class="table-responsive mb-2">
                         <table class="table table-hover align-middle mb-0 border trening-unos-table @if(in_array($konfig['tip'], ['dvoranski', 'vanjski'], true)) trening-unos-table-compact @endif">
-                            <thead style="--bs-table-bg:#f23f44;">
+                            <thead class="theme-thead-accent">
                             <tr id="trening-head-row">
                                 <th class="text-white">Serija</th>
                                 @for($i = 1; $i <= (int)$konfig['broj_strijela_u_seriji']; $i++)

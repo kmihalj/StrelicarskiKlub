@@ -28,7 +28,7 @@
         <div class="col-lg-12">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0 border">
-                    <thead class="h5" style="--bs-table-bg:#F23F44;">
+                    <thead class="h5 theme-thead-accent">
                     <tr>
                         <th class="text-white">Ime i prezime</th>
                         <th class="text-white">Stil</th>

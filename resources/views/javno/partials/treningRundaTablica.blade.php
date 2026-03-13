@@ -59,7 +59,7 @@
 
 <div class="table-responsive mt-2">
     <table class="table table-sm table-hover align-middle mb-0 border">
-        <thead style="--bs-table-bg:#f23f44;">
+        <thead class="theme-thead-accent">
         <tr>
             <th class="text-white">Serija</th>
             @for($i = 1; $i <= (int)$konfig['broj_strijela_u_seriji']; $i++)

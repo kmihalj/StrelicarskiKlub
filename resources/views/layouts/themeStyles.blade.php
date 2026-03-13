@@ -74,7 +74,7 @@
 
     .theme-dark .table thead > tr > *.border-danger,
     .theme-dark .table thead > tr > *.border.border-danger {
-        border-color: var(--bs-danger) !important;
+        border-color: rgba(var(--bs-primary-rgb), 0.65) !important;
     }
 
     .theme-dark .table-light,
@@ -92,7 +92,7 @@
     }
 
     .theme-dark .table thead.table-warning > tr > * {
-        color: #212529 !important;
+        color: var(--bs-body-color) !important;
     }
 
     .theme-dark .table thead > tr > *.text-white {
@@ -373,5 +373,47 @@
         --bs-btn-color: var(--theme-on-info, #111);
         --bs-btn-hover-color: var(--theme-on-info, #111);
         --bs-btn-active-color: var(--theme-on-info, #111);
+    }
+
+    /* Theme-adaptive section headers, card headers and table headers */
+    .row.bg-danger.fw-bolder,
+    .card-header.bg-danger,
+    .modal-header.bg-danger {
+        background-color: var(--bs-primary) !important;
+        color: var(--theme-on-primary, #ffffff) !important;
+        border-color: rgba(var(--bs-primary-rgb), 0.65) !important;
+    }
+
+    .row.bg-danger.fw-bolder .text-white,
+    .card-header.bg-danger .text-white,
+    .modal-header.bg-danger .text-white {
+        color: inherit !important;
+    }
+
+    .table thead.theme-thead-accent > tr > *,
+    .table > :not(caption) > thead.theme-thead-accent > tr > * {
+        background-color: var(--bs-primary) !important;
+        color: var(--theme-on-primary, #ffffff) !important;
+        border-color: rgba(var(--bs-primary-rgb), 0.65) !important;
+    }
+
+    .table thead.theme-thead-accent > tr > *.text-white,
+    .table > :not(caption) > thead.theme-thead-accent > tr > *.text-white {
+        color: var(--theme-on-primary, #ffffff) !important;
+    }
+
+    .table thead.table-warning > tr > *,
+    .table > :not(caption) > thead.table-warning > tr > * {
+        --bs-table-bg: var(--bs-secondary-bg-subtle);
+        --bs-table-color: var(--bs-body-color);
+        --bs-table-border-color: rgba(var(--bs-secondary-rgb), 0.45);
+        background-color: var(--bs-secondary-bg-subtle) !important;
+        color: var(--bs-body-color) !important;
+        border-color: rgba(var(--bs-secondary-rgb), 0.45) !important;
+    }
+
+    .table thead > tr > *.border-danger,
+    .table thead > tr > *.border.border-danger {
+        border-color: rgba(var(--bs-primary-rgb), 0.65) !important;
     }
 </style>

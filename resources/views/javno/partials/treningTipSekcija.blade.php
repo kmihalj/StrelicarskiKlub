@@ -50,7 +50,9 @@
         }
 
         .trening-th-total {
-            background-color: #f23f44 !important;
+            background-color: var(--bs-primary) !important;
+            color: var(--theme-on-primary, #ffffff) !important;
+            border-color: rgba(var(--bs-primary-rgb), 0.65) !important;
         }
 
         .trening-td-runda {

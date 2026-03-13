@@ -30,7 +30,7 @@ Uredi `.env` (najvažnije DB postavke):
 ```dotenv
 APP_NAME="Archery Club"
 APP_ENV=local
-APP_DEBUG=true
+APP_DEBUG=false
 APP_URL=http://localhost
 
 DB_CONNECTION=mysql
@@ -101,9 +101,6 @@ composer install --no-dev --optimize-autoloader
 php artisan migrate --seed --force
 npm ci
 npm run build
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
 ```
 
 ## 6. Uloge u sustavu (sažetak)
