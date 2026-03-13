@@ -113,4 +113,10 @@ npm run build
 
 ## 7. Napomena
 
-Za detaljan korisnički priručnik (admin/član/roditelj/polaznik) preporuka je izraditi zaseban dokument s ekranima i primjerima procesa.
+Detaljan korisnički priručnik nalazi se u `docs/`:
+
+- `docs/01-instalacija-i-prvi-koraci.md`
+- `docs/02-admin-prirucnik.md`
+- `docs/03-clan-prirucnik.md`
+- `docs/04-roditelj-prirucnik.md`
+- `docs/05-polaznik-skole-prirucnik.md`
