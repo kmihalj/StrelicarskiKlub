@@ -1,0 +1,56 @@
+// Fonts
+@import url('https://fonts.bunny.net/css?family=Nunito');
+
+// Variables
+@import 'variables';
+
+// Bootstrap
+@import 'bootstrap/scss/bootstrap';
+
+// Globalna prilagodba paginacije za mobilni prikaz.
+.pagination {
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;
+    gap: .25rem;
+    margin: 0;
+}
+
+.pagination .page-link {
+    border-radius: .375rem;
+    min-width: 1.9rem;
+    min-height: 2rem;
+    text-align: center;
+    padding: .34rem .5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.1;
+}
+
+.pagination .page-item.page-spacer .page-link {
+    visibility: hidden;
+    border-color: transparent;
+    background: transparent;
+    pointer-events: none;
+}
+
+@media (max-width: 575.98px) {
+    .pagination {
+        gap: .125rem;
+    }
+
+    .pagination .page-link {
+        padding: .34rem .48rem;
+        font-size: .8rem;
+        min-width: 1.8rem;
+        min-height: 2rem;
+    }
+
+    .pagination .page-item.page-control .page-link {
+        font-size: .95rem;
+        min-width: 2.05rem;
+        min-height: 2rem;
+        padding: .34rem .46rem;
+    }
+}
