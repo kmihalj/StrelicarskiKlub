@@ -9,6 +9,17 @@ Laravel aplikacija za vođenje streličarskog kluba:
 - teme (svijetla/tamna varijanta)
 - praćenje plaćanja
 
+## Dokumentacija
+
+Brzi linkovi:
+
+- [Pregled dokumentacije](docs/README.md)
+- [Instalacija i prvi koraci](docs/01-instalacija-i-prvi-koraci.md)
+- [Admin priručnik](docs/02-admin-prirucnik.md)
+- [Član priručnik](docs/03-clan-prirucnik.md)
+- [Roditelj priručnik](docs/04-roditelj-prirucnik.md)
+- [Polaznik škole priručnik](docs/05-polaznik-skole-prirucnik.md)
+
 ## 1. Preduvjeti
 
 - PHP 8.2+
@@ -113,10 +124,10 @@ npm run build
 
 ## 7. Napomena
 
-Detaljan korisnički priručnik nalazi se u `docs/`:
+Detaljan korisnički priručnik:
 
-- `docs/01-instalacija-i-prvi-koraci.md`
-- `docs/02-admin-prirucnik.md`
-- `docs/03-clan-prirucnik.md`
-- `docs/04-roditelj-prirucnik.md`
-- `docs/05-polaznik-skole-prirucnik.md`
+- [Instalacija i prvi koraci](docs/01-instalacija-i-prvi-koraci.md)
+- [Admin priručnik](docs/02-admin-prirucnik.md)
+- [Član priručnik](docs/03-clan-prirucnik.md)
+- [Roditelj priručnik](docs/04-roditelj-prirucnik.md)
+- [Polaznik škole priručnik](docs/05-polaznik-skole-prirucnik.md)
