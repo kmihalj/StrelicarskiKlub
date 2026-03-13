@@ -1,0 +1,9 @@
+# Default owner for the entire repository
+* @kmihalj
+
+# Optional explicit ownership by area
+/.github/ @kmihalj
+/docs/ @kmihalj
+/app/ @kmihalj
+/resources/ @kmihalj
+/database/ @kmihalj
