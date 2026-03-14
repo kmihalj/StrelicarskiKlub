@@ -544,10 +544,19 @@
             .clan-birthday-hero {
                 position: relative;
                 overflow: hidden;
+                color: var(--bs-body-color, #212529);
                 background:
                     radial-gradient(circle at 14% 20%, rgba(255, 209, 102, .26), rgba(255, 255, 255, 0) 44%),
                     radial-gradient(circle at 86% 22%, rgba(86, 204, 242, .22), rgba(255, 255, 255, 0) 42%),
-                    #fff;
+                    var(--bs-body-bg, #ffffff);
+            }
+
+            .clan-birthday-hero a {
+                color: var(--theme-link-color, var(--bs-primary));
+            }
+
+            .clan-birthday-hero a:hover {
+                color: var(--theme-link-hover-color, var(--bs-primary));
             }
 
             .clan-birthday-balloons {
@@ -596,6 +605,22 @@
                 --bs-table-active-bg: transparent;
                 --bs-table-hover-bg: rgba(255, 255, 255, .18);
                 background-color: transparent !important;
+            }
+
+            .theme-dark .clan-birthday-hero {
+                background:
+                    radial-gradient(circle at 14% 20%, rgba(255, 209, 102, .14), rgba(0, 0, 0, 0) 44%),
+                    radial-gradient(circle at 86% 22%, rgba(86, 204, 242, .12), rgba(0, 0, 0, 0) 42%),
+                    var(--bs-dark-bg-subtle, #1f2329);
+            }
+
+            .theme-dark .clan-birthday-balloon::after {
+                background: rgba(255, 255, 255, .36);
+            }
+
+            .theme-dark .clan-birthday-hero .birthday-records-table,
+            .theme-dark .clan-birthday-hero .birthday-records-table > :not(caption) > * > * {
+                --bs-table-hover-bg: rgba(255, 255, 255, .08);
             }
 
             @keyframes clan-birthday-balloon-float {

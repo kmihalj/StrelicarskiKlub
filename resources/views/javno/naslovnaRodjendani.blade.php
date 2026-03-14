@@ -38,7 +38,8 @@
         .birthday-card-wrap {
             position: relative;
             overflow: hidden;
-            background: #fff;
+            background: var(--bs-body-bg, #ffffff);
+            color: var(--bs-body-color, #212529);
         }
 
         .birthday-card-body {
@@ -48,7 +49,7 @@
             background:
                 radial-gradient(circle at 15% 18%, rgba(255, 209, 102, .3), rgba(255, 255, 255, 0) 42%),
                 radial-gradient(circle at 85% 30%, rgba(86, 204, 242, .24), rgba(255, 255, 255, 0) 44%),
-                #fff;
+                var(--bs-body-bg, #ffffff);
             border-radius: .2rem;
         }
 
@@ -64,10 +65,11 @@
         .birthday-card-link {
             text-decoration: none;
             font-weight: 700;
-            color: #0d6efd;
+            color: var(--theme-link-color, var(--bs-primary));
         }
 
         .birthday-card-link:hover {
+            color: var(--theme-link-hover-color, var(--bs-primary));
             text-decoration: underline;
         }
 
@@ -132,6 +134,17 @@
         .birthday-balloon-3 { left: 74%; background: #1dd1a1; animation-delay: 1.2s; }
         .birthday-balloon-4 { left: 86%; background: #54a0ff; animation-delay: .4s; }
         .birthday-balloon-5 { left: 58%; background: #ff9f43; animation-delay: 1.6s; }
+
+        .theme-dark .birthday-card-body {
+            background:
+                radial-gradient(circle at 15% 18%, rgba(255, 209, 102, .14), rgba(0, 0, 0, 0) 42%),
+                radial-gradient(circle at 85% 30%, rgba(86, 204, 242, .12), rgba(0, 0, 0, 0) 44%),
+                var(--bs-dark-bg-subtle, #1f2329);
+        }
+
+        .theme-dark .birthday-balloon::after {
+            background: rgba(255, 255, 255, .36);
+        }
 
         @keyframes birthday-letter-hop {
             0%, 100% { transform: translateY(0); }
