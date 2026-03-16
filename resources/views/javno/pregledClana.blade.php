@@ -1,3 +1,4 @@
+{{-- Profil člana: osobni podaci, rezultati po tipu turnira, timske medalje, treninzi i dokumenti. --}}
 @extends('layouts.app')
 @section('content')
     <div class="container-xxl bg-white shadow">

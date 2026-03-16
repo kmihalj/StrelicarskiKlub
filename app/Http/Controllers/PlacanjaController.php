@@ -15,17 +15,29 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
+/**
+ * Admin i korisnički kontroler za praćenje članarina, dodatnih zaduženja, izvještaje i generiranje barkoda.
+ */
 class PlacanjaController extends Controller
 {
+    /**
+     * Učitava servise za članarine, školarine i generiranje barkoda uplata.
+     */
     public function __construct(private readonly PaymentTrackingService $paymentTrackingService)
     {
     }
 
+    /**
+     * Prikazuje admin nadzor plaćanja: setup, filtere, statistiku i tablice dugovanja/uplata.
+     */
     public function adminIndex(Request $request): View
     {
         return view('admin.placanja.index', $this->buildAdminReportData($request));
     }
 
+    /**
+     * Generira i vraća CSV izvještaj plaćanja prema trenutno odabranim filterima i opsegu.
+     */
     public function exportCsv(Request $request): StreamedResponse
     {
         $scope = trim((string)$request->query('scope', 'rows'));
@@ -107,6 +119,9 @@ class PlacanjaController extends Controller
         ]);
     }
 
+    /**
+     * Sprema globalne postavke praćenja članarina i školarine.
+     */
     public function updateSetup(Request $request): RedirectResponse
     {
         if ($request->filled('delete_option_id')) {
@@ -165,6 +180,9 @@ class PlacanjaController extends Controller
             ->with('success', 'Postavke praćenja plaćanja su spremljene.');
     }
 
+    /**
+     * Validira ulaz i sprema promjene prema pravilima modula praćenja članarina i ostalih uplata.
+     */
     public function saveClanProfile(Request $request, Clanovi $clan): RedirectResponse
     {
         $validated = $request->validate([
@@ -183,6 +201,9 @@ class PlacanjaController extends Controller
             ->with('success', 'Podaci o plaćanjima člana su spremljeni.');
     }
 
+    /**
+     * Validira ulaz i sprema promjene prema pravilima modula praćenja članarina i ostalih uplata.
+     */
     public function addOption(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -226,6 +247,9 @@ class PlacanjaController extends Controller
             ->with('success', 'Nova vrsta plaćanja je dodana.');
     }
 
+    /**
+     * Validira ulaz i sprema promjene prema pravilima modula praćenja članarina i ostalih uplata.
+     */
     public function addManualCharge(Request $request, Clanovi $clan): RedirectResponse
     {
         $validated = $request->validate([
@@ -252,6 +276,9 @@ class PlacanjaController extends Controller
             ->with('success', 'Dodatno plaćanje je spremljeno.');
     }
 
+    /**
+     * Potvrđuje ili poništava uplatu za odabrano zaduženje člana.
+     */
     public function updateChargeStatus(Request $request, Clanovi $clan, ClanPaymentCharge $charge): RedirectResponse
     {
         if ((int)$charge->clan_id !== (int)$clan->id) {
@@ -293,6 +320,9 @@ class PlacanjaController extends Controller
             ->with('success', 'Status plaćanja je ažuriran.');
     }
 
+    /**
+     * Sprema odabranu varijantu uplate (članarina/podupirući član) za konkretan dug.
+     */
     public function updatePreferredVariant(Request $request, Clanovi $clan, ClanPaymentCharge $charge): RedirectResponse|JsonResponse
     {
         if (!auth()->check() || !auth()->user()->mozePregledavatiClana((int)$clan->id)) {
@@ -325,6 +355,9 @@ class PlacanjaController extends Controller
             ->route('javno.clanovi.placanja', ['clan' => $clan, 'charge' => $charge->id]);
     }
 
+    /**
+     * Briše ručno uneseno zaduženje člana iz evidencije plaćanja.
+     */
     public function destroyCharge(Clanovi $clan, ClanPaymentCharge $charge): RedirectResponse
     {
         if ((int)$charge->clan_id !== (int)$clan->id) {
@@ -344,6 +377,9 @@ class PlacanjaController extends Controller
             ->with('success', 'Stavka plaćanja je obrisana.');
     }
 
+    /**
+     * Dohvaća detalje jedne stavke i priprema ih za prikaz.
+     */
     public function showMemberPayments(Request $request, Clanovi $clan): View|JsonResponse
     {
         if (!auth()->check() || !auth()->user()->mozePregledavatiClana((int)$clan->id)) {
@@ -388,6 +424,9 @@ class PlacanjaController extends Controller
         ]);
     }
 
+    /**
+     * Priprema sve podatke za korisnički ekran „Moja plaćanja” (stavka, varijante, barkod, napomene).
+     */
     private function memberPaymentsUiPayload(Clanovi $clan, ?ClanPaymentCharge $nextCharge): array
     {
         $hubData = $nextCharge instanceof ClanPaymentCharge
@@ -423,6 +462,9 @@ class PlacanjaController extends Controller
         ];
     }
 
+    /**
+     * Sastavlja složeniju strukturu podataka iz više izvora.
+     */
     private function buildAdminReportData(Request $request, bool $applyRowsLimit = true): array
     {
         $paymentSetup = $this->paymentTrackingService->setupViewData();
@@ -595,6 +637,9 @@ class PlacanjaController extends Controller
         ];
     }
 
+    /**
+     * Pretvara zaduženje člana u red izvještaja za prikaz i CSV izvoz.
+     */
     private function mapClanChargeForReport(ClanPaymentCharge $charge): array
     {
         $charge->loadMissing(['clan', 'paymentOption']);
@@ -650,6 +695,9 @@ class PlacanjaController extends Controller
         ];
     }
 
+    /**
+     * Pretvara zaduženje školarine u red izvještaja za prikaz i CSV izvoz.
+     */
     private function mapSchoolChargeForReport(PolaznikPaymentCharge $charge): array
     {
         $charge->loadMissing('polaznik');
@@ -687,6 +735,9 @@ class PlacanjaController extends Controller
         ];
     }
 
+    /**
+     * Određuje konačnu vrijednost prema pravilima modula članarina, školarina i ostalih plaćanja.
+     */
     private function resolveReportDateRange(string $preset, mixed $rawFrom, mixed $rawTo): array
     {
         $normalizedPreset = trim($preset);
@@ -736,6 +787,9 @@ class PlacanjaController extends Controller
         return [$from, $to];
     }
 
+    /**
+     * Normalizira datum filtera izvještaja plaćanja u valjan format `Y-m-d`.
+     */
     private function normalizeFilterDate(mixed $value): ?string
     {
         $candidate = trim((string)$value);

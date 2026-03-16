@@ -1,3 +1,4 @@
+{{-- Javna stranica s podacima o klubu i važnim dokumentima. --}}
 @extends('layouts.app')
 @section('content')
     <div class="row">

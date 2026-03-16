@@ -1,3 +1,4 @@
+{{-- Roditeljski blok: pregled školarine djece polaznika škole. --}}
 @if(isset($statusSkolaDijete) && !is_null($statusSkolaDijete))
     @php
         $skolarinaNotice = $statusSkolaDijete['paymentNotice'] ?? null;

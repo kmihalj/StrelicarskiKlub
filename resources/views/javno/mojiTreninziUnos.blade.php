@@ -1,3 +1,4 @@
+{{-- Forma za unos ili uređivanje treninga prijavljenog člana. --}}
 @extends('layouts.app')
 @section('content')
     <div class="container-xxl">

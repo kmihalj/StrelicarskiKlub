@@ -13,12 +13,21 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
+/**
+ * Admin kontroler za korisničke račune: role, povezivanje s članom/polaznikom i roditeljske veze.
+ */
 class KorisniciController extends Controller
 {
+    /**
+     * Učitava servis za povezivanje korisničkih računa s članovima i polaznicima.
+     */
     public function __construct(private readonly KorisnikClanService $korisnikClanService)
     {
     }
 
+    /**
+     * Prikazuje popis svih korisničkih računa i njihovih rola.
+     */
     public function index(): View
     {
         $users = User::query()
@@ -30,6 +39,9 @@ class KorisniciController extends Controller
         ]);
     }
 
+    /**
+     * Otvara detaljno uređivanje korisnika, uključujući rolu i poveznice na članove/polaznike.
+     */
     public function edit(User $user): View
     {
         $user->load([
@@ -46,6 +58,9 @@ class KorisniciController extends Controller
         ], $podaciOdabira));
     }
 
+    /**
+     * Ažurira korisnički račun, rolu i veze prema članu, polazniku škole i roditeljstvu.
+     */
     public function update(Request $request, User $user): RedirectResponse
     {
         $validator = Validator::make($request->all(), [
@@ -280,6 +295,9 @@ class KorisniciController extends Controller
         return redirect()->route('admin.korisnici.edit', $user)->with('success', 'Podaci korisnika su spremljeni.');
     }
 
+    /**
+     * Briše korisnički račun iz sustava (uz zaštitu aktivne sesije administratora).
+     */
     public function destroy(User $user): RedirectResponse
     {
         if ((int)auth()->id() === (int)$user->id) {
@@ -291,6 +309,9 @@ class KorisniciController extends Controller
         return redirect()->route('admin.korisnici.index')->with('success', 'Korisnik je obrisan.');
     }
 
+    /**
+     * Dohvaća potrebne podatke iz baze za prikaz ili daljnju obradu u modulu korisničkih računa i ovlasti.
+     */
     private function dohvatiPodatkeOdabiraZaKorisnika(User $user): array
     {
         $granicaAktivnostiSkole = now()->startOfDay()->subMonthsNoOverflow(4)->toDateString();

@@ -16,13 +16,16 @@ use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
 
+/**
+ * Admin i korisnički kontroler za profile članova, liječničke preglede, dokumente i evidenciju treninga.
+ */
 class ClanoviController extends Controller
 {
     private const DOKUMENTI_EKSTENZIJE = 'pdf,doc,docx,jpg,jpeg,png,webp,xls,xlsx';
     private const DOKUMENTI_VRSTE = ['Upisnica', 'GDPR', 'Slika', 'Ostalo'];
 
     /**
-     * Store a newly created resource in storage.
+     * Sprema novog člana kluba s osnovnim osobnim podacima i statusom aktivnosti.
      */
     public function store(Request $request): RedirectResponse
     {
@@ -48,7 +51,7 @@ class ClanoviController extends Controller
     }
 
     /**
-     * Show the form for editing the specified resource.
+     * Otvara administracijsko uređivanje profila člana zajedno s dokumentima i statusom plaćanja.
      */
     public function edit(Clanovi $clan): View
     {
@@ -69,7 +72,7 @@ class ClanoviController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
+     * Ažurira osnovne podatke člana (identitet, kontakt, članstvo i aktivnost).
      */
     public function update(Request $request): RedirectResponse
     {
@@ -93,7 +96,7 @@ class ClanoviController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Briše člana i sve povezane datoteke (slike, liječničke preglede i dokumente).
      */
     public function destroy(int $id): RedirectResponse
     {
@@ -114,6 +117,9 @@ class ClanoviController extends Controller
         return redirect()->route('javno.clanovi');
     }
 
+    /**
+     * Validira upload datoteka, sprema ih u storage i upisuje metapodatke u bazu.
+     */
     public function upload_slike_clana(Request $request): RedirectResponse
     {
         if (!Storage::disk('local')->exists('public/slike_clanova')) {
@@ -143,6 +149,9 @@ class ClanoviController extends Controller
         }
     }
 
+    /**
+     * Briše odabrani zapis i po potrebi čisti povezane podatke/datoteke.
+     */
     public function brisanje_slike_clana(Request $request): RedirectResponse
     {
         $clan = Clanovi::where('id',  $request->get('clan_id'))->firstOrFail();
@@ -152,6 +161,9 @@ class ClanoviController extends Controller
         return redirect()->route('admin.clanovi.prikaz_clana', $clan)->with('success', 'Brisanje slike OK');
     }
 
+    /**
+     * Sprema novi liječnički pregled člana i priloženu dokumentaciju.
+     */
     public function spremi_lijecnicki_pregled(Request $request, Clanovi $clan): RedirectResponse
     {
         $validator = Validator::make($request->all(), [
@@ -186,6 +198,9 @@ class ClanoviController extends Controller
         return redirect()->route('admin.clanovi.prikaz_clana', ['clan' => $clan, 'open_documents' => 1])->with('success', 'Liječnički pregled je spremljen.');
     }
 
+    /**
+     * Ažurira postojeći liječnički pregled člana (datumi, napomena i dokument).
+     */
     public function update_lijecnicki_pregled(Request $request, Clanovi $clan, ClanLijecnickiPregled $pregled): RedirectResponse
     {
         $this->potvrdiPripadnostClanu($clan->id, $pregled->clan_id);
@@ -218,6 +233,9 @@ class ClanoviController extends Controller
         return redirect()->route('admin.clanovi.prikaz_clana', ['clan' => $clan, 'open_documents' => 1])->with('success', 'Liječnički pregled je ažuriran.');
     }
 
+    /**
+     * Briše liječnički pregled člana i pripadajuću datoteku ako postoji.
+     */
     public function obrisi_lijecnicki_pregled(Clanovi $clan, ClanLijecnickiPregled $pregled): RedirectResponse
     {
         $this->potvrdiPripadnostClanu($clan->id, $pregled->clan_id);
@@ -229,6 +247,9 @@ class ClanoviController extends Controller
         return redirect()->route('admin.clanovi.prikaz_clana', ['clan' => $clan, 'open_documents' => 1])->with('success', 'Liječnički pregled je obrisan.');
     }
 
+    /**
+     * U admin sučelju preuzima liječnički dokument odabranog člana.
+     */
     public function preuzmi_lijecnicki_pregled(Clanovi $clan, ClanLijecnickiPregled $pregled): BinaryFileResponse
     {
         $this->potvrdiPripadnostClanu($clan->id, $pregled->clan_id);
@@ -239,6 +260,9 @@ class ClanoviController extends Controller
         return response()->file(Storage::disk('local')->path($pregled->putanja));
     }
 
+    /**
+     * Sprema novi dokument člana (naziv, datum i datoteka).
+     */
     public function spremi_dokument(Request $request, Clanovi $clan): RedirectResponse
     {
         $validator = Validator::make($request->all(), [
@@ -276,6 +300,9 @@ class ClanoviController extends Controller
         return redirect()->route('admin.clanovi.prikaz_clana', ['clan' => $clan, 'open_documents' => 1])->with('success', 'Dokument je spremljen.');
     }
 
+    /**
+     * Ažurira postojeći dokument člana (naziv, datum i datoteku).
+     */
     public function update_dokument(Request $request, Clanovi $clan, ClanDokument $dokument): RedirectResponse
     {
         $this->potvrdiPripadnostClanu($clan->id, $dokument->clan_id);
@@ -315,6 +342,9 @@ class ClanoviController extends Controller
         return redirect()->route('admin.clanovi.prikaz_clana', ['clan' => $clan, 'open_documents' => 1])->with('success', 'Dokument je ažuriran.');
     }
 
+    /**
+     * Briše dokument člana i pripadajuću datoteku sa diska.
+     */
     public function obrisi_dokument(Clanovi $clan, ClanDokument $dokument): RedirectResponse
     {
         $this->potvrdiPripadnostClanu($clan->id, $dokument->clan_id);
@@ -325,6 +355,9 @@ class ClanoviController extends Controller
         return redirect()->route('admin.clanovi.prikaz_clana', ['clan' => $clan, 'open_documents' => 1])->with('success', 'Dokument je obrisan.');
     }
 
+    /**
+     * U admin sučelju preuzima odabrani dokument člana.
+     */
     public function preuzmi_dokument(Clanovi $clan, ClanDokument $dokument): BinaryFileResponse
     {
         $this->potvrdiPripadnostClanu($clan->id, $dokument->clan_id);
@@ -335,6 +368,9 @@ class ClanoviController extends Controller
         return response()->file(Storage::disk('local')->path($dokument->putanja));
     }
 
+    /**
+     * Pohranjuje uploadanu datoteku člana u privatni direktorij i vraća putanju/naziv.
+     */
     private function spremiDatoteku(string $inputName, string $direktorij): array
     {
         if (!Storage::disk('local')->exists($direktorij)) {
@@ -353,11 +389,17 @@ class ClanoviController extends Controller
         ];
     }
 
+    /**
+     * Vraća ekstenziju dokumenta/slike kako bi se datoteka pravilno pohranila i prikazala.
+     */
     private function ekstenzijaDatoteke(string $inputName): string
     {
         return request()->file($inputName)->extension();
     }
 
+    /**
+     * Briše datoteku s diska ako putanja postoji.
+     */
     private function obrisiDatotekuAkoPostoji(?string $putanja, string $disk = 'local'): void
     {
         if (!empty($putanja) && Storage::disk($disk)->exists($putanja)) {
@@ -365,6 +407,9 @@ class ClanoviController extends Controller
         }
     }
 
+    /**
+     * Provjerava da zapis koji se uređuje stvarno pripada odabranom članu.
+     */
     private function potvrdiPripadnostClanu(int $clanId, int $resourceClanId): void
     {
         if ($clanId !== $resourceClanId) {
@@ -372,6 +417,9 @@ class ClanoviController extends Controller
         }
     }
 
+    /**
+     * Određuje ključne parametre potrebne za daljnju obradu.
+     */
     private function odrediNazivDokumenta(string $vrsta, string $naziv): string
     {
         if ($vrsta !== 'Ostalo') {

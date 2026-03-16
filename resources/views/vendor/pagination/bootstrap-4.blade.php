@@ -1,3 +1,4 @@
+{{-- Vendor predložak koji aplikacija koristi za standardni UI element: bootstrap 4. --}}
 @if ($paginator->hasPages())
     @php
         $current = $paginator->currentPage();

@@ -33,71 +33,113 @@ class Clanovi extends Model
         'datum_pocetka_clanstva' => 'date',
     ];
 
+    /**
+     * Vraća sve pojedinačne rezultate koje je član ostvario na turnirima.
+     */
     public function rezultatiOpci(): HasMany
     {
         return $this->hasMany(RezultatiOpci::class, 'clan_id', 'id');
     }
 
+    /**
+     * Vraća detaljne stavke rezultata člana po poljima tipa turnira.
+     */
     public function rezultatiPoTipuTurnira(): HasMany
     {
         return $this->hasMany(RezultatiPoTipuTurnira::class, 'clan_id', 'id');
     }
 
+    /**
+     * Vraća funkcije koje član obavlja u klubu (npr. trener, tajnik).
+     */
     public function funkcijeUklubu(): HasMany
     {
         return $this->hasMany(clanoviFunkcije::class, 'clan_id', 'id');
     }
 
+    /**
+     * Vraća sve evidentirane liječničke preglede člana.
+     */
     public function lijecnickiPregledi(): HasMany
     {
         return $this->hasMany(ClanLijecnickiPregled::class, 'clan_id', 'id');
     }
 
+    /**
+     * Vraća zadnji važeći liječnički pregled člana (po datumu `vrijedi_do`).
+     */
     public function zadnjiLijecnickiPregled(): HasOne
     {
         return $this->hasOne(ClanLijecnickiPregled::class, 'clan_id', 'id')->latestOfMany('vrijedi_do');
     }
 
+    /**
+     * Vraća sve dokumente koji su učitani za člana.
+     */
     public function dokumenti(): HasMany
     {
         return $this->hasMany(ClanDokument::class, 'clan_id', 'id');
     }
 
+    /**
+     * Vraća korisnički račun koji je povezan s ovim članom.
+     */
     public function korisnik(): HasOne
     {
         return $this->hasOne(User::class, 'clan_id', 'id');
     }
 
+    /**
+     * Vraća roditeljske korisničke račune koji imaju pristup podacima ovog člana.
+     */
     public function roditelji(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'roditelj_clan', 'clan_id', 'roditelj_user_id');
     }
 
+    /**
+     * Vraća zapise škole streličarstva koji su kasnije prebačeni na ovog člana.
+     */
     public function evidencijeSkole(): HasMany
     {
         return $this->hasMany(PolaznikSkole::class, 'prebacen_u_clana_id', 'id');
     }
 
+    /**
+     * Vraća sve dvoranske treninge evidentirane za člana.
+     */
     public function treninziDvorana(): HasMany
     {
         return $this->hasMany(TreninziDvorana::class, 'clan_id', 'id');
     }
 
+    /**
+     * Vraća sve vanjske treninge evidentirane za člana.
+     */
     public function treninziVanjski(): HasMany
     {
         return $this->hasMany(TreninziVanjski::class, 'clan_id', 'id');
     }
 
+    /**
+     * Vraća aktivni profil praćenja članarine za člana.
+     */
     public function paymentProfile(): HasOne
     {
         return $this->hasOne(ClanPaymentProfile::class, 'clan_id', 'id');
     }
 
+    /**
+     * Vraća sve stavke zaduženja i uplata članarine ovog člana.
+     */
     public function paymentCharges(): HasMany
     {
         return $this->hasMany(ClanPaymentCharge::class, 'clan_id', 'id');
     }
 
+    /**
+     * Ažurira polje `lijecnicki_do` na članu prema najdaljem datumu iz svih evidentiranih liječničkih pregleda.
+     */
     public function osvjeziLijecnickiDo(): void
     {
         $this->lijecnicki_do = $this->lijecnickiPregledi()->max('vrijedi_do');

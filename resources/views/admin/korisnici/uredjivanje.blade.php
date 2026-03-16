@@ -1,3 +1,4 @@
+{{-- Administratorska forma za uređivanje korisničkog računa i ovlasti. --}}
 @extends('layouts.app')
 
 @section('content')

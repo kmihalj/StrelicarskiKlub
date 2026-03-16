@@ -1,3 +1,4 @@
+{{-- Forma za unos dvoranskog treninga po rundama, serijama i strijelama. --}}
 @extends('layouts.app')
 @section('content')
     <div class="container-xxl">

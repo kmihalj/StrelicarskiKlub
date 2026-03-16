@@ -8,12 +8,21 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
+/**
+ * Admin kontroler za globalno zaključavanje prikaza teme (automatski, svijetla ili tamna) na cijelom siteu.
+ */
 class AdminThemeModePolicyController extends Controller
 {
+    /**
+     * Učitava servis za rad s temama i načinima prikaza svijetla/tamna.
+     */
     public function __construct(private readonly ThemeService $themeService)
     {
     }
 
+    /**
+     * Sprema globalnu politiku prikaza teme za sve korisnike i goste.
+     */
     public function update(Request $request): RedirectResponse
     {
         $validated = $request->validate([

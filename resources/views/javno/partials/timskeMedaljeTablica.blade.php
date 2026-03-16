@@ -1,3 +1,4 @@
+{{-- Tablica timskih medalja člana s prikazom članova tima i ukupnog rezultata. --}}
 @php
     $prviTim = $timoviTipa->first();
     $poljaTipa = $prviTim?->turnir?->tipTurnira?->polja ?? collect();

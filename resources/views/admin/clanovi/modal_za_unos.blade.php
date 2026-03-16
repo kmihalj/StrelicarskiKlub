@@ -1,3 +1,4 @@
+{{-- Modal forma za unos novog člana kluba. --}}
 <div class="modal fade" id="UnosClana_modal">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">

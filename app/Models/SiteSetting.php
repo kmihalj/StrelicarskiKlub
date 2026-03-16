@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Model SiteSetting predstavlja zapis baze podataka i definira relacije te pomoćne metode za rad s podacima.
+ */
 class SiteSetting extends Model
 {
     protected $fillable = [

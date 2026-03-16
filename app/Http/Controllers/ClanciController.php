@@ -13,19 +13,25 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Throwable;
 
+/**
+ * Admin kontroler za unos, uređivanje i objavu klupskih članaka s medijima.
+ */
 class ClanciController extends Controller
 {
     private const AUTO_FACEBOOK_BLOK_START = '<!--AUTO_FACEBOOK_LINK_START-->';
     private const AUTO_FACEBOOK_BLOK_END = '<!--AUTO_FACEBOOK_LINK_END-->';
 
     /**
-     * Display a listing of the resource.
+     * Otvara formu za unos novog članka.
      */
     public function unos()
     {
         return view('admin.clanci.unos');
     }
 
+    /**
+     * Otvara uređivanje odabranog članka i svih njegovih medijskih priloga.
+     */
     public function uredjivanje(int $id)
     {
         $clanak = Clanci::findOrFail($id);
@@ -39,6 +45,9 @@ class ClanciController extends Controller
         ]);
     }
 
+    /**
+     * Briše odabrani zapis i po potrebi čisti povezane podatke/datoteke.
+     */
     public function brisanje(int $id): RedirectResponse
     {
         try {
@@ -50,6 +59,9 @@ class ClanciController extends Controller
         }
     }
 
+    /**
+     * Validira ulaz i sprema promjene prema pravilima modula članaka i medijskih priloga.
+     */
     public function spremanjeClanka(Request $request)
     {
         $postojeciClanakId = $request->get('id_clanka');
@@ -93,6 +105,9 @@ class ClanciController extends Controller
         return redirect()->route('admin.clanci.uredjivanje', $clanak->id);
     }
 
+    /**
+     * Uključuje ili isključuje prikaz galerije na odabranom članku.
+     */
     public function galerija(Request $request)
     {
         $clanak = Clanci::findOrFail((int)$request->get('id_clanka'));
@@ -105,6 +120,9 @@ class ClanciController extends Controller
         return redirect()->route('admin.clanci.uredjivanje', $clanak->id);
     }
 
+    /**
+     * Prikazuje administrativni popis svih članaka (bez obzira na vrstu).
+     */
     public function popisClanaka()
     {
         $clanci = Clanci::orderByDesc('datum')->paginate(15);
@@ -112,18 +130,26 @@ class ClanciController extends Controller
 
     }
 
+    /**
+     * Prikazuje pojedini članak u administratorskom prikazu s punim sadržajem.
+     */
     public function pokaziClanak(Clanci $clanak): View
     {
         return view('admin.clanci.prikazClanka', ['clanak' => $clanak]);
     }
 
+    /**
+     * Prikazuje popis članaka filtriran po vrsti (npr. Obavijest, O nama).
+     */
     public function popisClanakaPoVrsti(string $vrsta)
     {
-        //dd($vrsta);
         $clanci = Clanci::where('vrsta', '=', $vrsta)->orderByDesc('datum')->paginate(5);
         return view('admin.clanci.popisClanaka', ['vrsta' => $vrsta, 'clanci' => $clanci]);
     }
 
+    /**
+     * Validira upload datoteka, sprema ih u storage i upisuje metapodatke u bazu.
+     */
     public function uploadMedija(Request $request): RedirectResponse|JsonResponse
     {
         if (!(Storage::exists('public/clanci'))) {
@@ -187,6 +213,9 @@ class ClanciController extends Controller
         return redirect()->route('admin.clanci.uredjivanje', $clanak->id);
     }
 
+    /**
+     * Briše odabrani zapis i po potrebi čisti povezane podatke/datoteke.
+     */
     public function brisanjeMedija(Request $request): RedirectResponse
     {
         $medij = MedijiClanaka::findOrFail((int)$request->get('medijBrisanje'));
@@ -195,6 +224,9 @@ class ClanciController extends Controller
         return redirect()->route('admin.clanci.uredjivanje', $medij->clanak->id);
     }
 
+    /**
+     * Normalizira i validira Facebook URL prije spremanja u sadržaj.
+     */
     private function normalizirajFacebookLink(?string $link): ?string
     {
         $vrijednost = trim((string)$link);
@@ -219,6 +251,9 @@ class ClanciController extends Controller
         return $validiranUrl;
     }
 
+    /**
+     * Iz postojećeg HTML sadržaja izdvaja spremljeni Facebook link ako postoji.
+     */
     private function izvuciFacebookLinkIzSadrzaja(?string $sadrzaj): ?string
     {
         $vrijednost = (string)$sadrzaj;
@@ -240,6 +275,9 @@ class ClanciController extends Controller
         return null;
     }
 
+    /**
+     * Uklanja automatski Facebook blok iz sadržaja kako bi se zapis mogao ponovno sigurno spremiti.
+     */
     private function ukloniFacebookBlokIzSadrzaja(?string $sadrzaj): string
     {
         $vrijednost = (string)$sadrzaj;
@@ -256,6 +294,9 @@ class ClanciController extends Controller
         return trim($vrijednost);
     }
 
+    /**
+     * Generira HTML blok s Facebook poveznicom koji se umeće u sadržaj članka/turnira.
+     */
     private function izradiFacebookBlokZaSadrzaj(string $facebookLink): string
     {
         $siguranLink = htmlspecialchars($facebookLink, ENT_QUOTES | ENT_HTML5, 'UTF-8');

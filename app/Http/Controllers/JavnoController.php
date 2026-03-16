@@ -28,6 +28,9 @@ use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
+/**
+ * Javni i korisnički kontroler za naslovnicu, profile članova, rezultate, treninge i preuzimanje dokumenata.
+ */
 class JavnoController extends Controller
 {
 
@@ -308,9 +311,7 @@ class JavnoController extends Controller
 
         $paymentStatusByClan = [];
         if ($showPaymentColumn) {
-            foreach ($clanovi as $clan) {
-                $paymentStatusByClan[(int)$clan->id] = $paymentService->listStatusForClan($clan);
-            }
+            $paymentStatusByClan = $paymentService->listStatusForClanIds($clanovi->pluck('id')->all());
         }
 
         return view('javno.clanovi', [
@@ -321,6 +322,9 @@ class JavnoController extends Controller
         ]);
     }
 
+    /**
+     * Izvozi CSV popis aktivnih članova kluba s podacima za administrativni rad.
+     */
     public function exportAktivnihClanovaCsv(): StreamedResponse
     {
         if (!auth()->check() || !auth()->user()->imaPravoAdminOrMember()) {
@@ -480,70 +484,101 @@ class JavnoController extends Controller
 
 
         $cl = $clan->id;
-        // svi tipovi turnira u kojima se natjecao
-        $tipoviTurnira = TipoviTurnira::whereHas('turniri', function ($query) use ($cl) {
-            $query->whereHas('rezultatiOpci', function ($query) use ($cl) {
+        // Svi tipovi turnira u kojima član ima pojedinačni rezultat.
+        $tipoviTurnira = TipoviTurnira::query()
+            ->with('polja')
+            ->whereHas('turniri.rezultatiOpci', function ($query) use ($cl) {
                 $query->where('clan_id', '=', $cl);
-            });
-        })->get();
+            })
+            ->get();
 
-        // sve kategorije u kojima se natjecao
-        $kategorije = Kategorije::whereHas('rezultatiOpci', function ($query) use ($cl) {
-            $query->where('clan_id', '=', $cl);
-        })->get();
+        // Osobni rekordi: jedan agregatni upit umjesto trostruke petlje tip × stil × kategorija.
+        $rekordiKandidati = RezultatiPoTipuTurnira::query()
+            ->select([
+                'rezultati_po_tipu_turniras.turnir_id',
+                'rezultati_po_tipu_turniras.stil_id',
+                'rezultati_po_tipu_turniras.kategorija_id',
+                'rezultati_po_tipu_turniras.rezultat',
+                'turniris.tipovi_turnira_id as tip_turnira_id',
+            ])
+            ->join('turniris', 'turniris.id', '=', 'rezultati_po_tipu_turniras.turnir_id')
+            ->join('polja_za_tipove_turniras as polja_ukupno', 'polja_ukupno.id', '=', 'rezultati_po_tipu_turniras.polje_za_tipove_turnira_id')
+            ->where('rezultati_po_tipu_turniras.clan_id', '=', $cl)
+            ->where('polja_ukupno.naziv', '=', 'Ukupno')
+            ->orderBy('turniris.tipovi_turnira_id')
+            ->orderBy('rezultati_po_tipu_turniras.stil_id')
+            ->orderBy('rezultati_po_tipu_turniras.kategorija_id')
+            ->orderByDesc('rezultati_po_tipu_turniras.rezultat')
+            ->orderByDesc('turniris.datum')
+            ->orderByDesc('rezultati_po_tipu_turniras.id')
+            ->get();
 
-        // svi stilovi u kojima se natjecao
-        $stilovi = Stilovi::whereHas('rezultatiOpci', function ($query) use ($cl) {
-            $query->where('clan_id', '=', $cl);
-        })->get();
+        $osobniRekordi = [];
+        $datumiRekorda = [];
+        if ($rekordiKandidati->isNotEmpty()) {
+            $tipoviMapa = $tipoviTurnira->keyBy('id');
+            $stiloviMapa = Stilovi::query()
+                ->whereIn('id', $rekordiKandidati->pluck('stil_id')->unique()->values())
+                ->pluck('naziv', 'id');
+            $kategorijeMapa = Kategorije::query()
+                ->whereIn('id', $rekordiKandidati->pluck('kategorija_id')->unique()->values())
+                ->pluck('naziv', 'id');
+            $turniriMapa = Turniri::query()
+                ->whereIn('id', $rekordiKandidati->pluck('turnir_id')->unique()->values())
+                ->get()
+                ->keyBy('id');
 
-        //izvlačenje najboljih rezultata za streličara
-        $i = 0;
-        foreach ($tipoviTurnira as $tipturnira) {
-            foreach ($stilovi as $stil) {
-                foreach ($kategorije as $kategorija) {
-                    $najboljiRezultat = RezultatiPoTipuTurnira::
-                    whereHas('turnir', function ($query) use ($tipturnira) {
-                        $query->where('tipovi_turnira_id', '=', $tipturnira->id);
-                    })->whereHas('poljeZaTipTurnira', function ($query) {
-                        $query->where('naziv', '=', 'Ukupno');
-                    })->where('clan_id', '=', $cl)->where('kategorija_id', '=', $kategorija->id)->where('stil_id', '=', $stil->id)->max('rezultat');
-                    if ($najboljiRezultat) {
-                        $osobniRekordi[$i]['stil'] = $stil->naziv;
-                        $osobniRekordi[$i]['kategorija'] = $kategorija->naziv;
-                        $osobniRekordi[$i]['tipTurnira'] = $tipturnira->naziv;
-                        $osobniRekordi[$i]['rezultat'] = $najboljiRezultat;
-
-                        //turnir na kojem je postavio osobni rekord
-                        $osobniRekordi[$i]['turnir'] = Turniri::find(RezultatiPoTipuTurnira::
-                        whereHas('turnir', function ($query) use ($tipturnira) {
-                            $query->where('tipovi_turnira_id', '=', $tipturnira->id);
-                        })->whereHas('poljeZaTipTurnira', function ($query) {
-                            $query->where('naziv', '=', 'Ukupno');
-                        })->where('clan_id', '=', $cl)->where('kategorija_id', '=', $kategorija->id)->where('stil_id', '=', $stil->id)->where('rezultat', '=', $najboljiRezultat)->get()->first()->turnir_id);
-
-                        //datumi ostvarenih maksimalnih rezultata
-                        $datumiRekorda[] = $osobniRekordi[$i]['turnir']->datum;
-                        $i++;
-                    }
+            $obradeneKombinacije = [];
+            foreach ($rekordiKandidati as $kandidat) {
+                $kombinacijaKey = (int)$kandidat->tip_turnira_id . '|' . (int)$kandidat->stil_id . '|' . (int)$kandidat->kategorija_id;
+                if (isset($obradeneKombinacije[$kombinacijaKey])) {
+                    continue;
                 }
+
+                $tip = $tipoviMapa->get((int)$kandidat->tip_turnira_id);
+                $stilNaziv = $stiloviMapa->get((int)$kandidat->stil_id);
+                $kategorijaNaziv = $kategorijeMapa->get((int)$kandidat->kategorija_id);
+                $turnirRekorda = $turniriMapa->get((int)$kandidat->turnir_id);
+                if ($tip === null || $turnirRekorda === null || empty($stilNaziv) || empty($kategorijaNaziv)) {
+                    continue;
+                }
+
+                $osobniRekordi[] = [
+                    'stil' => (string)$stilNaziv,
+                    'kategorija' => (string)$kategorijaNaziv,
+                    'tipTurnira' => (string)$tip->naziv,
+                    'rezultat' => (int)$kandidat->rezultat,
+                    'turnir' => $turnirRekorda,
+                ];
+                $datumiRekorda[] = $turnirRekorda->datum;
+                $obradeneKombinacije[$kombinacijaKey] = true;
             }
         }
 
-        if (!isset($osobniRekordi)) $osobniRekordi = array();
-        if (!isset($datumiRekorda)) $datumiRekorda = array();
-
         //popis svih turnira na kojima je sudjelovao (pojedinačno ili u timu)
-        $turniriPopis = Turniri::where(function ($query) use ($cl) {
-            $query->whereHas('rezultatiOpci', function ($rezultatiQuery) use ($cl) {
-                $rezultatiQuery->where('clan_id', '=', $cl);
-            });
-            if ($this->timskeTabliceDostupne()) {
-                $query->orWhereHas('rezultatiTimovi.clanoviStavke.rezultatOpci', function ($timQuery) use ($cl) {
-                    $timQuery->where('clan_id', '=', $cl);
+        $turniriPopis = Turniri::query()
+            ->with([
+                'tipTurnira.polja',
+                'rezultatiOpci' => fn ($query) => $query
+                    ->with(['clan', 'stil', 'kategorija'])
+                    ->where('clan_id', '=', $cl)
+                    ->orderBy('id'),
+                'rezultatiPoTipuTurnira' => fn ($query) => $query
+                    ->where('clan_id', '=', $cl)
+                    ->orderBy('id'),
+            ])
+            ->where(function ($query) use ($cl) {
+                $query->whereHas('rezultatiOpci', function ($rezultatiQuery) use ($cl) {
+                    $rezultatiQuery->where('clan_id', '=', $cl);
                 });
-            }
-        })->orderByDesc('datum')->get();
+                if ($this->timskeTabliceDostupne()) {
+                    $query->orWhereHas('rezultatiTimovi.clanoviStavke.rezultatOpci', function ($timQuery) use ($cl) {
+                        $timQuery->where('clan_id', '=', $cl);
+                    });
+                }
+            })
+            ->orderByDesc('datum')
+            ->get();
         return view('javno.pregledClana', [
             'clan' => $clan,
             'turniri' => $turniri,
@@ -566,6 +601,9 @@ class JavnoController extends Controller
         ]);
     }
 
+    /**
+     * Omogućuje preuzimanje datoteke liječničkog pregleda člana uz provjeru ovlasti.
+     */
     public function preuzmi_lijecnicki_pregled(Clanovi $clan, ClanLijecnickiPregled $pregled): BinaryFileResponse
     {
         $this->potvrdiPravoNaDokumente($clan);
@@ -578,6 +616,9 @@ class JavnoController extends Controller
         return response()->file(Storage::disk('local')->path($pregled->putanja));
     }
 
+    /**
+     * Omogućuje preuzimanje dokumenta člana uz provjeru ovlasti.
+     */
     public function preuzmi_dokument(Clanovi $clan, ClanDokument $dokument): BinaryFileResponse
     {
         $this->potvrdiPravoNaDokumente($clan);
@@ -590,6 +631,9 @@ class JavnoController extends Controller
         return response()->file(Storage::disk('local')->path($dokument->putanja));
     }
 
+    /**
+     * Provjerava smije li korisnik preuzeti privatne dokumente traženog člana.
+     */
     private function potvrdiPravoNaDokumente(Clanovi $clan): void
     {
         if (!auth()->check()) {
@@ -603,6 +647,9 @@ class JavnoController extends Controller
         abort(403);
     }
 
+    /**
+     * Štiti rutu tako da se akcija izvodi samo nad članom navedenim u URL-u.
+     */
     private function potvrdiPripadnostClanu(int $clanId, int $resourceClanId): void
     {
         if ($clanId !== $resourceClanId) {
@@ -610,6 +657,9 @@ class JavnoController extends Controller
         }
     }
 
+    /**
+     * Pretvara internu oznaku spola u čitljiv tekst za CSV izvoz aktivnih članova.
+     */
     private function mapirajSpolZaCsv(?string $spol): string
     {
         $vrijednost = trim((string)$spol);
@@ -626,6 +676,9 @@ class JavnoController extends Controller
         return (string)$spol;
     }
 
+    /**
+     * Slaže status liječničkog pregleda člana za prikaz na naslovnici/profilu.
+     */
     private function pripremiStatusLijecnickogZaClana(Clanovi $clan): array
     {
         $status = [
@@ -656,6 +709,9 @@ class JavnoController extends Controller
         return $status;
     }
 
+    /**
+     * Formatira OIB za CSV izvoz tako da tablični alati ne uklone vodeće nule.
+     */
     private function formatirajOibZaCsv(?string $oib): string
     {
         $vrijednost = trim((string)$oib);
@@ -668,6 +724,9 @@ class JavnoController extends Controller
         return '="' . str_replace('"', '""', $vrijednost) . '"';
     }
 
+    /**
+     * Računa godišnju statistiku medalja i nastupa kluba za odabranu godinu.
+     */
     private function izracunajGodisnjuStatistiku(int $godina): array
     {
         $zlato = 0;
@@ -764,6 +823,9 @@ class JavnoController extends Controller
         ];
     }
 
+    /**
+     * Validira ulaz i sprema promjene prema pravilima modula javnog prikaza stranice kluba.
+     */
     private function dodajTurnirClanu(array &$turniriPoClanu, int $clanId, int $turnirId): void
     {
         if ($clanId <= 0 || $turnirId <= 0) {
@@ -777,6 +839,9 @@ class JavnoController extends Controller
         $turniriPoClanu[$clanId][$turnirId] = true;
     }
 
+    /**
+     * Validira ulaz i sprema promjene prema pravilima modula javnog prikaza stranice kluba.
+     */
     private function dodajMedaljuClanu(array &$medaljePoClanu, int $clanId, int $plasman): void
     {
         if ($clanId <= 0 || !in_array($plasman, [1, 2, 3], true)) {
@@ -803,6 +868,9 @@ class JavnoController extends Controller
         $medaljePoClanu[$clanId]['ukupno']++;
     }
 
+    /**
+     * Validira ulaz i sprema promjene prema pravilima modula javnog prikaza stranice kluba.
+     */
     private function dodajKlubskuMedalju(int $plasman, int &$zlato, int &$srebro, int &$bronca): void
     {
         if ($plasman === 1) {
@@ -820,6 +888,9 @@ class JavnoController extends Controller
         }
     }
 
+    /**
+     * Dohvaća potrebne podatke iz baze za prikaz ili daljnju obradu u modulu javnog prikaza i korisničkih profila.
+     */
     private function dohvatiMapuImenaClanova(array $clanoviIds): array
     {
         if (empty($clanoviIds)) {
@@ -835,6 +906,9 @@ class JavnoController extends Controller
             ->all();
     }
 
+    /**
+     * Izračunava vodeće članove po medaljama i broju nastupa u odabranoj godini.
+     */
     private function izracunajVodece(array $vrijednostiPoClanu, array $imenaClanova): array
     {
         $filtrirano = [];
@@ -898,19 +972,12 @@ class JavnoController extends Controller
         return view('javno.pregledTurnira', ['turniri' => $turniri]);
     }
 
+    /**
+     * Provjerava postoje li tablice za timske rezultate prije prikaza timskih sekcija.
+     */
     private function timskeTabliceDostupne(): bool
     {
         return Schema::hasTable('rezultati_timovi') && Schema::hasTable('rezultati_tim_clanovi');
     }
 
-    /**
-     * @return array
-     */
-    public function menu(): array
-    {
-        $menu['Obavijesti'] = Clanci::where('vrsta', '=', 'Obavijest')->where('menu', '=', '1')->orderByDesc('datum')->get(['id', 'menu_naslov']);
-        $menu['O nama'] = Clanci::where('vrsta', '=', 'O nama')->where('menu', '=', '1')->orderByDesc('datum')->get(['id', 'menu_naslov']);
-        $menu['Strelicarstvo'] = Clanci::where('vrsta', '=', 'Streličarstvo')->where('menu', '=', '1')->orderByDesc('datum')->get(['id', 'menu_naslov']);
-        return $menu;
-    }
 }

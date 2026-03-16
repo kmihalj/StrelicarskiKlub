@@ -1,3 +1,4 @@
+{{-- Desktop navigacija glavnog izbornika aplikacije. --}}
 @include('layouts.navCSS')
 <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: var(--theme-nav-solid-bg, #000); z-index: 9999;">
     <div class="container-fluid">

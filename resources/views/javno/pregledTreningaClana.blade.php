@@ -1,3 +1,4 @@
+{{-- Pregled treninga odabranog člana za admina/roditelja/člana s pravom pristupa. --}}
 @extends('layouts.app')
 @section('content')
     @php

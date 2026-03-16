@@ -1,3 +1,4 @@
+{{-- Glavni layout aplikacije: uključuje navigaciju, stilove teme i sadržaj stranice. --}}
 <!doctype html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>

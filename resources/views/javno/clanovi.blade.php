@@ -1,3 +1,4 @@
+{{-- Popis članova kluba s osnovnim podacima i poveznicama na profile. --}}
 ﻿@extends('layouts.app')
 @auth()
     @if(auth()->user()->imaPravoAdminOrMember())

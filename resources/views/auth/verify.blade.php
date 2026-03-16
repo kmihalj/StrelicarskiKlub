@@ -1,3 +1,4 @@
+{{-- Ekran potvrde e-mail adrese korisničkog računa. --}}
 @extends('layouts.app')
 
 @section('content')

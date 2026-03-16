@@ -14,6 +14,16 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
+/**
+ * Servis zadužen za kompletan životni ciklus članarina:
+ * - konfiguraciju modela i cijena,
+ * - automatsko generiranje obveza po modelu plaćanja člana,
+ * - evidenciju statusa uplata,
+ * - izračun dugovanja i pripremu podataka za HUB-3A barkod.
+ *
+ * Namjerno je centraliziran na jednom mjestu kako bi kontroleri ostali tanki,
+ * a poslovna pravila konzistentna kroz admin i korisničke ekrane.
+ */
 class PaymentTrackingService
 {
     public const STATUS_OPEN = 'open';
@@ -35,6 +45,9 @@ class PaymentTrackingService
     private const DEFAULT_INFO_ARTICLE_ID = 33;
     private ?bool $optionArchivedColumnSupported = null;
 
+    /**
+     * Provjerava je li modul praćenja članarina aktivan i infrastrukturno podržan.
+     */
     public function isEnabled(): bool
     {
         if (!$this->supportsPaymentTracking()) {
@@ -44,6 +57,9 @@ class PaymentTrackingService
         return (bool)SiteSetting::query()->value('payment_tracking_enabled');
     }
 
+    /**
+     * Dohvaća ID članka s uputama za plaćanje (fallback na zadani članak ako nije postavljen).
+     */
     public function paymentInfoArticleId(): int
     {
         if (!$this->supportsPaymentTracking()) {
@@ -55,6 +71,12 @@ class PaymentTrackingService
         return is_numeric($value) ? (int)$value : self::DEFAULT_INFO_ARTICLE_ID;
     }
 
+    /**
+     * Priprema sve podatke potrebne admin ekranu za setup plaćanja.
+     *
+     * Ujedno normalizira katalog sezonskih opcija kako bi u sučelju uvijek
+     * postojale očekivane temeljne stavke (dvoranska i vanjska sezona).
+     */
     public function setupViewData(): array
     {
         if (!$this->supportsPaymentTracking()) {
@@ -82,6 +104,7 @@ class PaymentTrackingService
         $options = $optionsQuery
             ->get()
             ->map(function (MembershipPaymentOption $option): MembershipPaymentOption {
+                // latestPrice vraćamo kao pomoćne atribute jer ih forma direktno prikazuje/uređuje.
                 $latestPrice = $option->latestPrice;
                 $option->setAttribute('latest_price_amount', $latestPrice ? (string)$latestPrice->amount : '0.00');
                 $option->setAttribute('latest_price_valid_from', $latestPrice?->valid_from?->format('Y-m-d') ?? now()->toDateString());
@@ -108,6 +131,12 @@ class PaymentTrackingService
         ];
     }
 
+    /**
+     * Sprema globalne postavke i katalog modela plaćanja iz admin forme.
+     *
+     * Važno: cijene su vremenski verzionirane (`valid_from`) kako promjena cijene
+     * ne bi retroaktivno mijenjala povijesne obveze.
+     */
     public function updateSetup(array $data, int $adminUserId): void
     {
         if (!$this->supportsPaymentTracking()) {
@@ -160,6 +189,7 @@ class PaymentTrackingService
         $options = $optionsQuery->get();
 
         foreach ($options as $option) {
+            // Svaka opcija ima payload pod svojim ključem; helper pokriva i legacy nazive ključeva.
             $payload = $this->resolveOptionPayload($optionsPayload, $option);
             $periodChanged = false;
 
@@ -206,6 +236,7 @@ class PaymentTrackingService
             }
 
             if ($periodChanged) {
+                // Promjena perioda (npr. monthly -> seasonal) znači da treba regenerirati buduće obveze profila.
                 $this->syncProfilesForOption((int)$option->id, true);
             }
 
@@ -256,6 +287,9 @@ class PaymentTrackingService
         }
     }
 
+    /**
+     * Kreira novi model naplate članarine koji se kasnije može dodijeliti članovima.
+     */
     public function createOption(array $data, int $adminUserId): MembershipPaymentOption
     {
         if (!$this->supportsPaymentTracking()) {
@@ -319,6 +353,9 @@ class PaymentTrackingService
         return $option;
     }
 
+    /**
+     * Arhivira zapis kako više ne bi bio aktivan u radu.
+     */
     public function archiveOption(int $optionId): void
     {
         if (!$this->supportsPaymentTracking()) {
@@ -339,6 +376,11 @@ class PaymentTrackingService
         $option->save();
     }
 
+    /**
+     * Dodjeljuje model plaćanja članu i regenerira automatske stavke obveza.
+     *
+     * Koristi se iz admin profila člana nakon odabira modela (mjesečno/sezonski/godišnje/oslobođen).
+     */
     public function assignProfileToClan(Clanovi $clan, array $data, int $adminUserId): ClanPaymentProfile
     {
         if (!$this->supportsPaymentTracking()) {
@@ -372,12 +414,16 @@ class PaymentTrackingService
 
         $profile->load('paymentOption');
 
+        // Nakon promjene profila odmah usklađujemo buduće obveze i početni dug.
         $this->syncProfileCharges($profile, true);
         $this->syncOpeningDebtCharge($profile, $adminUserId);
 
         return $profile;
     }
 
+    /**
+     * Kreira ručno dodatno zaduženje (npr. najam opreme, dvorana, druga klupska obveza).
+     */
     public function createManualCharge(Clanovi $clan, array $data, int $adminUserId): ClanPaymentCharge
     {
         $amount = $this->normalizeAmount($data['amount'] ?? null);
@@ -416,6 +462,9 @@ class PaymentTrackingService
         ]);
     }
 
+    /**
+     * Mijenja status uplate pojedine stavke i po potrebi prilagođava iznos/varijantu članarine.
+     */
     public function updateChargeStatus(
         ClanPaymentCharge $charge,
         bool $isPaid,
@@ -432,6 +481,8 @@ class PaymentTrackingService
         $baseTitle = $this->normalizeText($metadata['base_title'] ?? null) ?? $charge->title;
 
         if ($isPaid) {
+            // Ako je stavka plaćena, računa se konačni iznos po odabranoj varijanti
+            // (npr. puna/podupiruća) i zaključava se datum potvrde.
             $resolvedVariant = $this->resolveVariantForCharge(
                 $charge,
                 $paymentVariant
@@ -460,6 +511,7 @@ class PaymentTrackingService
             }
             unset($metadata['preferred_variant']);
         } else {
+            // Vraćanje na "open" resetira sve što je vezano uz potvrđenu uplatu.
             $charge->status = self::STATUS_OPEN;
             $charge->paid_at = null;
             $charge->confirmed_by = null;
@@ -473,6 +525,9 @@ class PaymentTrackingService
         $charge->save();
     }
 
+    /**
+     * Briše ili označava zapis kao obrisan.
+     */
     public function deleteCharge(ClanPaymentCharge $charge, int $adminUserId): void
     {
         if ($charge->source === self::SOURCE_AUTO) {
@@ -505,6 +560,9 @@ class PaymentTrackingService
         throw new \InvalidArgumentException('Stavku plaćanja nije moguće obrisati.');
     }
 
+    /**
+     * Vraća dopuštene varijante uplate za stavku članarine (npr. puna/podupirući) i izračunate iznose.
+     */
     public function availableVariantsForCharge(ClanPaymentCharge $charge): array
     {
         $charge->loadMissing('paymentOption');
@@ -558,6 +616,9 @@ class PaymentTrackingService
         return [];
     }
 
+    /**
+     * Vraća trenutno odabranu varijantu plaćanja za stavku članarine iz metadata podataka.
+     */
     public function selectedVariantForCharge(ClanPaymentCharge $charge, bool $preferPreferred = false): ?string
     {
         $metadata = is_array($charge->metadata) ? $charge->metadata : [];
@@ -568,6 +629,9 @@ class PaymentTrackingService
         return $this->resolveVariantForCharge($charge, is_string($rawVariant) ? $rawVariant : null);
     }
 
+    /**
+     * Sprema korisnikov preferirani tip uplate za otvorenu automatsku stavku članarine.
+     */
     public function setPreferredVariantForCharge(ClanPaymentCharge $charge, ?string $variant): void
     {
         if ($charge->source !== self::SOURCE_AUTO || $charge->status !== self::STATUS_OPEN) {
@@ -590,12 +654,18 @@ class PaymentTrackingService
         $charge->save();
     }
 
+    /**
+     * Računa konačni iznos stavke prema odabranoj varijanti plaćanja.
+     */
     public function resolvedChargeAmount(ClanPaymentCharge $charge, bool $preferPreferred = false): float
     {
         $variant = $this->selectedVariantForCharge($charge, $preferPreferred);
         return $this->calculateVariantAmount($charge, $this->baseAmountForCharge($charge), $variant);
     }
 
+    /**
+     * Vraća korisnički naziv odabrane varijante plaćanja za stavku članarine.
+     */
     public function variantLabelForCharge(ClanPaymentCharge $charge, ?string $variant): ?string
     {
         if ($variant === null) {
@@ -611,6 +681,9 @@ class PaymentTrackingService
         return null;
     }
 
+    /**
+     * Vraća napomenu o ograničenju korištenja dvorane/terena za podupiruće varijante.
+     */
     public function restrictionNoteForCharge(ClanPaymentCharge $charge, ?string $variant): ?string
     {
         if ($variant === null || !$this->isSupportingVariant($variant)) {
@@ -638,6 +711,9 @@ class PaymentTrackingService
         };
     }
 
+    /**
+     * Provjerava naplaćuje li se ova stavka gotovinom (bez barkoda/HUB naloga).
+     */
     public function isCashCollectionForCharge(ClanPaymentCharge $charge): bool
     {
         if ($charge->source !== self::SOURCE_AUTO) {
@@ -648,9 +724,12 @@ class PaymentTrackingService
         return $this->optionUsesCash($charge->paymentOption);
     }
 
+    /**
+     * Vraća sažeti status članarine člana za prikaz u listama članova (plaćeno ili iznos duga).
+     */
     public function listStatusForClan(Clanovi $clan): ?array
     {
-        $summary = $this->memberSummary($clan);
+        $summary = $this->memberSummaryReadOnly($clan);
         if (!($summary['enabled'] ?? false)) {
             return null;
         }
@@ -676,7 +755,79 @@ class PaymentTrackingService
         ];
     }
 
+    /**
+     * Vraća statuse plaćanja za više članova odjednom kako bi se izbjegao N+1 upit u listama.
+     */
+    public function listStatusForClanIds(iterable $clanIds): array
+    {
+        $ids = collect($clanIds)
+            ->map(static fn ($id): int => (int)$id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty() || !$this->isEnabled() || !$this->supportsPaymentTracking()) {
+            return [];
+        }
+
+        $profilesByClan = ClanPaymentProfile::query()
+            ->with('paymentOption')
+            ->whereIn('clan_id', $ids)
+            ->get()
+            ->keyBy(fn (ClanPaymentProfile $profile): int => (int)$profile->clan_id);
+
+        $chargesByClan = ClanPaymentCharge::query()
+            ->with('paymentOption')
+            ->whereIn('clan_id', $ids)
+            ->where('status', '!=', self::STATUS_DELETED)
+            ->orderBy('clan_id')
+            ->orderBy('id')
+            ->get();
+        $chargesByClan = $chargesByClan->groupBy(fn (ClanPaymentCharge $charge): int => (int)$charge->clan_id);
+
+        $statuses = [];
+        foreach ($ids as $clanId) {
+            $profile = $profilesByClan->get($clanId);
+            $charges = $chargesByClan->get($clanId, collect());
+            $profileConfigured = $profile !== null && $profile->paymentOption !== null;
+            if (!$profileConfigured && $charges->isEmpty()) {
+                $statuses[$clanId] = null;
+                continue;
+            }
+
+            $unpaidCharges = $charges->filter(fn (ClanPaymentCharge $charge): bool => $charge->status === self::STATUS_OPEN);
+            $totalOpenAmount = round((float)$unpaidCharges->sum(
+                fn (ClanPaymentCharge $charge): float => $this->resolvedChargeAmount($charge, true)
+            ), 2);
+
+            $statuses[$clanId] = $totalOpenAmount > 0
+                ? ['state' => 'debt', 'amount' => $totalOpenAmount]
+                : ['state' => 'paid', 'amount' => 0.0];
+        }
+
+        return $statuses;
+    }
+
+    /**
+     * Sastavlja cjeloviti sažetak stanja plaćanja za člana uz automatsku sinkronizaciju stavki.
+     */
     public function memberSummary(Clanovi $clan): array
+    {
+        return $this->buildMemberSummary($clan, true);
+    }
+
+    /**
+     * Sastavlja cjeloviti sažetak stanja plaćanja bez upisa u bazu (read-only prikaz).
+     */
+    public function memberSummaryReadOnly(Clanovi $clan): array
+    {
+        return $this->buildMemberSummary($clan, false);
+    }
+
+    /**
+     * Sastavlja cjeloviti sažetak stanja plaćanja za člana (otvoreno, plaćeno, tekuće, dugovanja).
+     */
+    private function buildMemberSummary(Clanovi $clan, bool $syncBeforeRead): array
     {
         $enabled = $this->isEnabled();
 
@@ -702,7 +853,7 @@ class PaymentTrackingService
             ->where('clan_id', $clan->id)
             ->first();
 
-        if ($profile !== null && $profile->paymentOption !== null) {
+        if ($syncBeforeRead && $profile !== null && $profile->paymentOption !== null) {
             $this->syncProfileCharges($profile, false);
             $this->syncOpeningDebtCharge($profile, (int)($profile->updated_by ?? $profile->created_by ?? 0));
         }
@@ -720,6 +871,7 @@ class PaymentTrackingService
         $unpaidCharges = $charges->filter(fn (ClanPaymentCharge $charge): bool => $charge->status === self::STATUS_OPEN)->values();
         $paidCharges = $charges->filter(fn (ClanPaymentCharge $charge): bool => $charge->status === self::STATUS_PAID)->values();
 
+        // Trenutno razdoblje: koristi period_start/period_end i služi za upozorenje "tekuća članarina".
         $currentCharges = $charges
             ->filter(function (ClanPaymentCharge $charge) use ($today): bool {
                 if ($charge->source !== self::SOURCE_AUTO) {
@@ -738,6 +890,7 @@ class PaymentTrackingService
             ->filter(fn (ClanPaymentCharge $charge): bool => $charge->status === self::STATUS_OPEN)
             ->values();
 
+        // Povijesna dugovanja: otvorene stavke kojima je prošao period_end ili due_date.
         $pastDueCharges = $unpaidCharges
             ->filter(function (ClanPaymentCharge $charge) use ($today): bool {
                 if ($charge->period_end !== null) {
@@ -784,6 +937,9 @@ class PaymentTrackingService
         ];
     }
 
+    /**
+     * Generira korisnički tekst upozorenja koji se prikazuje na naslovnici/profilu člana.
+     */
     public function noticeForClan(Clanovi $clan): ?array
     {
         $summary = $this->memberSummary($clan);
@@ -845,6 +1001,7 @@ class PaymentTrackingService
             ];
         }
 
+        // Poseban slučaj: podupiruća varijanta zahtijeva dodatnu napomenu o ograničenjima korištenja.
         $currentSupportingNotes = $summary['currentCharges']
             ->filter(function (ClanPaymentCharge $charge): bool {
                 if ($charge->status !== self::STATUS_PAID) {
@@ -877,6 +1034,11 @@ class PaymentTrackingService
         ];
     }
 
+    /**
+     * Priprema payload za HUB-3A barkod (računska uplata).
+     *
+     * Povratna vrijednost je `null` za gotovinska plaćanja jer za njih barkod nema smisla.
+     */
     public function buildHubPayloadForCharge(Clanovi $clan, ClanPaymentCharge $charge): ?array
     {
         if ($this->isCashCollectionForCharge($charge)) {
@@ -951,6 +1113,9 @@ class PaymentTrackingService
         ];
     }
 
+    /**
+     * Provjerava podržava li okruženje ili konfiguracija traženu mogućnost.
+     */
     private function supportsPaymentTracking(): bool
     {
         return Schema::hasTable('site_settings')
@@ -961,6 +1126,9 @@ class PaymentTrackingService
             && Schema::hasTable('clan_payment_charges');
     }
 
+    /**
+     * Usklađuje katalog sezonskih opcija članarine (dvoranska/vanjska) prema pravilima aplikacije.
+     */
     private function normalizeSeasonalOptionsCatalog(): void
     {
         if (!$this->supportsArchivedOptions()) {
@@ -1023,6 +1191,9 @@ class PaymentTrackingService
         }
     }
 
+    /**
+     * Nakon promjene modela naplate osvježava profile svih članova koji koriste taj model.
+     */
     private function syncProfilesForOption(int $optionId, bool $resetFuture = false): void
     {
         $option = MembershipPaymentOption::query()->find($optionId);
@@ -1053,6 +1224,9 @@ class PaymentTrackingService
             });
     }
 
+    /**
+     * Ponovno računa zaduženja člana prema aktivnom modelu plaćanja i važećem cjeniku.
+     */
     private function syncProfileCharges(ClanPaymentProfile $profile, bool $resetFuture): void
     {
         $profile->loadMissing('paymentOption');
@@ -1156,6 +1330,9 @@ class PaymentTrackingService
             ->delete();
     }
 
+    /**
+     * Održava početno dugovanje člana kao zasebnu stavku u evidenciji plaćanja.
+     */
     private function syncOpeningDebtCharge(ClanPaymentProfile $profile, int $adminUserId): void
     {
         $amount = (float)($profile->opening_debt_amount ?? 0);
@@ -1204,6 +1381,9 @@ class PaymentTrackingService
         $charge->save();
     }
 
+    /**
+     * Generira skup podataka prema poslovnim pravilima.
+     */
     private function generatePeriods(MembershipPaymentOption $option, Carbon $startDate, Carbon $horizonEnd): array
     {
         return match ($option->period_type) {
@@ -1214,6 +1394,9 @@ class PaymentTrackingService
         };
     }
 
+    /**
+     * Određuje krajnji datum do kojeg unaprijed generiramo automatske stavke članarine.
+     */
     private function resolveAutoChargeHorizonEnd(MembershipPaymentOption $option, Carbon $referenceDate): Carbon
     {
         $today = $referenceDate->copy()->startOfDay();
@@ -1249,6 +1432,9 @@ class PaymentTrackingService
         return $today->copy()->endOfDay();
     }
 
+    /**
+     * Generira skup podataka prema poslovnim pravilima.
+     */
     private function generateMonthlyPeriods(MembershipPaymentOption $option, Carbon $startDate, Carbon $horizonEnd): array
     {
         $periods = [];
@@ -1278,6 +1464,9 @@ class PaymentTrackingService
         return $periods;
     }
 
+    /**
+     * Generira skup podataka prema poslovnim pravilima.
+     */
     private function generateSeasonalPeriods(MembershipPaymentOption $option, Carbon $startDate, Carbon $horizonEnd): array
     {
         $periods = [];
@@ -1336,6 +1525,9 @@ class PaymentTrackingService
         return $periods;
     }
 
+    /**
+     * Generira skup podataka prema poslovnim pravilima.
+     */
     private function generateSeasonalPeriodsForProfile(MembershipPaymentOption $selectedOption, Carbon $startDate, Carbon $horizonEnd): array
     {
         $indoorOption = $this->resolveSeasonalOptionForAnchor($selectedOption, 'oct');
@@ -1387,6 +1579,9 @@ class PaymentTrackingService
         return $periods;
     }
 
+    /**
+     * Za traženo sidro sezone (`apr`/`oct`) pronalazi odgovarajuću opciju članarine.
+     */
     private function resolveSeasonalOptionForAnchor(MembershipPaymentOption $selectedOption, string $anchor): MembershipPaymentOption
     {
         $normalizedAnchor = $anchor === 'apr' ? 'apr' : 'oct';
@@ -1426,6 +1621,9 @@ class PaymentTrackingService
         return $fallback instanceof MembershipPaymentOption ? $fallback : $selectedOption;
     }
 
+    /**
+     * Generira skup podataka prema poslovnim pravilima.
+     */
     private function generateAnnualPeriods(MembershipPaymentOption $option, Carbon $startDate, Carbon $horizonEnd): array
     {
         $periods = [];
@@ -1462,6 +1660,9 @@ class PaymentTrackingService
         return $periods;
     }
 
+    /**
+     * Vraća cijenu opcije koja je vrijedila na zadani datum.
+     */
     private function resolvePriceForOptionDate(int $optionId, Carbon $date): float
     {
         $price = MembershipPaymentOptionPrice::query()
@@ -1478,6 +1679,9 @@ class PaymentTrackingService
         return (float)$price->amount;
     }
 
+    /**
+     * Vraća osnovni iznos stavke prije primjene varijanti (puna/podupirući).
+     */
     private function baseAmountForCharge(ClanPaymentCharge $charge): float
     {
         $metadata = is_array($charge->metadata) ? $charge->metadata : [];
@@ -1488,6 +1692,9 @@ class PaymentTrackingService
         return round((float)$charge->amount, 2);
     }
 
+    /**
+     * Validira traženu varijantu uplate i vraća važeću fallback varijantu ako je potrebno.
+     */
     private function resolveVariantForCharge(ClanPaymentCharge $charge, ?string $variant): ?string
     {
         $availableValues = array_map(
@@ -1506,6 +1713,9 @@ class PaymentTrackingService
         return null;
     }
 
+    /**
+     * Izračunava vrijednosti prema definiranim formulama i pravilima.
+     */
     private function calculateVariantAmount(ClanPaymentCharge $charge, float $baseAmount, ?string $variant): float
     {
         if ($variant === null) {
@@ -1521,6 +1731,9 @@ class PaymentTrackingService
         };
     }
 
+    /**
+     * Sastavlja složeniju strukturu podataka iz više izvora.
+     */
     private function buildChargeTitleForVariant(string $baseTitle, ?string $variant): string
     {
         if (!$this->isSupportingVariant($variant)) {
@@ -1532,6 +1745,9 @@ class PaymentTrackingService
             : $baseTitle . ' - podupirući član';
     }
 
+    /**
+     * Provjerava pripada li odabrana varijanta podupirućem članstvu.
+     */
     private function isSupportingVariant(?string $variant): bool
     {
         return in_array($variant, [
@@ -1542,6 +1758,9 @@ class PaymentTrackingService
         ], true);
     }
 
+    /**
+     * Provjerava naplaćuje li se odabrana opcija članarine gotovinom umjesto preko računa.
+     */
     private function optionUsesCash(?MembershipPaymentOption $option): bool
     {
         if ($option === null) {
@@ -1552,12 +1771,18 @@ class PaymentTrackingService
             && $this->normalizeCollectionMethod($option->collection_method ?? null) === self::COLLECTION_CASH;
     }
 
+    /**
+     * Provjerava podržava li okruženje ili konfiguracija traženu mogućnost.
+     */
     private function supportsCollectionMethod(): bool
     {
         return Schema::hasTable('membership_payment_options')
             && Schema::hasColumn('membership_payment_options', 'collection_method');
     }
 
+    /**
+     * Provjerava podržava li okruženje ili konfiguracija traženu mogućnost.
+     */
     private function supportsArchivedOptions(): bool
     {
         if ($this->optionArchivedColumnSupported === null) {
@@ -1568,6 +1793,9 @@ class PaymentTrackingService
         return $this->optionArchivedColumnSupported;
     }
 
+    /**
+     * Iz payload-a forme izvlači podatke za konkretnu opciju članarine (po ID-u ili ključu).
+     */
     private function resolveOptionPayload(array $optionsPayload, MembershipPaymentOption $option): array
     {
         $payloadById = $optionsPayload[(string)$option->id] ?? $optionsPayload[$option->id] ?? null;
@@ -1583,6 +1811,9 @@ class PaymentTrackingService
         return [];
     }
 
+    /**
+     * Normalizira tip razdoblja i sidro sezone za postavke modela članarine.
+     */
     private function normalizePeriodSettings(string $periodType, mixed $periodAnchor): array
     {
         $normalizedPeriodType = trim($periodType);
@@ -1605,6 +1836,9 @@ class PaymentTrackingService
         ];
     }
 
+    /**
+     * Normalizira novčani iznos iz forme u decimalni broj s dvije decimale.
+     */
     private function normalizeAmount(mixed $value): ?float
     {
         if ($value === null) {
@@ -1624,6 +1858,9 @@ class PaymentTrackingService
         return round((float)$normalized, 2);
     }
 
+    /**
+     * Normalizira način naplate na podržane vrijednosti (`bank` ili `cash`).
+     */
     private function normalizeCollectionMethod(mixed $value): string
     {
         $normalized = trim((string)$value);
@@ -1632,6 +1869,9 @@ class PaymentTrackingService
             : self::COLLECTION_BANK;
     }
 
+    /**
+     * Normalizira datum iz forme u standardni format `Y-m-d`.
+     */
     private function normalizeDate(?string $value): ?string
     {
         if ($value === null) {
@@ -1650,6 +1890,9 @@ class PaymentTrackingService
         }
     }
 
+    /**
+     * Čisti tekstualni unos i pretvara prazne vrijednosti u `null`.
+     */
     private function normalizeText(mixed $value): ?string
     {
         $normalized = trim((string)$value);
@@ -1657,6 +1900,9 @@ class PaymentTrackingService
         return $normalized === '' ? null : $normalized;
     }
 
+    /**
+     * Čisti i validira OIB člana za potrebe HUB/poziva na broj.
+     */
     private function normalizeOib(?string $oib): ?string
     {
         $normalized = preg_replace('/\D+/', '', (string)$oib);
@@ -1664,6 +1910,9 @@ class PaymentTrackingService
         return strlen((string)$normalized) === 11 ? (string)$normalized : null;
     }
 
+    /**
+     * Sastavlja složeniju strukturu podataka iz više izvora.
+     */
     private function buildHubDescription(Clanovi $clan, ClanPaymentCharge $charge, ?string $variant): string
     {
         $payer = trim((string)$clan->Ime . ' ' . (string)$clan->Prezime);
@@ -1676,6 +1925,9 @@ class PaymentTrackingService
         return $description;
     }
 
+    /**
+     * Generira čitljiv naziv razdoblja (sezona/godina) koji ide u HUB opis plaćanja.
+     */
     private function resolveHubPeriodLabel(ClanPaymentCharge $charge): string
     {
         $periodKey = (string)($charge->period_key ?? '');
@@ -1697,6 +1949,9 @@ class PaymentTrackingService
         return $title;
     }
 
+    /**
+     * Validira ulaz i sprema promjene prema pravilima modula članarina članova.
+     */
     private function splitAddress(string $address): array
     {
         $normalized = trim($address);
@@ -1712,6 +1967,9 @@ class PaymentTrackingService
         return [$normalized, ''];
     }
 
+    /**
+     * Normalizira IBAN (velika slova, bez razmaka) i čisti ga za HUB zapis.
+     */
     private function normalizeIban(?string $iban): ?string
     {
         $normalized = strtoupper(str_replace(' ', '', (string)$iban));
@@ -1722,6 +1980,9 @@ class PaymentTrackingService
         return $this->sanitizeHubLine($normalized, 34);
     }
 
+    /**
+     * Čisti jedan HUB red i skraćuje ga na dopuštenu duljinu.
+     */
     private function sanitizeHubLine(string $value, int $maxLength): string
     {
         $normalized = trim(preg_replace('/\s+/', ' ', $value) ?? $value);
@@ -1737,6 +1998,9 @@ class PaymentTrackingService
         return mb_substr($normalized, 0, $maxLength);
     }
 
+    /**
+     * Čisti tekst HUB payload-a od nedopuštenih znakova i predugih vrijednosti.
+     */
     private function sanitizeHubPayloadText(string $value, ?int $maxLength = null): string
     {
         $normalized = str_replace(["\r\n", "\r", "\n"], ' ', $value);

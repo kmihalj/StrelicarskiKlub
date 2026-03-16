@@ -1,8 +1,12 @@
+{{-- Forma za unos jednog novog pojedinačnog rezultata člana na turniru. --}}
 <div class="row">
     <div class="col-lg-12 col-md-12 col-12 fw-bolder">
         <p id="rezultat_form_title">Unos rezultata:</p>
     </div>
     <div class="col-lg-6 mb-2">
+        {{-- Jedna forma pokriva oba slučaja:
+             1) novi unos (POST na SpremanjeRezultata)
+             2) uređivanje (POST na updateRezultat nakon klika na „Uredi“ u tablici). --}}
         <form
             id="unos_rezultata"
             action="{{ route('admin.rezultati.SpremanjeRezultata') }}"
@@ -41,7 +45,9 @@
     @foreach($turnir->tipTurnira->polja as $index => $polje)
         <div class="col-lg-2 col-md-2 col-3 mb-2">
             <label for="polje_{{ $index }}">{{ $polje->naziv }}</label>
+            {{-- Rezultat pojedinog polja definiranog tipom turnira (npr. 1. krug, 2. krug, ukupno). --}}
             <input type="number" form="unos_rezultata" class="form-control" name="polje[]" id="polje_{{ $index }}" aria-label="polje_{{ $index }}" required>
+            {{-- Kod uređivanja čuvamo ID retka u tablici rezultati_po_tipu_turniras kako bi update bio precizan. --}}
             <input type="hidden" form="unos_rezultata" name="rez_po_tipu_ids[]" id="rez_po_tipu_id_{{ $index }}">
         </div>
     @endforeach
@@ -56,6 +62,7 @@
         </div>
     @endif
     <div class="col-lg-12 col-md-12 col-12 mb-2 text-end">
+        {{-- Odustani je vidljiv samo u edit modu; vraća formu na "novi unos". --}}
         <button type="button" id="rezultat_odustani_btn" class="btn btn-outline-secondary d-none">Odustani</button>
         <button type="submit" id="rezultat_spremi_btn" form="unos_rezultata" class="btn btn-danger">Spremi</button>
     </div>
@@ -111,6 +118,7 @@
         }
 
         function osvjeziKategorije() {
+            // Kategorije se filtriraju prema spolu odabranog člana kako bi unos ostao valjan.
             const selectedClan = clanSelect.options[clanSelect.selectedIndex];
             const clanSpol = selectedClan ? normalizirajSpol(selectedClan.dataset.spol) : '';
             const prethodnaVrijednost = kategorijaSelect.value;
@@ -157,6 +165,7 @@
         }
 
         function prebaciUNoviUnos() {
+            // Reset svih polja i povratak na osnovnu akciju spremanja (novi redak).
             rezultatForm.action = rezultatForm.dataset.storeAction || rezultatForm.action;
             if (formTitle) {
                 formTitle.textContent = 'Unos rezultata:';
@@ -192,6 +201,7 @@
         }
 
         function prebaciUUredjivanje(button) {
+            // Podatke čitamo iz data-* atributa retka tablice (bez dodatnog server round-tripa).
             const polja = procitajJson(button.dataset.polja || '[]', []);
             const poljaIds = procitajJson(button.dataset.poljaIds || '[]', []);
 
@@ -230,6 +240,7 @@
                 odustaniButton.classList.remove('d-none');
             }
 
+            // Korisnika automatski dovodimo na formu da je uređivanje odmah vidljivo.
             rezultatForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 

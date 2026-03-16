@@ -27,28 +27,41 @@ class Turniri extends Model
         'ima_timove' => 'bool',
     ];
 
+    /**
+     * Svaki turnir ima jedan tip turnira (npr. WA 2x18, WA 720), a isti tip može koristiti više turnira.
+     */
     public function tipTurnira(): BelongsTo
     {
         return $this->belongsTo(TipoviTurnira::class, 'tipovi_turnira_id');
     }
 
+    /**
+     * Vraća sve pojedinačne rezultate članova unesene za ovaj turnir.
+     */
     public function rezultatiOpci(): HasMany
     {
         return $this->hasMany(RezultatiOpci::class, 'turnir_id', 'id');
     }
 
-    /** @noinspection PhpUnused */
+    /**
+     * Vraća detaljna polja rezultata (po tipu turnira) za ovaj turnir.
+     */
     public function rezultatiPoTipuTurnira(): HasMany
     {
         return $this->hasMany(RezultatiPoTipuTurnira::class, 'turnir_id', 'id');
     }
 
-    /** @noinspection PhpUnused */
+    /**
+     * Vraća slike i video zapise povezane s ovim turnirom.
+     */
     public function mediji(): HasMany
     {
         return $this->hasMany(RezultatiSlike::class, 'turnir_id', 'id');
     }
 
+    /**
+     * Vraća sve timske rezultate povezane s ovim turnirom.
+     */
     public function rezultatiTimovi(): HasMany
     {
         return $this->hasMany(RezultatiTim::class, 'turnir_id', 'id');

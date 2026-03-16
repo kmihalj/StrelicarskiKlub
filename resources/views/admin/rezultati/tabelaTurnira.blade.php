@@ -1,3 +1,4 @@
+{{-- Dio tablice popisa turnira s osnovnim podacima i akcijama. --}}
 <div class="table-responsive">
     <table class="table table-hover align-middle mb-0 border">
         <thead class="table-warning">

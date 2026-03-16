@@ -1,3 +1,4 @@
+{{-- Predložak jednog retka u tablici popisa članova. --}}
 <tr class="js-clan-row"
     data-ime="{{ trim((string) $clan->Ime) }}"
     data-prezime="{{ trim((string) $clan->Prezime) }}"

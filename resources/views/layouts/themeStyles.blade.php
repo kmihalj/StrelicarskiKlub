@@ -1,3 +1,4 @@
+{{-- Ubrizgavanje CSS varijabli aktivne teme (boje, linkovi, kontrasti). --}}
 <style>
     :root {
         @foreach(($activeThemeCssVars ?? []) as $cssVar => $cssValue)

@@ -1,3 +1,4 @@
+{{-- JS/CSS pomoćni kod za render grafova treninga i napretka rezultata. --}}
 @once
     <style>
         .trening-chart-wrap {

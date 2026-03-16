@@ -1,3 +1,4 @@
+{{-- Tablica postojećih pojedinačnih rezultata turnira s akcijama uređivanja/brisanja. --}}
 @if($turnir->rezultatiOpci->count() != 0)
     <div class="row mb-2">
         <div class="col m-1">
@@ -21,12 +22,16 @@
                     <tbody>
                     @foreach($turnir->rezultatiOpci as $i => $rezultat)
                         @php
+                            // Za svaki opći rezultat pripremamo mapu polja po ID-u kako bismo
+                            // mogli deterministički prikazati vrijednosti u redoslijedu definicije tipa turnira.
                             $rezultatiPoPoljima = $turnir->rezultatiPoTipuTurnira
                                 ->where('clan_id', $rezultat->clan_id)
                                 ->where('stil_id', $rezultat->stil_id)
                                 ->where('kategorija_id', $rezultat->kategorija_id)
                                 ->keyBy('polje_za_tipove_turnira_id');
 
+                            // Ove dvije liste šaljemo u data-* atribute gumba „Uredi“.
+                            // Kasnije JS iz njih puni formu za uređivanje bez dodatnog requesta.
                             $poljaVrijednosti = [];
                             $poljaIds = [];
                         @endphp
@@ -62,6 +67,7 @@
                             @endif
                             <td class="text-end">
                                 <div class="d-inline-flex align-items-center gap-1">
+                                    {{-- Gumb prebacuje formu u "edit mode" i puni sva polja odabranog retka. --}}
                                     <button
                                         type="button"
                                         class="btn text-success btn-rounded js-rezultat-edit"
@@ -82,6 +88,7 @@
                                         @csrf
                                     </form>
 
+                                    {{-- Brisanje je i dalje dostupno, ali kao zasebna akcija uz potvrdu korisnika. --}}
                                     <button type="submit" form="brisanje{{ $rezultat->id }}" class="btn text-danger btn-rounded" title="Obriši" onclick="return confirm('Da li ste sigurni da želite obrisati rezultat ?')">
                                         @include('admin.SVG.obrisi')
                                     </button>

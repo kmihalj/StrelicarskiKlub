@@ -1,3 +1,4 @@
+{{-- Forma za upload slika/video datoteka uz turnir. --}}
 <div class="row">
     <div class="col-lg-12 col-md-6 fw-bolder">
         @php

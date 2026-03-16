@@ -1,3 +1,4 @@
+{{-- Blok statusa članarine (plaćeno/dugovanje) za prijavljenog člana. --}}
 @php
     $statusPlacanjaKorisnika = $statusPlacanjaKorisnika ?? null;
     $placanjeNotice = $statusPlacanjaKorisnika['notice'] ?? null;

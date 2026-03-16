@@ -1,3 +1,4 @@
+{{-- Evidencija dolazaka polaznika škole po datumima treninga. --}}
 @extends('layouts.app')
 
 @section('content')

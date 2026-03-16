@@ -1,3 +1,4 @@
+{{-- Ikona smjera sortiranja u tabličnim zaglavljima. --}}
 @php
     $sortState = $state ?? 'both';
 @endphp

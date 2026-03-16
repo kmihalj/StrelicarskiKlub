@@ -1,3 +1,4 @@
+{{-- Blok rođendana članova/polaznika koji se prikazuje na naslovnici. --}}
 @if(isset($rodendaniDanas) && $rodendaniDanas->isNotEmpty())
     <div class="row justify-content-center p-2 shadow bg-danger fw-bolder">
         <div class="col-lg-12 text-white">

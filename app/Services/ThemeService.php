@@ -9,6 +9,15 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
+/**
+ * Servis za upravljanje temama i varijantama prikaza (svijetla/tamna).
+ *
+ * Obuhvaća:
+ * - odabir aktivne teme i varijante,
+ * - normalizaciju palete boja,
+ * - izračun CSS varijabli koje koristi cijeli layout,
+ * - sinkronizaciju globalnih asseta (logo/favicon) uključujući fallback na legacy favicon.ico.
+ */
 class ThemeService
 {
     public const MODE_AUTO = 'auto';
@@ -18,6 +27,9 @@ class ThemeService
     public const MODE_COOKIE_PREFERENCE = 'theme_mode_preference';
     public const MODE_COOKIE_RESOLVED = 'theme_mode_resolved';
 
+    /**
+     * Vraća globalnu politiku prikaza teme (auto/light/dark) postavljenu od administratora.
+     */
     public function siteThemeModePolicy(): string
     {
         if (!Schema::hasTable('site_settings') || !Schema::hasColumn('site_settings', 'theme_mode_policy')) {
@@ -29,11 +41,17 @@ class ThemeService
         return $this->normalizeModePreference(is_string($policy) ? $policy : null);
     }
 
+    /**
+     * Provjerava je li admin prisilno zaključao prikaz na svijetlu ili tamnu varijantu teme.
+     */
     public function isThemeModeForced(): bool
     {
         return in_array($this->siteThemeModePolicy(), [self::MODE_LIGHT, self::MODE_DARK], true);
     }
 
+    /**
+     * Zadana paleta boja (light) koja se koristi kao baza i fallback za nedostajuće ključeve.
+     */
     public function getDefaultColors(): array
     {
         return [
@@ -65,6 +83,9 @@ class ThemeService
         ];
     }
 
+    /**
+     * Zadana paleta boja za dark varijantu.
+     */
     public function getDarkColors(): array
     {
         return [
@@ -96,11 +117,17 @@ class ThemeService
         ];
     }
 
+    /**
+     * Vraća sve podržane ključeve boja koje tema može sadržavati.
+     */
     public function getColorKeys(): array
     {
         return array_keys($this->getDefaultColors());
     }
 
+    /**
+     * Vraća podskup ključeva boja koji su administrativno editabilni u sučelju za uređivanje teme.
+     */
     public function getEditableColorKeys(): array
     {
         return [
@@ -129,16 +156,25 @@ class ThemeService
         ];
     }
 
+    /**
+     * Vraća naziv cookie-ja u koji spremamo korisnikovu preferenciju načina prikaza (`light`, `dark`, `auto`).
+     */
     public function modePreferenceCookieName(): string
     {
         return self::MODE_COOKIE_PREFERENCE;
     }
 
+    /**
+     * Vraća naziv cookie-ja u koji spremamo stvarno razriješenu varijantu teme (`light` ili `dark`).
+     */
     public function resolvedModeCookieName(): string
     {
         return self::MODE_COOKIE_RESOLVED;
     }
 
+    /**
+     * Normalizira korisničku preferenciju prikaza na jednu od vrijednosti: `light`, `dark`, `auto`.
+     */
     public function normalizeModePreference(?string $value): string
     {
         $normalized = Str::lower(trim((string)$value));
@@ -149,6 +185,9 @@ class ThemeService
         return self::MODE_AUTO;
     }
 
+    /**
+     * Normalizira razriješeni način prikaza i svodi ga na `light` ili `dark`.
+     */
     public function normalizeResolvedMode(?string $value): string
     {
         $normalized = Str::lower(trim((string)$value));
@@ -156,6 +195,9 @@ class ThemeService
         return $normalized === self::MODE_DARK ? self::MODE_DARK : self::MODE_LIGHT;
     }
 
+    /**
+     * Vraća preferenciju načina prikaza za trenutno prijavljenog korisnika.
+     */
     public function currentModePreference(): string
     {
         if (Auth::check()) {
@@ -168,6 +210,11 @@ class ThemeService
         return self::MODE_AUTO;
     }
 
+    /**
+     * Razrješava efektivni način prikaza:
+     * - direktno iz preference (light/dark),
+     * - ili iz kolačića koji pamti zadnji automatski resolved mode.
+     */
     public function resolveMode(string $modePreference): string
     {
         $normalizedPreference = $this->normalizeModePreference($modePreference);
@@ -178,6 +225,9 @@ class ThemeService
         return $this->normalizeResolvedMode($this->readCookie(self::MODE_COOKIE_RESOLVED));
     }
 
+    /**
+     * Vraća trenutno aktivnu temu; ako nijedna nije aktivna, koristi prvu dostupnu kao fallback.
+     */
     public function getActiveTheme(): ?Theme
     {
         if (!Schema::hasTable('themes')) {
@@ -187,6 +237,9 @@ class ThemeService
         return Theme::active()->first() ?? Theme::query()->orderBy('id')->first();
     }
 
+    /**
+     * Spaja spremljene boje teme s fallback paletom i osigurava valjane HEX vrijednosti.
+     */
     public function normalizeColors(?array $colors): array
     {
         $defaults = $this->getDefaultColors();
@@ -199,11 +252,17 @@ class ThemeService
         return $defaults;
     }
 
+    /**
+     * Provjerava je li zadana boja valjani 6-znamenkasti HEX zapis.
+     */
     public function isValidHexColor(?string $value): bool
     {
         return is_string($value) && preg_match('/^#[0-9a-fA-F]{6}$/', trim($value)) === 1;
     }
 
+    /**
+     * Za zadanu pozadinsku boju vraća kontrastnu boju teksta (`dark` ili `light`) prema luminanciji.
+     */
     public function contrastColor(string $backgroundHex, string $dark = '#111111', string $light = '#ffffff'): string
     {
         [$r, $g, $b] = $this->hexToRgb($backgroundHex);
@@ -212,6 +271,9 @@ class ThemeService
         return $luminance > 0.58 ? $dark : $light;
     }
 
+    /**
+     * Slaže CSS varijable teme (Bootstrap + custom) za odabrani način prikaza i paletu boja.
+     */
     public function cssVariables(array $colors, string $modeResolved = self::MODE_LIGHT): array
     {
         $isDarkMode = $this->normalizeResolvedMode($modeResolved) === self::MODE_DARK;
@@ -279,6 +341,9 @@ class ThemeService
         ];
     }
 
+    /**
+     * Priprema kompletan paket podataka aktivne teme (boje, CSS varijable, logo, favicon, mode) za sve Blade prikaze.
+     */
     public function sharedThemeData(): array
     {
         $activeTheme = $this->getActiveTheme();
@@ -341,6 +406,9 @@ class ThemeService
         ];
     }
 
+    /**
+     * Dohvaća globalne putanje loga/favicona iz postavki sitea (ako su postavljene).
+     */
     private function siteAssetPaths(): array
     {
         if (!Schema::hasTable('site_settings')) {
@@ -377,6 +445,9 @@ class ThemeService
         ];
     }
 
+    /**
+     * Računa fallback putanje asseta iz same teme kada globalni asseti nisu postavljeni.
+     */
     private function themeAssetFallbackPaths(?Theme $activeTheme, ?Theme $themeForMode): array
     {
         $logoLight = $this->sanitizeAssetPath($themeForMode?->logo_path)
@@ -410,6 +481,9 @@ class ThemeService
         ];
     }
 
+    /**
+     * Pretvara internu putanju asseta u javni URL, uz fallback ako putanja ne postoji.
+     */
     private function assetUrlFromPath(?string $path, string $defaultUrl): string
     {
         $normalizedPath = $this->sanitizeAssetPath($path);
@@ -424,6 +498,9 @@ class ThemeService
         return asset('storage/' . ltrim($normalizedPath, '/'));
     }
 
+    /**
+     * Određuje MIME tip favicona prema ekstenziji datoteke.
+     */
     private function faviconMimeType(?string $path): string
     {
         $normalizedPath = strtolower((string)$this->sanitizeAssetPath($path));
@@ -446,6 +523,9 @@ class ThemeService
         return 'image/x-icon';
     }
 
+    /**
+     * Vraća zadani favicon koji se koristi kada tema/site nema svoj favicon.
+     */
     private function defaultFaviconFallback(): array
     {
         if (Storage::disk('public')->exists('site-assets/favicon.png')) {
@@ -468,6 +548,9 @@ class ThemeService
         ];
     }
 
+    /**
+     * Vraća verziju favicona (timestamp izmjene) za cache-busting u pregledniku.
+     */
     private function faviconVersion(?string $path): int
     {
         $normalizedPath = $this->sanitizeAssetPath($path);
@@ -492,6 +575,9 @@ class ThemeService
         return time();
     }
 
+    /**
+     * Ažurira `favicon.ico` iz trenutnog PNG favicona kako bi obje ikone prikazivale isti znak.
+     */
     private function syncLegacyIcoFromFaviconPng(?string $faviconPath): void
     {
         try {
@@ -518,6 +604,9 @@ class ThemeService
         }
     }
 
+    /**
+     * Pronalazi valjani PNG izvor favicona koji koristimo za sinkronizaciju `favicon.ico`.
+     */
     private function resolveFaviconPngSource(?string $faviconPath): ?array
     {
         $storage = Storage::disk('public');
@@ -561,11 +650,17 @@ class ThemeService
         return null;
     }
 
+    /**
+     * Provjerava je li sadržaj datoteke stvarno PNG binarni zapis.
+     */
     private function isPngBinary(string $content): bool
     {
         return strncmp($content, "\x89PNG\r\n\x1a\n", 8) === 0;
     }
 
+    /**
+     * Pakira PNG sadržaj u ICO format kako bi preglednici koji traže `.ico` dobili ispravan favicon.
+     */
     private function wrapPngAsIco(string $pngBinary, int $size = 64): string
     {
         $sizeByte = ($size >= 256) ? 0 : max(min($size, 255), 1);
@@ -585,6 +680,9 @@ class ThemeService
         return $iconDir . $iconEntry . $pngBinary;
     }
 
+    /**
+     * Čisti putanju asseta i vraća `null` za prazne/neispravne vrijednosti.
+     */
     private function sanitizeAssetPath(?string $path): ?string
     {
         if (!is_string($path)) {
@@ -596,6 +694,9 @@ class ThemeService
         return $cleaned === '' ? null : $cleaned;
     }
 
+    /**
+     * Vraća odgovarajuću varijantu teme (light/dark) unutar iste obitelji tema.
+     */
     private function resolveThemeVariant(?Theme $activeTheme, string $resolvedMode): ?Theme
     {
         if ($activeTheme === null || !$this->supportsVariants()) {
@@ -615,6 +716,9 @@ class ThemeService
         return $variant ?? $activeTheme;
     }
 
+    /**
+     * Iz teme izvlači ključ obitelji (`theme_key`) koji povezuje svijetlu i tamnu varijantu.
+     */
     private function themeKeyFromTheme(Theme $theme): string
     {
         $key = trim((string)($theme->theme_key ?? ''));
@@ -628,6 +732,9 @@ class ThemeService
         return trim((string)$slug);
     }
 
+    /**
+     * Provjerava podržava li okruženje ili konfiguracija traženu mogućnost.
+     */
     private function supportsVariants(): bool
     {
         return Schema::hasTable('themes')
@@ -635,6 +742,9 @@ class ThemeService
             && Schema::hasColumn('themes', 'variant');
     }
 
+    /**
+     * Sigurno čita vrijednost cookie-ja za temu uz fallback na globalni `$_COOKIE`.
+     */
     private function readCookie(string $name): ?string
     {
         if (!app()->bound('request')) {
@@ -660,6 +770,9 @@ class ThemeService
         return is_string($cookieValue) ? $cookieValue : null;
     }
 
+    /**
+     * Procjenjuje je li aktivna paleta tamna prema luminanciji boje pozadine.
+     */
     private function isDarkTheme(array $colors): bool
     {
         [$r, $g, $b] = $this->hexToRgb($colors['body_bg'] ?? '#ffffff');
@@ -668,6 +781,9 @@ class ThemeService
         return $luminance < 0.45;
     }
 
+    /**
+     * Pretvara HEX boju u RGB CSV zapis koji koristi Bootstrap CSS varijable.
+     */
     private function rgbCsv(string $hexColor): string
     {
         [$r, $g, $b] = $this->hexToRgb($hexColor);
@@ -675,6 +791,9 @@ class ThemeService
         return $r . ', ' . $g . ', ' . $b;
     }
 
+    /**
+     * Pretvara HEX boju u RGB triplet.
+     */
     private function hexToRgb(string $hexColor): array
     {
         $hex = ltrim($hexColor, '#');
@@ -686,6 +805,9 @@ class ThemeService
         ];
     }
 
+    /**
+     * Validira i normalizira HEX boju, uz fallback ako vrijednost nije valjana.
+     */
     private function normalizeHexColor(string $color, string $fallback): string
     {
         $candidate = trim($color);
@@ -696,6 +818,9 @@ class ThemeService
         return strtolower($candidate);
     }
 
+    /**
+     * Posvjetljuje ili potamnjuje HEX boju za zadani pomak radi hover/kontrast varijanti.
+     */
     private function shiftHexColor(string $hexColor, int $delta): string
     {
         [$r, $g, $b] = $this->hexToRgb($hexColor);

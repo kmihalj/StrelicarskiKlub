@@ -1,3 +1,4 @@
+{{-- Ekran za unos nove lozinke nakon primljenog tokena. --}}
 @extends('layouts.app')
 
 @section('content')

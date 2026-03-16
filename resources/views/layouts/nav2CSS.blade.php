@@ -1,3 +1,4 @@
+{{-- Stilovi za mobilni izbornik i animacije otvaranja/zatvaranja. --}}
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cinzel:wght@600&display=swap" rel="stylesheet">
 <style>
     html, body, #app {

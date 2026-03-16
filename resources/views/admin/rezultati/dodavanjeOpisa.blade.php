@@ -1,3 +1,4 @@
+{{-- Forma za uređivanje uvodnog opisa turnira (iznad rezultata). --}}
 <div class="row">
     <div class="col-lg-12 col-md-12 col-12 fw-bolder">
         <p>Unos dodatnih podataka za turnir:</p>

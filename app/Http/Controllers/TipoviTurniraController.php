@@ -11,10 +11,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Throwable;
 
+/**
+ * Admin kontroler za tipove turnira, stilove, kategorije i polja unosa rezultata.
+ */
 class TipoviTurniraController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Prikazuje administracijski pregled tipova turnira, kategorija, stilova i pripadajućih polja.
      * @noinspection PhpMissingReturnTypeInspection
      * @noinspection PhpUndefinedMethodInspection
      */
@@ -26,6 +29,9 @@ class TipoviTurniraController extends Controller
         return view('admin.turniri.pocetna', ['tipoviTurnira' => $tipoviTurnira, 'kategorije' => $kategorije, 'stilovi'=>$stilovi]);
     }
 
+    /**
+     * Sprema novi tip turnira ili izmjene postojećeg tipa.
+     */
     public function spremi_tipoviTurnira(Request $request)
     {
         $rules = array('naziv_tipa_turnira_za_unos' => 'required');
@@ -106,6 +112,9 @@ class TipoviTurniraController extends Controller
         return view('admin.turniri.pocetna', ['tipoviTurnira' => $tipoviTurnira, 'kategorije' => $kategorije, 'stilovi'=>$stilovi, 'odabraniTipTurnira' => $tipTurnira]);
     }
 
+    /**
+     * Sprema novu kategoriju natjecanja ili izmjene postojeće kategorije.
+     */
     public function spremi_kategoriju(Request $request)
     {
         $rules = ['naziv_kategorije' => 'required', 'spol_kategorija' => 'required'];
@@ -137,6 +146,9 @@ class TipoviTurniraController extends Controller
         return redirect()->route('admin.turniri.naslovna');
     }
 
+    /**
+     * Sprema stil luka koji se koristi u unosu rezultata i filtriranju prikaza.
+     */
     public function spremi_stil_luka(Request $request)
     {
         $rules = array('naziv_stila_luka_za_unos' => 'required');

@@ -1,3 +1,4 @@
+{{-- Blok statusa školarine i dolazaka za prijavljenog polaznika škole. --}}
 @if(isset($statusSkolaKorisnika) && !is_null($statusSkolaKorisnika))
     @php
         $skolarinaNotice = $statusSkolaKorisnika['paymentNotice'] ?? null;

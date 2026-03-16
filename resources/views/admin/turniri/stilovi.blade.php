@@ -1,3 +1,4 @@
+{{-- Administratorski ekran za upravljanje stilovima luka. --}}
 <div class="card">
     <div class="card-header bg-danger fw-bolder text-white">
         Stilovi luka

@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * Model ClanPaymentProfile predstavlja zapis baze podataka i definira relacije te pomoćne metode za rad s podacima.
+ */
 class ClanPaymentProfile extends Model
 {
     use HasFactory;
@@ -32,26 +35,41 @@ class ClanPaymentProfile extends Model
         'updated_by' => 'integer',
     ];
 
+    /**
+     * Profil plaćanja članarine člana je povezan s jednim zapisom: člana kluba.
+     */
     public function clan(): BelongsTo
     {
         return $this->belongsTo(Clanovi::class, 'clan_id', 'id');
     }
 
+    /**
+     * Profil plaćanja članarine člana je povezan s jednim zapisom: model članarine.
+     */
     public function paymentOption(): BelongsTo
     {
         return $this->belongsTo(MembershipPaymentOption::class, 'membership_payment_option_id', 'id');
     }
 
+    /**
+     * Profil plaćanja članarine člana može imati više povezanih zapisa: stavke članarine (zaduženja i uplate).
+     */
     public function charges(): HasMany
     {
         return $this->hasMany(ClanPaymentCharge::class, 'clan_payment_profile_id', 'id');
     }
 
+    /**
+     * Profil plaćanja članarine člana je povezan s jednim zapisom: korisnički račun.
+     */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by', 'id');
     }
 
+    /**
+     * Profil plaćanja članarine člana je povezan s jednim zapisom: korisnički račun.
+     */
     public function updater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by', 'id');

@@ -1,3 +1,4 @@
+{{-- Administratorski ekran za definiranje polja unosa po tipu turnira. --}}
 <div class="card">
     <div class="card-header bg-danger fw-bolder text-white">
         Polja za pojedini tip turnira za kreiranje rezultata

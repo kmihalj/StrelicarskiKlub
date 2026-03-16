@@ -1,3 +1,4 @@
+{{-- Administratorski početni ekran postavki turnira i pomoćnih šifrarnika. --}}
 @extends('layouts.app')
 @auth()
     @if(auth()->user()->rola <= 1)

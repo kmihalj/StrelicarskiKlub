@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Clanovi;
 use App\Models\Kategorije;
-use App\Models\RezultatiLinkovi;
 use App\Models\RezultatiOpci;
 use App\Models\RezultatiPoTipuTurnira;
 use App\Models\RezultatiSlike;
@@ -23,6 +22,9 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
+/**
+ * Admin kontroler za upravljanje turnirima, rezultatima po članovima i timskim rezultatima.
+ */
 class TurniriController extends Controller
 {
     private const STANDARDNI_LUK_STIL_ID = 7;
@@ -37,18 +39,27 @@ class TurniriController extends Controller
         return view('admin.rezultati.popisTurnira', ['turniri' => $turniri, 'tipoviTurnira' => $tipoviTurnira]);
     }
 
+    /**
+     * Sprema novi turnir u kalendar rezultata.
+     */
     public function spremiTurnir(Request $request): RedirectResponse
     {
         $turnir = new Turniri();
-        return $this->SpremanjeTurnira($request, $turnir);
+        return $this->spremanjeTurnira($request, $turnir);
     }
 
+    /**
+     * Ažurira osnovne podatke turnira (naziv, datum, tip, mjesto i opise).
+     */
     public function updateTurnir(Request $request): RedirectResponse
     {
         $turnir = Turniri::findOrFail((int)$request->get('turnir_id'));
-        return $this->SpremanjeTurnira($request, $turnir);
+        return $this->spremanjeTurnira($request, $turnir);
     }
-    public function SpremanjeTurnira(Request $request, $turnir): RedirectResponse
+    /**
+     * Validira ulaz i sprema promjene prema pravilima modula turnira i rezultata.
+     */
+    private function spremanjeTurnira(Request $request, Turniri $turnir): RedirectResponse
     {
         $stranica = $request->get('stranica') ?? 1;
         $turnir->datum = $request->get('datum_turnira');
@@ -70,6 +81,9 @@ class TurniriController extends Controller
         return view('admin.rezultati.popisTurnira', ['turniri' => $turniri, 'tipoviTurnira' => $tipoviTurnira, 'uredi_turnir'=>$turnir]);
     }
 
+    /**
+     * Briše turnir i sve njegove pojedinačne/timske rezultate.
+     */
     public function obrisiTurnir(int $id): RedirectResponse
     {
         try {
@@ -86,6 +100,8 @@ class TurniriController extends Controller
      */
     public function unosRezultataForma(int $id)
     {
+        // Učitavamo sve relacije potrebne za jedan ekran unosa rezultata
+        // kako bismo izbjegli dodatne upite tijekom renderiranja Blade prikaza.
         $with = [
             'tipTurnira.polja',
             'rezultatiOpci' => fn ($query) => $query
@@ -122,6 +138,8 @@ class TurniriController extends Controller
         $ukupnoPoljeId = $this->odrediUkupnoPoljeId($turnir);
         $dostupniRezultatiZaTim = $turnir->rezultatiOpci
             ->map(function (RezultatiOpci $rezultat) use ($ukupnoPoljeId): array {
+                // Svaka stavka ima dovoljno konteksta da administrator može složiti tim
+                // bez otvaranja dodatnih ekrana (član + stil + kategorija + rezultat).
                 return [
                     'id' => (int)$rezultat->id,
                     'clan' => trim((string)$rezultat->clan?->Prezime . ' ' . (string)$rezultat->clan?->Ime),
@@ -152,6 +170,9 @@ class TurniriController extends Controller
         return redirect()->route('admin.rezultati.unosRezultata', $turnir->id);
     }
 
+    /**
+     * Sprema završni opis turnira i opcionalni Facebook link ispod rezultata.
+     */
     public function dodatniPodaci2Rezultat(Request $request)
     {
         $turnir = Turniri::findOrFail((int)$request->get('turnir_id'));
@@ -178,6 +199,9 @@ class TurniriController extends Controller
         return redirect()->route('admin.rezultati.unosRezultata', $turnir->id);
     }
 
+    /**
+     * Validira upload datoteka, sprema ih u storage i upisuje metapodatke u bazu.
+     */
     public function uploadMedija(Request $request): RedirectResponse|JsonResponse
     {
         if (!(Storage::exists('public/turniri'))) {
@@ -239,6 +263,9 @@ class TurniriController extends Controller
         return redirect()->route('admin.rezultati.unosRezultata', $medij->turnir->id);
     }
 
+    /**
+     * Validira ulaz i sprema promjene prema pravilima modula turnira i rezultata.
+     */
     public function SpremanjeRezultata(Request $request): RedirectResponse
     {
         $turnir = Turniri::find($request->get('turnir_id'));
@@ -268,6 +295,8 @@ class TurniriController extends Controller
         $polja_iz_forme = $request->get('polje');
         $i=0;
         foreach ($turnir->tipTurnira->polja as $polje_za_unos) {
+            // Za svaki definirani stupac tipa turnira spremamo zaseban redak rezultata.
+            // Ovim pristupom tip turnira može imati proizvoljan broj polja.
             $rezPoTipu = new RezultatiPoTipuTurnira();
             $rezPoTipu->turnir_id = $request->get('turnir_id');
             $rezPoTipu->clan_id = $clan->id;
@@ -292,6 +321,9 @@ class TurniriController extends Controller
         return redirect()->route('admin.rezultati.unosRezultata', $turnir->id);
     }
 
+    /**
+     * Ažurira uneseni rezultat člana na turniru (stil, kategorija, krugovi, ukupno i plasman).
+     */
     public function updateRezultat(Request $request, RezultatiOpci $rezultat): RedirectResponse
     {
         $turnir = $rezultat->turnir;
@@ -346,6 +378,8 @@ class TurniriController extends Controller
             $poljaIzForme,
             $rezPoTipuIdsIzForme
         ): void {
+            // Stari identitet rezultata koristimo da pronađemo točno one "po tipu" retke
+            // koji pripadaju upravo ovom zapisu prije uređivanja.
             $stariClanId = (int)$rezultat->clan_id;
             $staraKategorijaId = (int)$rezultat->kategorija_id;
             $stariStilId = (int)$rezultat->stil_id;
@@ -366,6 +400,8 @@ class TurniriController extends Controller
             $iskoristeniRedci = [];
 
             foreach ($poljaDefinicije as $index => $poljeDefinicija) {
+                // Primarno pokušavamo pogoditi redak po skrivenom ID-u iz forme,
+                // a fallback je match po ID-u definicije polja tipa turnira.
                 $preferiraniId = $rezPoTipuIdsIzForme->get($index);
                 $rezPoTipu = $preferiraniId ? $postojeciPoId->get($preferiraniId) : null;
 
@@ -389,6 +425,8 @@ class TurniriController extends Controller
             }
 
             if (!empty($iskoristeniRedci)) {
+                // Uklanjamo eventualne "viškove" kako ne bi ostali stari redci
+                // nakon promjene stila/kategorije ili strukture polja.
                 RezultatiPoTipuTurnira::query()
                     ->where('turnir_id', (int)$turnir->id)
                     ->where('clan_id', $stariClanId)
@@ -417,6 +455,9 @@ class TurniriController extends Controller
             ->with('success', 'Rezultat je ažuriran.');
     }
 
+    /**
+     * Uključuje/isključuje timske rezultate za turnir i po potrebi osvježava timske zapise.
+     */
     public function postaviTimoveAktivno(Request $request, Turniri $turnir): RedirectResponse
     {
         if (!$this->timskeTabliceDostupne()) {
@@ -430,6 +471,9 @@ class TurniriController extends Controller
         return redirect()->route('admin.rezultati.unosRezultata', $turnir->id);
     }
 
+    /**
+     * Sprema ili ažurira timski rezultat (članovi tima, zbroj i plasman).
+     */
     public function spremiTimskiRezultat(Request $request): RedirectResponse
     {
         if (!$this->timskeTabliceDostupne()) {
@@ -478,33 +522,42 @@ class TurniriController extends Controller
                 ->with('error', 'Odabrani članovi nemaju rezultate na ovom turniru.');
         }
 
-        $stilIds = $odabraniRezultati->pluck('stil_id')->unique()->values();
-        $kategorijaIds = $odabraniRezultati->pluck('kategorija_id')->unique()->values();
+        DB::transaction(function () use ($request, $turnir, $odabraniRezultatiIds, $odabraniRezultati): void {
+            $stilIds = $odabraniRezultati->pluck('stil_id')->unique()->values();
+            $kategorijaIds = $odabraniRezultati->pluck('kategorija_id')->unique()->values();
 
-        $tim = new RezultatiTim();
-        $tim->turnir_id = $turnir->id;
-        $tim->plasman = (int)$request->input('plasman_tima');
-        $tim->stil_id = $stilIds->count() === 1 ? (int)$stilIds->first() : null;
-        $tim->kategorija_id = $kategorijaIds->count() === 1 ? (int)$kategorijaIds->first() : null;
-        $tim->rezultat = 0;
-        $tim->save();
+            $tim = new RezultatiTim();
+            $tim->turnir_id = $turnir->id;
+            $tim->plasman = (int)$request->input('plasman_tima');
+            $tim->stil_id = $stilIds->count() === 1 ? (int)$stilIds->first() : null;
+            $tim->kategorija_id = $kategorijaIds->count() === 1 ? (int)$kategorijaIds->first() : null;
+            $tim->rezultat = 0;
+            $tim->save();
 
-        foreach ($odabraniRezultatiIds as $index => $rezultatOpciId) {
-            $stavka = new RezultatiTimClan();
-            $stavka->rezultati_tim_id = $tim->id;
-            $stavka->rezultat_opci_id = $rezultatOpciId;
-            $stavka->redni_broj = $index + 1;
-            $stavka->save();
-        }
+            $tim->clanoviStavke()->createMany(
+                $odabraniRezultatiIds
+                    ->values()
+                    ->map(static fn (int $rezultatOpciId, int $index): array => [
+                        'rezultat_opci_id' => $rezultatOpciId,
+                        'redni_broj' => $index + 1,
+                    ])
+                    ->all()
+            );
 
-        $turnir->ima_timove = true;
-        $turnir->save();
+            if (!$turnir->ima_timove) {
+                $turnir->ima_timove = true;
+                $turnir->save();
+            }
 
-        $this->osvjeziUkupniRezultatTima($tim->load('clanoviStavke.rezultatOpci'));
+            $this->osvjeziUkupniRezultatTima($tim->load('clanoviStavke.rezultatOpci'));
+        });
 
         return redirect()->route('admin.rezultati.unosRezultata', $turnir->id);
     }
 
+    /**
+     * Briše odabrani zapis i po potrebi čisti povezane podatke/datoteke.
+     */
     public function brisanjeTimskogRezultata(int $id): RedirectResponse
     {
         if (!$this->timskeTabliceDostupne()) {
@@ -524,6 +577,8 @@ class TurniriController extends Controller
     {
         $rezOpci = RezultatiOpci::findOrFail($id);
         $turnir_id = $rezOpci->turnir->id;
+        // Brišemo samo retke koji pripadaju ovom konkretnom općem rezultatu
+        // (turnir + član + stil + kategorija), a ne sve retke člana na turniru.
         $rezPoTipu = RezultatiPoTipuTurnira::where('turnir_id', $turnir_id)
             ->where('clan_id', $rezOpci->clan_id)
             ->where('kategorija_id', $rezOpci->kategorija_id)
@@ -537,11 +592,17 @@ class TurniriController extends Controller
         return redirect()->route('admin.rezultati.unosRezultata', $turnir_id);
     }
 
+    /**
+     * Provjerava postoje li timske tablice u bazi prije rada s timskim rezultatima.
+     */
     private function timskeTabliceDostupne(): bool
     {
         return Schema::hasTable('rezultati_timovi') && Schema::hasTable('rezultati_tim_clanovi');
     }
 
+    /**
+     * Osvježava sve timske rezultate turnira prema trenutno odabranim članovima timova.
+     */
     private function osvjeziTimoveTurnira(int $turnirId): void
     {
         $timovi = RezultatiTim::query()
@@ -566,6 +627,9 @@ class TurniriController extends Controller
         }
     }
 
+    /**
+     * Računa i sprema ukupni rezultat tima iz zbroja rezultata članova tima.
+     */
     private function osvjeziUkupniRezultatTima(RezultatiTim $tim): void
     {
         $tim->loadMissing([
@@ -601,6 +665,9 @@ class TurniriController extends Controller
         $tim->save();
     }
 
+    /**
+     * Određuje ključne parametre potrebne za daljnju obradu.
+     */
     private function odrediUkupnoPoljeId(Turniri $turnir): ?int
     {
         $turnir->loadMissing('tipTurnira.polja');
@@ -614,6 +681,9 @@ class TurniriController extends Controller
         return $ukupnoPolje ? (int)$ukupnoPolje->id : null;
     }
 
+    /**
+     * Vraća brojčani rezultat pojedinačnog zapisa koji se koristi u zbroju timskog rezultata.
+     */
     private function rezultatZaRezultatOpci(RezultatiOpci $rezultat, ?int $ukupnoPoljeId): int
     {
         if ($ukupnoPoljeId !== null) {
@@ -636,6 +706,9 @@ class TurniriController extends Controller
             ->sum('rezultat');
     }
 
+    /**
+     * Ujednačava oznaku spola člana na `M` ili `Ž` kako bi filtriranje kategorija radilo konzistentno.
+     */
     private function normalizirajSpol(?string $spol): string
     {
         $vrijednost = trim((string)$spol);
@@ -656,6 +729,9 @@ class TurniriController extends Controller
         return $vrijednost;
     }
 
+    /**
+     * Normalizira i validira Facebook URL prije spremanja u sadržaj.
+     */
     private function normalizirajFacebookLink(?string $link): ?string
     {
         $vrijednost = trim((string)$link);
@@ -680,6 +756,9 @@ class TurniriController extends Controller
         return $validiranUrl;
     }
 
+    /**
+     * Iz postojećeg HTML sadržaja izdvaja spremljeni Facebook link ako postoji.
+     */
     private function izvuciFacebookLinkIzOpisa2(?string $opis2): ?string
     {
         $sadrzaj = (string)$opis2;
@@ -701,6 +780,9 @@ class TurniriController extends Controller
         return null;
     }
 
+    /**
+     * Uklanja automatski Facebook blok iz sadržaja kako bi se zapis mogao ponovno sigurno spremiti.
+     */
     private function ukloniFacebookBlokIzOpisa2(?string $opis2): string
     {
         $sadrzaj = (string)$opis2;
@@ -717,6 +799,9 @@ class TurniriController extends Controller
         return trim($sadrzaj);
     }
 
+    /**
+     * Generira HTML blok s Facebook poveznicom koji se umeće u sadržaj članka/turnira.
+     */
     private function izradiFacebookBlokZaOpis2(string $facebookLink): string
     {
         $siguranLink = htmlspecialchars($facebookLink, ENT_QUOTES | ENT_HTML5, 'UTF-8');
@@ -731,4 +816,3 @@ class TurniriController extends Controller
             . self::AUTO_FACEBOOK_BLOK_END;
     }
 }
-

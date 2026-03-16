@@ -1,3 +1,4 @@
+{{-- Administratorska forma za unos i uređivanje članka (tekst, menu, mediji, Facebook link). --}}
 @extends('layouts.app')
 @auth()
     @if(auth()->user()->rola <= 1)

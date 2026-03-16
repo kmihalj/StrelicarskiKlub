@@ -8,7 +8,7 @@ use Illuminate\Support\ServiceProvider;
 class BroadcastServiceProvider extends ServiceProvider
 {
     /**
-     * Bootstrap any application services.
+     * Učitava broadcast rute i pravila autorizacije za privatne kanale.
      */
     public function boot(): void
     {

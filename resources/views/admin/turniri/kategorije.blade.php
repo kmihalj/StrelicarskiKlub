@@ -1,3 +1,4 @@
+{{-- Administratorski ekran za upravljanje natjecateljskim kategorijama. --}}
 <div class="card">
     <div class="card-header bg-danger fw-bolder text-white">
         Kategorije

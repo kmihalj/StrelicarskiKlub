@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Model ClanDokument predstavlja zapis baze podataka i definira relacije te pomoćne metode za rad s podacima.
+ */
 class ClanDokument extends Model
 {
     use HasFactory;
@@ -27,11 +30,17 @@ class ClanDokument extends Model
         'datum_dokumenta' => 'date',
     ];
 
+    /**
+     * Dokument člana je povezan s jednim zapisom: člana kluba.
+     */
     public function clan(): BelongsTo
     {
         return $this->belongsTo(Clanovi::class, 'clan_id');
     }
 
+    /**
+     * Dokument člana je povezan s jednim zapisom: korisnički račun.
+     */
     public function autor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

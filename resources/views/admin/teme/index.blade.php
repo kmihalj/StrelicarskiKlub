@@ -1,3 +1,4 @@
+{{-- Administratorski ekran za uređivanje tema, boja, loga, favicona i aktivne varijante. --}}
 @extends('layouts.app')
 
 @section('content')

@@ -1,3 +1,4 @@
+{{-- Modal za prikaz/generiranje QR podataka za uplatu prema podacima kluba. --}}
 <div class="modal fade" id="QRCode">
     <div class="modal-dialog modal modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">

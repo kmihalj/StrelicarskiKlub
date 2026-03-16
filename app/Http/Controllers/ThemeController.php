@@ -14,12 +14,21 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * Admin kontroler za uređivanje tema, varijanti svijetla/tamna te globalnih asseta (logo i favicon).
+ */
 class ThemeController extends Controller
 {
+    /**
+     * Učitava servis za dohvat i spremanje aktivne teme i varijanti boja.
+     */
     public function __construct(private readonly ThemeService $themeService)
     {
     }
 
+    /**
+     * Prikazuje administraciju tema: popis tema, aktivnu varijantu i globalne assete.
+     */
     public function index(Request $request): View
     {
         $themes = $this->orderedThemes()->get();
@@ -51,6 +60,9 @@ class ThemeController extends Controller
         ]);
     }
 
+    /**
+     * Aktivira odabranu temu kao glavnu temu cijelog sitea.
+     */
     public function activate(Theme $theme): RedirectResponse
     {
         Theme::query()->update(['is_active' => false]);
@@ -62,6 +74,9 @@ class ThemeController extends Controller
             ->with('success', 'Tema je aktivirana.');
     }
 
+    /**
+     * Klonira cijelu obitelj varijanti teme (light/dark) pod novim nazivom.
+     */
     public function clone(Request $request, Theme $theme): RedirectResponse
     {
         $validated = $request->validate([
@@ -114,6 +129,9 @@ class ThemeController extends Controller
             ->with('success', 'Tema je uspješno klonirana.');
     }
 
+    /**
+     * Sprema boje i postavke odabrane varijante teme.
+     */
     public function update(Request $request, Theme $theme): RedirectResponse
     {
         $rules = [
@@ -236,6 +254,9 @@ class ThemeController extends Controller
             ->with('success', 'Tema je spremljena.');
     }
 
+    /**
+     * Vraća teme sortirane tako da aktivna tema bude prva u popisu.
+     */
     private function orderedThemes()
     {
         $query = Theme::query()
@@ -249,6 +270,9 @@ class ThemeController extends Controller
         return $query->orderBy('id');
     }
 
+    /**
+     * Vraća sve varijante iste teme (ista obitelj `theme_key`).
+     */
     private function familyThemes(Theme $theme)
     {
         if ($this->supportsVariants()) {
@@ -258,6 +282,9 @@ class ThemeController extends Controller
         return Theme::query()->whereKey($theme->id);
     }
 
+    /**
+     * Određuje ključ obitelji teme koji povezuje light i dark varijantu.
+     */
     private function themeKey(Theme $theme): string
     {
         $themeKey = trim((string)($theme->theme_key ?? ''));
@@ -270,6 +297,9 @@ class ThemeController extends Controller
         return $slug !== '' ? $slug : ('tema-' . $theme->id);
     }
 
+    /**
+     * Normalizira i vraća varijantu teme (`light` ili `dark`).
+     */
     private function themeVariant(Theme $theme): string
     {
         $variant = Str::lower(trim((string)($theme->variant ?? 'light')));
@@ -277,12 +307,18 @@ class ThemeController extends Controller
         return in_array($variant, ['light', 'dark'], true) ? $variant : 'light';
     }
 
+    /**
+     * Provjerava podržava li okruženje ili konfiguracija traženu mogućnost.
+     */
     private function supportsVariants(): bool
     {
         return Schema::hasColumn('themes', 'theme_key')
             && Schema::hasColumn('themes', 'variant');
     }
 
+    /**
+     * Generira skup podataka prema poslovnim pravilima.
+     */
     private function generateUniqueThemeKey(string $name, ?string $ignoreThemeKey = null): string
     {
         $base = Str::slug($name);
@@ -307,6 +343,9 @@ class ThemeController extends Controller
         return $themeKey;
     }
 
+    /**
+     * Generira skup podataka prema poslovnim pravilima.
+     */
     private function generateUniqueSlug(string $preferred, ?int $ignoreThemeId = null): string
     {
         $base = Str::slug($preferred);
@@ -327,6 +366,9 @@ class ThemeController extends Controller
         return $slug;
     }
 
+    /**
+     * Generira skup podataka prema poslovnim pravilima.
+     */
     private function generateFaviconFromSource(UploadedFile $file): ?string
     {
         $imageContents = @file_get_contents($file->getRealPath());
@@ -394,11 +436,17 @@ class ThemeController extends Controller
         return $storagePath;
     }
 
+    /**
+     * Provjerava je li uploadani sadržaj valjani PNG prije izrade favicon `.ico` datoteke.
+     */
     private function isPngBinary(string $content): bool
     {
         return strncmp($content, "\x89PNG\r\n\x1a\n", 8) === 0;
     }
 
+    /**
+     * Pretvara PNG favicon u valjani ICO sadržaj za `/favicon.ico` kompatibilnost.
+     */
     private function wrapPngAsIco(string $pngBinary, int $size = 64): string
     {
         $sizeByte = ($size >= 256) ? 0 : max(min($size, 255), 1);
@@ -418,6 +466,9 @@ class ThemeController extends Controller
         return $iconDir . $iconEntry . $pngBinary;
     }
 
+    /**
+     * Generira datoteku `public/favicon.ico` iz odabranog PNG favicona radi kompatibilnosti preglednika.
+     */
     private function syncPublicFaviconIco(string $pngBinary): void
     {
         $icoPath = public_path('favicon.ico');
@@ -425,6 +476,9 @@ class ThemeController extends Controller
         @file_put_contents($icoPath, $icoBinary, LOCK_EX);
     }
 
+    /**
+     * Provjerava postoji li traženi podatak ili relacija.
+     */
     private function hasSiteAssetColumns(): bool
     {
         return Schema::hasTable('site_settings')
@@ -433,6 +487,9 @@ class ThemeController extends Controller
             && Schema::hasColumn('site_settings', 'favicon_path');
     }
 
+    /**
+     * Dohvaća trenutno korištene putanje loga i favicona na razini cijelog sitea.
+     */
     private function currentSiteAssetPaths(): array
     {
         if (!$this->hasSiteAssetColumns()) {
@@ -452,6 +509,9 @@ class ThemeController extends Controller
         ];
     }
 
+    /**
+     * Sprema logo ili favicon u `storage/site-assets` i vraća relativnu putanju.
+     */
     private function storeSiteAsset(UploadedFile $file, string $baseName): string
     {
         $extension = strtolower((string)$file->extension());
@@ -466,6 +526,9 @@ class ThemeController extends Controller
         return $file->storeAs('site-assets', $fileName, 'public');
     }
 
+    /**
+     * Briše stare varijante asseta (logo/favicon) koje više nisu aktivne.
+     */
     private function cleanupSiteAssetVariants(string $baseName, ?string $exceptPath = null): void
     {
         $disk = Storage::disk('public');
@@ -483,6 +546,9 @@ class ThemeController extends Controller
         }
     }
 
+    /**
+     * Uklanja staru datoteku asseta koja je zamijenjena novim uploadom.
+     */
     private function cleanupReplacedAsset(?string $oldPath, ?string $newPath = null): void
     {
         $normalizedOldPath = $this->sanitizeAssetPath($oldPath);
@@ -503,6 +569,9 @@ class ThemeController extends Controller
         }
     }
 
+    /**
+     * Upisuje globalne putanje logo/favicona u sve teme kako bi prikaz bio usklađen.
+     */
     private function syncGlobalAssetPathsToThemes(?string $logoPath, ?string $logoDarkPath, ?string $faviconPath): void
     {
         if (!Schema::hasTable('themes')) {
@@ -543,6 +612,9 @@ class ThemeController extends Controller
         ]);
     }
 
+    /**
+     * Sastavlja složeniju strukturu podataka iz više izvora.
+     */
     private function buildAssetPreview(?Theme $selectedTheme): array
     {
         if ($selectedTheme === null) {
@@ -596,6 +668,9 @@ class ThemeController extends Controller
         ];
     }
 
+    /**
+     * Čisti i validira putanju asseta prije rada sa storage-om.
+     */
     private function sanitizeAssetPath(?string $path): ?string
     {
         if (!is_string($path)) {
@@ -607,6 +682,9 @@ class ThemeController extends Controller
         return $cleaned === '' ? null : $cleaned;
     }
 
+    /**
+     * Generira javni URL loga iz spremljene putanje datoteke.
+     */
     private function logoUrlFromPath(?string $path): string
     {
         $normalizedPath = $this->existingAssetPath($path) ?? 'slike/logo.png';
@@ -618,6 +696,9 @@ class ThemeController extends Controller
         return asset('storage/' . ltrim($normalizedPath, '/'));
     }
 
+    /**
+     * Generira javni URL favicona iz spremljene putanje datoteke.
+     */
     private function faviconUrlFromPath(?string $path): string
     {
         $normalizedPath = $this->existingAssetPath($path);
@@ -632,6 +713,9 @@ class ThemeController extends Controller
         return asset('storage/' . ltrim($normalizedPath, '/'));
     }
 
+    /**
+     * Vraća fallback URL favicona kada prilagođeni favicon nije postavljen.
+     */
     private function defaultFaviconUrl(): string
     {
         if (Storage::disk('public')->exists('site-assets/favicon.png')) {
@@ -643,6 +727,9 @@ class ThemeController extends Controller
             : asset('favicon.ico');
     }
 
+    /**
+     * Vraća relativnu putanju fallback favicona unutar javne mape.
+     */
     private function defaultFaviconRelativePath(): string
     {
         if (Storage::disk('public')->exists('site-assets/favicon.png')) {
@@ -652,6 +739,9 @@ class ThemeController extends Controller
         return is_file(public_path('favicon.png')) ? 'favicon.png' : 'favicon.ico';
     }
 
+    /**
+     * Vraća putanju asseta samo ako datoteka stvarno postoji u storage-u.
+     */
     private function existingAssetPath(?string $path): ?string
     {
         $normalizedPath = $this->sanitizeAssetPath($path);

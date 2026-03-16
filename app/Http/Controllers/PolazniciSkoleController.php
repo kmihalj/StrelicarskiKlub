@@ -20,16 +20,25 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
+/**
+ * Admin i korisnički kontroler za evidenciju polaznika škole, dolazaka, dokumenata i školarine.
+ */
 class PolazniciSkoleController extends Controller
 {
     private const BROJ_DOLAZAKA = 16;
     private const DOKUMENTI_EKSTENZIJE = 'pdf,doc,docx,jpg,jpeg,png,webp,xls,xlsx';
     private const DOKUMENTI_VRSTE = ['Upisnica', 'GDPR', 'Slika', 'Ostalo'];
 
+    /**
+     * Učitava servise za rad s polaznicima škole i evidencijom školarine.
+     */
     public function __construct(private readonly SchoolPaymentService $schoolPaymentService)
     {
     }
 
+    /**
+     * Prikazuje popis polaznika škole s ključnim podacima i statusom školarine.
+     */
     public function index(): View
     {
         $this->oznaciIsteklePolaznike();
@@ -78,6 +87,9 @@ class PolazniciSkoleController extends Controller
         ]);
     }
 
+    /**
+     * Prikazuje i sprema evidenciju dolazaka polaznika škole po datumima treninga.
+     */
     public function evidencijaDolasaka(): View
     {
         $this->potvrdiAdmina();
@@ -102,6 +114,9 @@ class PolazniciSkoleController extends Controller
         ]);
     }
 
+    /**
+     * Sprema evidenciju dolazaka polaznika škole po rednim brojevima treninga.
+     */
     public function spremiEvidencijuDolasaka(Request $request): RedirectResponse
     {
         $this->potvrdiAdmina();
@@ -134,6 +149,9 @@ class PolazniciSkoleController extends Controller
             ->with('success', 'Evidencija dolazaka je spremljena.');
     }
 
+    /**
+     * Dohvaća detalje jedne stavke i priprema ih za prikaz.
+     */
     public function show(PolaznikSkole $polaznik): View
     {
         $this->potvrdiPravoNaPolaznika($polaznik);
@@ -180,6 +198,9 @@ class PolazniciSkoleController extends Controller
         ]);
     }
 
+    /**
+     * Upisuje novog polaznika škole i inicijalizira evidenciju dolazaka/školarine.
+     */
     public function store(Request $request): RedirectResponse
     {
         $this->potvrdiAdmina();
@@ -204,6 +225,9 @@ class PolazniciSkoleController extends Controller
             ->with('success', 'Polaznik škole je uspješno dodan.');
     }
 
+    /**
+     * Ažurira osobne podatke polaznika škole.
+     */
     public function update(Request $request, PolaznikSkole $polaznik): RedirectResponse
     {
         $this->potvrdiAdmina();
@@ -226,6 +250,9 @@ class PolazniciSkoleController extends Controller
             ->with('success', 'Podaci polaznika su spremljeni.');
     }
 
+    /**
+     * Sprema model školarine polaznika (oslobođen, jednokratno ili u dvije rate).
+     */
     public function spremiSkolarinaProfil(Request $request, PolaznikSkole $polaznik): RedirectResponse
     {
         $this->potvrdiAdmina();
@@ -252,6 +279,9 @@ class PolazniciSkoleController extends Controller
             ->with('success', 'Model školarine je spremljen.');
     }
 
+    /**
+     * Administrator potvrđuje uplatu školarine polaznika (u cijelosti ili u dvije rate).
+     */
     public function updateSkolarinaStatus(
         Request $request,
         PolaznikSkole $polaznik,
@@ -291,6 +321,9 @@ class PolazniciSkoleController extends Controller
             ->with('success', 'Status školarine je ažuriran.');
     }
 
+    /**
+     * Briše polaznika škole i povezane evidencije (dolasci, dokumenti, školarina).
+     */
     public function destroy(PolaznikSkole $polaznik): RedirectResponse
     {
         $this->potvrdiAdmina();
@@ -320,6 +353,9 @@ class PolazniciSkoleController extends Controller
             ->with('success', 'Polaznik škole je obrisan.');
     }
 
+    /**
+     * Sprema novi dokument polaznika škole u njegov privatni profil.
+     */
     public function spremiDokument(Request $request, PolaznikSkole $polaznik): RedirectResponse
     {
         $this->potvrdiAdmina();
@@ -363,6 +399,9 @@ class PolazniciSkoleController extends Controller
             ->with('success', 'Dokument polaznika je spremljen.');
     }
 
+    /**
+     * Briše dokument polaznika škole i pripadajuću datoteku sa diska.
+     */
     public function obrisiDokument(PolaznikSkole $polaznik, PolaznikSkoleDokument $dokument): RedirectResponse
     {
         $this->potvrdiAdmina();
@@ -376,6 +415,9 @@ class PolazniciSkoleController extends Controller
             ->with('success', 'Dokument polaznika je obrisan.');
     }
 
+    /**
+     * Omogućuje preuzimanje dokumenta polaznika škole uz provjeru prava pristupa.
+     */
     public function preuzmiDokument(PolaznikSkole $polaznik, PolaznikSkoleDokument $dokument): BinaryFileResponse
     {
         $this->potvrdiPravoNaDokumentPolaznika($polaznik);
@@ -388,6 +430,9 @@ class PolazniciSkoleController extends Controller
         return response()->file(Storage::disk('local')->path($dokument->putanja));
     }
 
+    /**
+     * Prebacuje polaznika škole u člana kluba i prenosi relevantne podatke/dokumente.
+     */
     public function prebaciUClana(PolaznikSkole $polaznik): RedirectResponse
     {
         $this->potvrdiAdmina();
@@ -478,6 +523,9 @@ class PolazniciSkoleController extends Controller
             ->with('success', 'Polaznik je prebačen u članove kluba, a dokumenti su preneseni u profil člana.');
     }
 
+    /**
+     * Provjerava postoji li polaznik i je li validan za traženu akciju.
+     */
     private function validirajPolaznika(Request $request, ?PolaznikSkole $polaznik = null): array
     {
         return $request->validate([
@@ -504,6 +552,9 @@ class PolazniciSkoleController extends Controller
         ]);
     }
 
+    /**
+     * Prepisuje validirane podatke forme u model polaznika prije spremanja.
+     */
     private function mapirajPodatkePolaznika(PolaznikSkole $polaznik, array $validated): void
     {
         $polaznik->Prezime = trim((string)$validated['Prezime']);
@@ -516,6 +567,9 @@ class PolazniciSkoleController extends Controller
         $polaznik->datum_upisa = $validated['datum_upisa'];
     }
 
+    /**
+     * Sinkronizira 16 termina dolazaka polaznika prema trenutnom unosu u formi.
+     */
     private function syncDolasci(PolaznikSkole $polaznik, array $dolasci): void
     {
         for ($i = 1; $i <= self::BROJ_DOLAZAKA; $i++) {
@@ -533,6 +587,9 @@ class PolazniciSkoleController extends Controller
         }
     }
 
+    /**
+     * Priprema polje dolazaka tako da su redni brojevi 1–16 uvijek dostupni za prikaz forme.
+     */
     private function normaliziraniDolasci(PolaznikSkole $polaznik): array
     {
         $poRednom = $polaznik->dolasci->keyBy('redni_broj');
@@ -545,6 +602,9 @@ class PolazniciSkoleController extends Controller
         return $dolasci;
     }
 
+    /**
+     * Pohranjuje uploadanu datoteku polaznika u privatni direktorij i vraća putanju/naziv.
+     */
     private function spremiDatoteku(string $inputName, string $direktorij): array
     {
         if (!Storage::disk('local')->exists($direktorij)) {
@@ -562,6 +622,9 @@ class PolazniciSkoleController extends Controller
         ];
     }
 
+    /**
+     * Kopira dokument polaznika u dokumente člana prilikom prijelaza u članstvo.
+     */
     private function kopirajDokumentZaClana(PolaznikSkoleDokument $dokument, int $clanId): string
     {
         if (empty($dokument->putanja) || !Storage::disk('local')->exists($dokument->putanja)) {
@@ -596,6 +659,9 @@ class PolazniciSkoleController extends Controller
         return $novaPutanja;
     }
 
+    /**
+     * Briše datoteku polaznika s diska ako putanja postoji.
+     */
     private function obrisiDatotekuAkoPostoji(?string $putanja, string $disk = 'local'): void
     {
         if (!empty($putanja) && Storage::disk($disk)->exists($putanja)) {
@@ -603,6 +669,9 @@ class PolazniciSkoleController extends Controller
         }
     }
 
+    /**
+     * Provjerava da profil polaznika smije otvoriti administrator, sam polaznik ili njegov povezani roditelj.
+     */
     private function potvrdiPravoNaPolaznika(PolaznikSkole $polaznik): void
     {
         if ($this->jeAdminIliClan()) {
@@ -620,6 +689,9 @@ class PolazniciSkoleController extends Controller
         abort(403);
     }
 
+    /**
+     * Provjerava pravo pristupa privatnim dokumentima polaznika (admin, polaznik, roditelj).
+     */
     private function potvrdiPravoNaDokumentPolaznika(PolaznikSkole $polaznik): void
     {
         if ($this->jeAdmin()) {
@@ -637,6 +709,9 @@ class PolazniciSkoleController extends Controller
         abort(403);
     }
 
+    /**
+     * Osigurava da se akcija izvodi nad istim polaznikom koji je otvoren u URL-u.
+     */
     private function potvrdiPripadnostPolazniku(int $polaznikId, int $resourcePolaznikId): void
     {
         if ($polaznikId !== $resourcePolaznikId) {
@@ -644,6 +719,9 @@ class PolazniciSkoleController extends Controller
         }
     }
 
+    /**
+     * Za osjetljive akcije nad polaznicima dopušta pristup isključivo administratoru.
+     */
     private function potvrdiAdmina(): void
     {
         if (!$this->jeAdmin()) {
@@ -651,16 +729,25 @@ class PolazniciSkoleController extends Controller
         }
     }
 
+    /**
+     * Vraća `true` ako je prijavljeni korisnik administrator ili član s administrativnim pravima.
+     */
     private function jeAdminIliClan(): bool
     {
         return auth()->check() && auth()->user()->imaPravoAdminOrMember();
     }
 
+    /**
+     * Vraća `true` ako je prijavljeni korisnik administrator.
+     */
     private function jeAdmin(): bool
     {
         return auth()->check() && (int)auth()->user()->rola === 1;
     }
 
+    /**
+     * Provjerava je li prijavljeni korisnik povezan baš s traženim polaznikom.
+     */
     private function jeVlastitiPolaznik(PolaznikSkole $polaznik): bool
     {
         return auth()->check()
@@ -668,6 +755,9 @@ class PolazniciSkoleController extends Controller
             && (int)auth()->user()->polaznik_id === (int)$polaznik->id;
     }
 
+    /**
+     * Provjerava je li prijavljeni roditelj povezan s traženim polaznikom.
+     */
     private function jeRoditeljPovezanSaPolaznikom(PolaznikSkole $polaznik): bool
     {
         if (!auth()->check() || !auth()->user()->jeRoditelj()) {
@@ -679,6 +769,9 @@ class PolazniciSkoleController extends Controller
             ->exists();
     }
 
+    /**
+     * Određuje ključne parametre potrebne za daljnju obradu.
+     */
     private function odrediNazivDokumenta(string $vrsta, string $naziv): string
     {
         if ($vrsta !== 'Ostalo') {
@@ -688,6 +781,9 @@ class PolazniciSkoleController extends Controller
         return trim($naziv);
     }
 
+    /**
+     * Vraća query aktivnih polaznika škole za listu i filtere.
+     */
     private function queryAktivniPolazniciSkole(): Builder
     {
         $granica = $this->granicaAktivnostiSkole();
@@ -701,6 +797,9 @@ class PolazniciSkoleController extends Controller
             });
     }
 
+    /**
+     * Vraća query neaktivnih polaznika škole za listu i filtere.
+     */
     private function queryNeaktivniPolazniciSkole(): Builder
     {
         $granica = $this->granicaAktivnostiSkole();
@@ -716,6 +815,9 @@ class PolazniciSkoleController extends Controller
             });
     }
 
+    /**
+     * Automatski označava polaznike kao neaktivne nakon isteka razdoblja aktivnosti.
+     */
     private function oznaciIsteklePolaznike(): void
     {
         $granica = $this->granicaAktivnostiSkole();
@@ -728,6 +830,9 @@ class PolazniciSkoleController extends Controller
             ->update(['u_skoli' => false]);
     }
 
+    /**
+     * Računa datumsku granicu nakon koje se polaznik smatra neaktivnim.
+     */
     private function granicaAktivnostiSkole(): Carbon
     {
         return now()->startOfDay()->subMonthsNoOverflow(4);

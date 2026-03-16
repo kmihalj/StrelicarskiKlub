@@ -1,3 +1,4 @@
+{{-- Forma za uređivanje završnog opisa turnira i Facebook linka. --}}
 <div class="row">
     <div class="col-lg-12 col-md-12 col-12 fw-bolder">
         <p>Unos podataka za turnir (ispod medija):</p>

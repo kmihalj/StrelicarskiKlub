@@ -1,3 +1,4 @@
+{{-- Modal forma za unos novog polaznika škole streličarstva. --}}
 <div class="modal fade" id="UnosPolaznikaSkole_modal">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">

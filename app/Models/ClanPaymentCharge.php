@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Model ClanPaymentCharge predstavlja zapis baze podataka i definira relacije te pomoćne metode za rad s podacima.
+ */
 class ClanPaymentCharge extends Model
 {
     use HasFactory;
@@ -46,31 +49,49 @@ class ClanPaymentCharge extends Model
         'metadata' => 'array',
     ];
 
+    /**
+     * Stavka plaćanja članarine je povezan s jednim zapisom: člana kluba.
+     */
     public function clan(): BelongsTo
     {
         return $this->belongsTo(Clanovi::class, 'clan_id', 'id');
     }
 
+    /**
+     * Stavka plaćanja članarine je povezan s jednim zapisom: profil članarine člana.
+     */
     public function profile(): BelongsTo
     {
         return $this->belongsTo(ClanPaymentProfile::class, 'clan_payment_profile_id', 'id');
     }
 
+    /**
+     * Stavka plaćanja članarine je povezan s jednim zapisom: model članarine.
+     */
     public function paymentOption(): BelongsTo
     {
         return $this->belongsTo(MembershipPaymentOption::class, 'membership_payment_option_id', 'id');
     }
 
+    /**
+     * Stavka plaćanja članarine je povezan s jednim zapisom: korisnički račun.
+     */
     public function confirmer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'confirmed_by', 'id');
     }
 
+    /**
+     * Stavka plaćanja članarine je povezan s jednim zapisom: korisnički račun.
+     */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by', 'id');
     }
 
+    /**
+     * Stavka plaćanja članarine je povezan s jednim zapisom: korisnički račun.
+     */
     public function updater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by', 'id');

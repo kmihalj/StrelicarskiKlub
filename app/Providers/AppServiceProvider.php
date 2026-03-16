@@ -5,13 +5,14 @@ namespace App\Providers;
 use App\Models\Clanci;
 use App\Services\ThemeService;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
     /**
-     * Register any application services.
+     * Registrira globalne servise aplikacije (trenutno bez dodatnih bindova).
      */
     public function register(): void
     {
@@ -19,7 +20,7 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Bootstrap any application services.
+     * Inicijalizira globalne postavke prikaza (Bootstrap paginacija, tema i navigacijski meni).
      */
     public function boot(): void
     {
@@ -39,19 +40,19 @@ class AppServiceProvider extends ServiceProvider
         });
 
         View::composer('layouts.nav2', function ($view) {
-            $menu = [];
-            $menu['Obavijesti'] = Clanci::where('vrsta', 'Obavijest')
-                ->where('menu', '1')
-                ->orderByDesc('datum')
-                ->get(['id', 'menu_naslov']);
-            $menu['O nama'] = Clanci::where('vrsta', 'O nama')
-                ->where('menu', '1')
-                ->orderByDesc('datum')
-                ->get(['id', 'menu_naslov']);
-            $menu['Strelicarstvo'] = Clanci::where('vrsta', 'Streličarstvo')
-                ->where('menu', '1')
-                ->orderByDesc('datum')
-                ->get(['id', 'menu_naslov']);
+            $menu = Cache::remember('nav2_menu_items_v1', now()->addMinutes(10), function (): array {
+                $stavke = Clanci::query()
+                    ->where('menu', '1')
+                    ->whereIn('vrsta', ['Obavijest', 'O nama', 'Streličarstvo'])
+                    ->orderByDesc('datum')
+                    ->get(['id', 'menu_naslov', 'vrsta']);
+
+                return [
+                    'Obavijesti' => $stavke->where('vrsta', 'Obavijest')->values(),
+                    'O nama' => $stavke->where('vrsta', 'O nama')->values(),
+                    'Strelicarstvo' => $stavke->where('vrsta', 'Streličarstvo')->values(),
+                ];
+            });
 
             $view->with('menu', $menu);
         });

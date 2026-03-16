@@ -1,3 +1,4 @@
+{{-- Pregled pojedinog članka zajedno s pripadajućim medijima. --}}
 @extends('layouts.app')
 @section('content')
 

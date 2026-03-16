@@ -1,3 +1,4 @@
+{{-- Administratorski popis turnira i ulaz u uređivanje rezultata. --}}
 @extends('layouts.app')
 
 @section('content')

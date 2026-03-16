@@ -1,3 +1,4 @@
+{{-- Administratorski ekran postavki praćenja plaćanja. --}}
 @php
     $trackingEnabled = (bool)($paymentSetup['paymentTrackingEnabled'] ?? false);
     $paymentOptions = $paymentSetup['paymentOptions'] ?? collect();

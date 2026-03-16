@@ -28,21 +28,33 @@ class RezultatiTim extends Model
         'rezultat',
     ];
 
+    /**
+     * Timski rezultat je povezan s jednim zapisom: turnir.
+     */
     public function turnir(): BelongsTo
     {
         return $this->belongsTo(Turniri::class, 'turnir_id');
     }
 
+    /**
+     * Timski rezultat je povezan s jednim zapisom: stil luka.
+     */
     public function stil(): BelongsTo
     {
         return $this->belongsTo(Stilovi::class, 'stil_id');
     }
 
+    /**
+     * Timski rezultat je povezan s jednim zapisom: natjecateljsku kategoriju.
+     */
     public function kategorija(): BelongsTo
     {
         return $this->belongsTo(Kategorije::class, 'kategorija_id');
     }
 
+    /**
+     * Vraća sve članove tima i njihove pojedinačne rezultate za ovaj timski rezultat.
+     */
     public function clanoviStavke(): HasMany
     {
         return $this->hasMany(RezultatiTimClan::class, 'rezultati_tim_id');

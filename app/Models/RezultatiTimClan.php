@@ -23,11 +23,17 @@ class RezultatiTimClan extends Model
         'redni_broj',
     ];
 
+    /**
+     * Stavka člana tima je povezan s jednim zapisom: timski rezultat.
+     */
     public function tim(): BelongsTo
     {
         return $this->belongsTo(RezultatiTim::class, 'rezultati_tim_id');
     }
 
+    /**
+     * Stavka člana tima je povezan s jednim zapisom: pojedinačni rezultat člana.
+     */
     public function rezultatOpci(): BelongsTo
     {
         return $this->belongsTo(RezultatiOpci::class, 'rezultat_opci_id');
