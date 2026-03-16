@@ -20,6 +20,16 @@
                     </thead>
                     <tbody>
                     @foreach($turnir->rezultatiOpci as $i => $rezultat)
+                        @php
+                            $rezultatiPoPoljima = $turnir->rezultatiPoTipuTurnira
+                                ->where('clan_id', $rezultat->clan_id)
+                                ->where('stil_id', $rezultat->stil_id)
+                                ->where('kategorija_id', $rezultat->kategorija_id)
+                                ->keyBy('polje_za_tipove_turnira_id');
+
+                            $poljaVrijednosti = [];
+                            $poljaIds = [];
+                        @endphp
                         <tr>
                             <td>
                                 <p class="fw-bold mb-1">{{ $rezultat->clan->Prezime}} {{ $rezultat->clan->Ime}} </p>
@@ -30,12 +40,17 @@
                             <td>
                                 <p class="fw-bold mb-1"> {{ $rezultat->kategorija->naziv }} </p>
                             </td>
-                            @foreach($turnir->rezultatiPoTipuTurnira as $polje)
-                                @if ($rezultat->clan->id == $polje['clan_id'] && $rezultat->stil->id == $polje['stil_id'])
+                            @foreach($turnir->tipTurnira->polja as $poljeDefinicija)
+                                @php
+                                    $stavkaPolja = $rezultatiPoPoljima->get($poljeDefinicija->id);
+                                    $poljaVrijednosti[] = $stavkaPolja?->rezultat;
+                                    $poljaIds[] = $stavkaPolja?->id;
+                                @endphp
                                 <td>
-                                    <p class="fw-bold mb-1"> @if($polje['rezultat'] == 0) - @else {{ $polje['rezultat'] }} @endif </p>
+                                    <p class="fw-bold mb-1">
+                                        @if(($stavkaPolja?->rezultat ?? null) == 0) - @else {{ $stavkaPolja?->rezultat ?? '-' }} @endif
+                                    </p>
                                 </td>
-                                @endif
                             @endforeach
                             <td>
                                 <p class="fw-bold mb-1"> {{ $rezultat->plasman }} </p>
@@ -46,13 +61,31 @@
                                 </td>
                             @endif
                             <td class="text-end">
-                                <form id="brisanje{{ $rezultat->id }}" action="{{ route('admin.rezultati.brisanjeRezultata', $rezultat->id) }}" method="POST">
-                                    @csrf
-                                </form>
+                                <div class="d-inline-flex align-items-center gap-1">
+                                    <button
+                                        type="button"
+                                        class="btn text-success btn-rounded js-rezultat-edit"
+                                        title="Uredi"
+                                        data-rezultat-id="{{ $rezultat->id }}"
+                                        data-update-url="{{ route('admin.rezultati.updateRezultat', $rezultat->id) }}"
+                                        data-clan-id="{{ $rezultat->clan_id }}"
+                                        data-stil-id="{{ $rezultat->stil_id }}"
+                                        data-kategorija-id="{{ $rezultat->kategorija_id }}"
+                                        data-plasman="{{ $rezultat->plasman }}"
+                                        data-plasman-eliminacije="{{ $rezultat->plasman_nakon_eliminacija }}"
+                                        data-polja='@json($poljaVrijednosti)'
+                                        data-polja-ids='@json($poljaIds)'>
+                                        @include('admin.SVG.uredi')
+                                    </button>
 
-                                <button type="submit" form="brisanje{{ $rezultat->id }}" class="btn text-danger btn-rounded" title="Obriši" onclick="return confirm('Da li ste sigurni da želite obrisati rezultat ?')">
-                                    @include('admin.SVG.obrisi')
-                                </button>
+                                    <form id="brisanje{{ $rezultat->id }}" action="{{ route('admin.rezultati.brisanjeRezultata', $rezultat->id) }}" method="POST" class="d-inline">
+                                        @csrf
+                                    </form>
+
+                                    <button type="submit" form="brisanje{{ $rezultat->id }}" class="btn text-danger btn-rounded" title="Obriši" onclick="return confirm('Da li ste sigurni da želite obrisati rezultat ?')">
+                                        @include('admin.SVG.obrisi')
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     @endforeach

@@ -17,6 +17,7 @@ use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -291,6 +292,131 @@ class TurniriController extends Controller
         return redirect()->route('admin.rezultati.unosRezultata', $turnir->id);
     }
 
+    public function updateRezultat(Request $request, RezultatiOpci $rezultat): RedirectResponse
+    {
+        $turnir = $rezultat->turnir;
+        if (!$turnir) {
+            return redirect()->route('admin.rezultati.popisTurnira')->with('error', 'Turnir nije pronaden.');
+        }
+
+        if ((int)$request->get('turnir_id') !== (int)$turnir->id) {
+            return redirect()->route('admin.rezultati.unosRezultata', $turnir->id)
+                ->with('error', 'Neispravan zahtjev za uređivanje rezultata.');
+        }
+
+        $clan = Clanovi::find($request->get('clan'));
+        $kategorija = Kategorije::find($request->get('kategorija'));
+        $stil = Stilovi::where('id', $request->get('stil'))
+            ->where('id', '!=', self::STANDARDNI_LUK_STIL_ID)
+            ->first();
+
+        if (!$clan || !$kategorija || !$stil) {
+            return redirect()->route('admin.rezultati.unosRezultata', $turnir->id)
+                ->with('error', 'Odabrani clan, stil ili kategorija nisu valjani.');
+        }
+
+        $clanSpol = $this->normalizirajSpol($clan->spol);
+        $kategorijaSpol = $this->normalizirajSpol($kategorija->spol);
+
+        if ($clanSpol === '' || $kategorijaSpol === '' || $clanSpol !== $kategorijaSpol) {
+            return redirect()->route('admin.rezultati.unosRezultata', $turnir->id)
+                ->with('error', 'Odabrana kategorija ne odgovara spolu clana.');
+        }
+
+        $turnir->loadMissing('tipTurnira.polja');
+        $poljaDefinicije = $turnir->tipTurnira->polja->values();
+        $poljaIzForme = collect($request->input('polje', []))->values();
+        $rezPoTipuIdsIzForme = collect($request->input('rez_po_tipu_ids', []))
+            ->map(static fn ($id) => $id === null || $id === '' ? null : (int)$id)
+            ->values();
+
+        if ($poljaDefinicije->count() !== $poljaIzForme->count()) {
+            return redirect()->route('admin.rezultati.unosRezultata', $turnir->id)
+                ->with('error', 'Broj unesenih polja rezultata nije ispravan.');
+        }
+
+        DB::transaction(function () use (
+            $request,
+            $rezultat,
+            $turnir,
+            $clan,
+            $kategorija,
+            $stil,
+            $poljaDefinicije,
+            $poljaIzForme,
+            $rezPoTipuIdsIzForme
+        ): void {
+            $stariClanId = (int)$rezultat->clan_id;
+            $staraKategorijaId = (int)$rezultat->kategorija_id;
+            $stariStilId = (int)$rezultat->stil_id;
+
+            $postojeciPoTipu = RezultatiPoTipuTurnira::query()
+                ->where('turnir_id', (int)$turnir->id)
+                ->where('clan_id', $stariClanId)
+                ->where('kategorija_id', $staraKategorijaId)
+                ->where('stil_id', $stariStilId)
+                ->whereIn('polje_za_tipove_turnira_id', $poljaDefinicije->pluck('id')->all())
+                ->get();
+
+            $postojeciPoId = $postojeciPoTipu->keyBy('id');
+            $postojeciPoPolju = $postojeciPoTipu
+                ->sortBy('id')
+                ->keyBy('polje_za_tipove_turnira_id');
+
+            $iskoristeniRedci = [];
+
+            foreach ($poljaDefinicije as $index => $poljeDefinicija) {
+                $preferiraniId = $rezPoTipuIdsIzForme->get($index);
+                $rezPoTipu = $preferiraniId ? $postojeciPoId->get($preferiraniId) : null;
+
+                if ($rezPoTipu === null) {
+                    $rezPoTipu = $postojeciPoPolju->get((int)$poljeDefinicija->id);
+                }
+
+                if ($rezPoTipu === null || in_array((int)$rezPoTipu->id, $iskoristeniRedci, true)) {
+                    $rezPoTipu = new RezultatiPoTipuTurnira();
+                }
+
+                $rezPoTipu->turnir_id = (int)$turnir->id;
+                $rezPoTipu->clan_id = (int)$clan->id;
+                $rezPoTipu->kategorija_id = (int)$kategorija->id;
+                $rezPoTipu->stil_id = (int)$stil->id;
+                $rezPoTipu->polje_za_tipove_turnira_id = (int)$poljeDefinicija->id;
+                $rezPoTipu->rezultat = $poljaIzForme->get($index);
+                $rezPoTipu->save();
+
+                $iskoristeniRedci[] = (int)$rezPoTipu->id;
+            }
+
+            if (!empty($iskoristeniRedci)) {
+                RezultatiPoTipuTurnira::query()
+                    ->where('turnir_id', (int)$turnir->id)
+                    ->where('clan_id', $stariClanId)
+                    ->where('kategorija_id', $staraKategorijaId)
+                    ->where('stil_id', $stariStilId)
+                    ->whereIn('polje_za_tipove_turnira_id', $poljaDefinicije->pluck('id')->all())
+                    ->whereNotIn('id', $iskoristeniRedci)
+                    ->delete();
+            }
+
+            $rezultat->clan_id = (int)$clan->id;
+            $rezultat->kategorija_id = (int)$kategorija->id;
+            $rezultat->stil_id = (int)$stil->id;
+            $rezultat->plasman = $request->get('plasman');
+            $rezultat->plasman_nakon_eliminacija = $turnir->eliminacije
+                ? ($request->get('plasman_eliminacije') !== null ? $request->get('plasman_eliminacije') : null)
+                : null;
+            $rezultat->save();
+        });
+
+        if ($this->timskeTabliceDostupne()) {
+            $this->osvjeziTimoveTurnira((int)$turnir->id);
+        }
+
+        return redirect()->route('admin.rezultati.unosRezultata', $turnir->id)
+            ->with('success', 'Rezultat je ažuriran.');
+    }
+
     public function postaviTimoveAktivno(Request $request, Turniri $turnir): RedirectResponse
     {
         if (!$this->timskeTabliceDostupne()) {
@@ -398,7 +524,11 @@ class TurniriController extends Controller
     {
         $rezOpci = RezultatiOpci::findOrFail($id);
         $turnir_id = $rezOpci->turnir->id;
-        $rezPoTipu = RezultatiPoTipuTurnira::where('turnir_id', $turnir_id)->where('clan_id', $rezOpci->clan->id)->get();
+        $rezPoTipu = RezultatiPoTipuTurnira::where('turnir_id', $turnir_id)
+            ->where('clan_id', $rezOpci->clan_id)
+            ->where('kategorija_id', $rezOpci->kategorija_id)
+            ->where('stil_id', $rezOpci->stil_id)
+            ->get();
         $rezPoTipu->each->delete();
         $rezOpci->delete();
         if ($this->timskeTabliceDostupne()) {
@@ -601,5 +731,4 @@ class TurniriController extends Controller
             . self::AUTO_FACEBOOK_BLOK_END;
     }
 }
-
 
