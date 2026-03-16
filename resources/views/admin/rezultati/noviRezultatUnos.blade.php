@@ -8,8 +8,8 @@
             <input type="hidden" id="turnir_id" name="turnir_id" value={{$turnir->id}}>
         </form>
         <label for="clan">Prezime i ime:</label>
-        <select class="form-select" form="unos_rezultata" id="clan" name="clan" aria-label="Odabir clana" required>
-            <option value="" selected>Odaberite clana</option>
+        <select class="form-select" form="unos_rezultata" id="clan" name="clan" aria-label="Odabir člana" required>
+            <option value="" selected>Odaberite člana</option>
             @foreach($clanovi as $clan)
                 <option value="{{ $clan->id }}" data-spol="{{ $clan->spol }}">{{ $clan->Prezime }} {{ $clan->Ime }}</option>
             @endforeach
@@ -27,7 +27,7 @@
     <div class="col-lg-3 mb-2">
         <label for="kategorija">Kategorija:</label>
         <select class="form-select" form="unos_rezultata" id="kategorija" name="kategorija" aria-label="Odabir kategorije" required>
-            <option value="" selected>Prvo odaberite clana</option>
+            <option value="" selected>Prvo odaberite člana</option>
             @foreach($kategorije as $kategorija)
                 <option value="{{ $kategorija->id }}" data-spol="{{ $kategorija->spol }}">{{ $kategorija->naziv }}</option>
             @endforeach
@@ -120,7 +120,7 @@
             }
 
             if (!clanSpol) {
-                placeholder.textContent = 'Prvo odaberite clana';
+                placeholder.textContent = 'Prvo odaberite člana';
                 return;
             }
 
