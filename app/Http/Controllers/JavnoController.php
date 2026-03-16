@@ -21,6 +21,8 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -35,7 +37,7 @@ class JavnoController extends Controller
      *
      * stavka u meniju "REZULTATI"
      */
-    public function prikazRezultata()
+    public function prikazRezultata(Request $request)
     {
         $with = [
             'tipTurnira.polja',
@@ -52,39 +54,51 @@ class JavnoController extends Controller
             $with[] = 'rezultatiTimovi.clanoviStavke.rezultatOpci.clan';
         }
 
-        $turniri = Turniri::with($with)->orderByDesc('datum')->paginate(10);
+        $turniri = Turniri::with($with)->orderByDesc('datum')->paginate(10)->withQueryString();
         $tipoviTurnira = TipoviTurnira::orderBy('naziv')->get();
+        $trenutnaGodina = (int)date('Y');
+        $proslaGodina = $trenutnaGodina - 1;
 
-        // statistika za tekuću i prošlu godinu
-        $godina = date('Y');
-        for ($i = 0; $i <= 1; $i++) {
-            $godina = $godina - $i;
-            $timoviZaGodinu = null;
-            if ($this->timskeTabliceDostupne()) {
-                $timoviZaGodinu = RezultatiTim::query()->whereHas('turnir', function ($query) use ($godina) {
-                    $query->whereYear('datum', $godina);
-                });
-            }
-            //prva mjesta ukupno
-            $rezultati[$godina][1] = RezultatiOpci::whereHas('turnir', function ($query) use ($godina) {
-                    $query->whereYear('datum', $godina)->where('eliminacije', '=', 0);
-                })->where('plasman', '=', 1)->count() + RezultatiOpci::whereHas('turnir', function ($query) use ($godina) {
-                    $query->whereYear('datum', $godina)->where('eliminacije', '=', 1);
-                })->where('plasman_nakon_eliminacija', '=', 1)->count() + ($timoviZaGodinu ? (clone $timoviZaGodinu)->where('plasman', 1)->count() : 0);
-            //druga mjesta ukupno
-            $rezultati[$godina][2] = RezultatiOpci::whereHas('turnir', function ($query) use ($godina) {
-                    $query->whereYear('datum', $godina)->where('eliminacije', '=', 0);
-                })->where('plasman', '=', 2)->count() + RezultatiOpci::whereHas('turnir', function ($query) use ($godina) {
-                    $query->whereYear('datum', $godina)->where('eliminacije', '=', 1);
-                })->where('plasman_nakon_eliminacija', '=', 2)->count() + ($timoviZaGodinu ? (clone $timoviZaGodinu)->where('plasman', 2)->count() : 0);
-            //treća mjesta ukupno
-            $rezultati[$godina][3] = RezultatiOpci::whereHas('turnir', function ($query) use ($godina) {
-                    $query->whereYear('datum', $godina)->where('eliminacije', '=', 0);
-                })->where('plasman', '=', 3)->count() + RezultatiOpci::whereHas('turnir', function ($query) use ($godina) {
-                    $query->whereYear('datum', $godina)->where('eliminacije', '=', 1);
-                })->where('plasman_nakon_eliminacija', '=', 3)->count() + ($timoviZaGodinu ? (clone $timoviZaGodinu)->where('plasman', 3)->count() : 0);
+        $dostupneGodine = Turniri::query()
+            ->selectRaw('YEAR(datum) as godina')
+            ->whereNotNull('datum')
+            ->distinct()
+            ->orderByDesc('godina')
+            ->pluck('godina')
+            ->map(static fn ($godina): int => (int)$godina)
+            ->merge([$trenutnaGodina, $proslaGodina])
+            ->unique()
+            ->sortDesc()
+            ->values();
+
+        $odabranaGodina = (int)$request->query('godina', $proslaGodina);
+        if (!$dostupneGodine->contains($odabranaGodina)) {
+            $odabranaGodina = $trenutnaGodina;
         }
-        return view('javno.rezultati', ['turniri' => $turniri, 'statistika' => $rezultati, 'tipoviTurnira' => $tipoviTurnira]);
+
+        $godineZaStatistiku = collect([$trenutnaGodina, $proslaGodina, $odabranaGodina])->unique()->values();
+        $statistika = [];
+        $statistikaGodine = [];
+
+        foreach ($godineZaStatistiku as $godina) {
+            $godinaStat = $this->izracunajGodisnjuStatistiku((int)$godina);
+            $statistikaGodine[(int)$godina] = $godinaStat;
+            $statistika[(int)$godina][1] = (int)$godinaStat['zlato'];
+            $statistika[(int)$godina][2] = (int)$godinaStat['srebro'];
+            $statistika[(int)$godina][3] = (int)$godinaStat['bronca'];
+        }
+
+        return view('javno.rezultati', [
+            'turniri' => $turniri,
+            'statistika' => $statistika,
+            'statistikaGodine' => $statistikaGodine,
+            'detaljnaStatistikaGodine' => $statistikaGodine[$odabranaGodina] ?? $this->izracunajGodisnjuStatistiku($odabranaGodina),
+            'odabranaGodinaStatistike' => $odabranaGodina,
+            'dostupneGodineStatistike' => $dostupneGodine,
+            'trenutnaGodina' => $trenutnaGodina,
+            'proslaGodina' => $proslaGodina,
+            'tipoviTurnira' => $tipoviTurnira,
+        ]);
     }
 
 
@@ -652,6 +666,214 @@ class JavnoController extends Controller
 
         // OIB šaljemo kao tekstualnu formulu da Excel/LibreOffice ne maknu vodeće nule.
         return '="' . str_replace('"', '""', $vrijednost) . '"';
+    }
+
+    private function izracunajGodisnjuStatistiku(int $godina): array
+    {
+        $zlato = 0;
+        $srebro = 0;
+        $bronca = 0;
+        $medaljePoClanu = [];
+        $turniriPoClanu = [];
+
+        $individualniRezultati = RezultatiOpci::query()
+            ->join('turniris', 'turniris.id', '=', 'rezultati_opcis.turnir_id')
+            ->whereYear('turniris.datum', $godina)
+            ->select([
+                'rezultati_opcis.clan_id',
+                'rezultati_opcis.turnir_id',
+                'turniris.eliminacije',
+                'rezultati_opcis.plasman',
+                'rezultati_opcis.plasman_nakon_eliminacija',
+            ])
+            ->get();
+
+        foreach ($individualniRezultati as $rezultat) {
+            $clanId = (int)$rezultat->clan_id;
+            $turnirId = (int)$rezultat->turnir_id;
+            $plasman = ((int)$rezultat->eliminacije === 1)
+                ? (int)$rezultat->plasman_nakon_eliminacija
+                : (int)$rezultat->plasman;
+
+            $this->dodajTurnirClanu($turniriPoClanu, $clanId, $turnirId);
+            $this->dodajMedaljuClanu($medaljePoClanu, $clanId, $plasman);
+            $this->dodajKlubskuMedalju($plasman, $zlato, $srebro, $bronca);
+        }
+
+        if ($this->timskeTabliceDostupne()) {
+            $timovi = DB::table('rezultati_timovi as rt')
+                ->join('turniris as t', 't.id', '=', 'rt.turnir_id')
+                ->whereYear('t.datum', $godina)
+                ->select(['rt.turnir_id', 'rt.plasman'])
+                ->get();
+
+            foreach ($timovi as $tim) {
+                $this->dodajKlubskuMedalju((int)$tim->plasman, $zlato, $srebro, $bronca);
+            }
+
+            $timskiClanovi = DB::table('rezultati_tim_clanovi as rtc')
+                ->join('rezultati_timovi as rt', 'rt.id', '=', 'rtc.rezultati_tim_id')
+                ->join('turniris as t', 't.id', '=', 'rt.turnir_id')
+                ->join('rezultati_opcis as ro', 'ro.id', '=', 'rtc.rezultat_opci_id')
+                ->whereYear('t.datum', $godina)
+                ->select(['ro.clan_id', 'rt.turnir_id', 'rt.plasman'])
+                ->get();
+
+            foreach ($timskiClanovi as $timClan) {
+                $this->dodajTurnirClanu($turniriPoClanu, (int)$timClan->clan_id, (int)$timClan->turnir_id);
+                $this->dodajMedaljuClanu($medaljePoClanu, (int)$timClan->clan_id, (int)$timClan->plasman);
+            }
+        }
+
+        $brojTurnira = Turniri::query()->whereYear('datum', $godina)->count();
+
+        $turniriBrojPoClanu = [];
+        foreach ($turniriPoClanu as $clanId => $turniriClana) {
+            $turniriBrojPoClanu[(int)$clanId] = count($turniriClana);
+        }
+
+        $sviClanoviIds = array_values(array_unique(array_merge(
+            array_keys($medaljePoClanu),
+            array_keys($turniriBrojPoClanu)
+        )));
+        $imenaClanova = $this->dohvatiMapuImenaClanova($sviClanoviIds);
+
+        $ukupnoMedaljaPoClanu = [];
+        $zlatnePoClanu = [];
+        $srebrnePoClanu = [];
+        $broncanePoClanu = [];
+        foreach ($medaljePoClanu as $clanId => $medalje) {
+            $ukupnoMedaljaPoClanu[(int)$clanId] = (int)($medalje['ukupno'] ?? 0);
+            $zlatnePoClanu[(int)$clanId] = (int)($medalje['zlato'] ?? 0);
+            $srebrnePoClanu[(int)$clanId] = (int)($medalje['srebro'] ?? 0);
+            $broncanePoClanu[(int)$clanId] = (int)($medalje['bronca'] ?? 0);
+        }
+
+        return [
+            'godina' => $godina,
+            'zlato' => $zlato,
+            'srebro' => $srebro,
+            'bronca' => $bronca,
+            'ukupno' => $zlato + $srebro + $bronca,
+            'broj_turnira' => (int)$brojTurnira,
+            'najvise_medalja' => $this->izracunajVodece($ukupnoMedaljaPoClanu, $imenaClanova),
+            'najvise_zlatnih' => $this->izracunajVodece($zlatnePoClanu, $imenaClanova),
+            'najvise_srebrnih' => $this->izracunajVodece($srebrnePoClanu, $imenaClanova),
+            'najvise_broncanih' => $this->izracunajVodece($broncanePoClanu, $imenaClanova),
+            'najvise_turnira' => $this->izracunajVodece($turniriBrojPoClanu, $imenaClanova),
+        ];
+    }
+
+    private function dodajTurnirClanu(array &$turniriPoClanu, int $clanId, int $turnirId): void
+    {
+        if ($clanId <= 0 || $turnirId <= 0) {
+            return;
+        }
+
+        if (!isset($turniriPoClanu[$clanId])) {
+            $turniriPoClanu[$clanId] = [];
+        }
+
+        $turniriPoClanu[$clanId][$turnirId] = true;
+    }
+
+    private function dodajMedaljuClanu(array &$medaljePoClanu, int $clanId, int $plasman): void
+    {
+        if ($clanId <= 0 || !in_array($plasman, [1, 2, 3], true)) {
+            return;
+        }
+
+        if (!isset($medaljePoClanu[$clanId])) {
+            $medaljePoClanu[$clanId] = [
+                'zlato' => 0,
+                'srebro' => 0,
+                'bronca' => 0,
+                'ukupno' => 0,
+            ];
+        }
+
+        if ($plasman === 1) {
+            $medaljePoClanu[$clanId]['zlato']++;
+        } elseif ($plasman === 2) {
+            $medaljePoClanu[$clanId]['srebro']++;
+        } else {
+            $medaljePoClanu[$clanId]['bronca']++;
+        }
+
+        $medaljePoClanu[$clanId]['ukupno']++;
+    }
+
+    private function dodajKlubskuMedalju(int $plasman, int &$zlato, int &$srebro, int &$bronca): void
+    {
+        if ($plasman === 1) {
+            $zlato++;
+            return;
+        }
+
+        if ($plasman === 2) {
+            $srebro++;
+            return;
+        }
+
+        if ($plasman === 3) {
+            $bronca++;
+        }
+    }
+
+    private function dohvatiMapuImenaClanova(array $clanoviIds): array
+    {
+        if (empty($clanoviIds)) {
+            return [];
+        }
+
+        return Clanovi::query()
+            ->whereIn('id', $clanoviIds)
+            ->get(['id', 'Ime', 'Prezime'])
+            ->mapWithKeys(static function (Clanovi $clan): array {
+                return [(int)$clan->id => trim((string)$clan->Prezime . ' ' . (string)$clan->Ime)];
+            })
+            ->all();
+    }
+
+    private function izracunajVodece(array $vrijednostiPoClanu, array $imenaClanova): array
+    {
+        $filtrirano = [];
+        foreach ($vrijednostiPoClanu as $clanId => $vrijednost) {
+            $vrijednostInt = (int)$vrijednost;
+            if ($vrijednostInt > 0) {
+                $filtrirano[(int)$clanId] = $vrijednostInt;
+            }
+        }
+
+        if (empty($filtrirano)) {
+            return [
+                'vrijednost' => 0,
+                'clanovi' => [],
+                'label' => '-',
+            ];
+        }
+
+        $maksimum = max($filtrirano);
+        $vodeciClanovi = array_map('intval', array_keys(array_filter(
+            $filtrirano,
+            static fn (int $vrijednost): bool => $vrijednost === $maksimum
+        )));
+
+        usort($vodeciClanovi, static function (int $clanA, int $clanB) use ($imenaClanova): int {
+            $imeA = $imenaClanova[$clanA] ?? ('Član #' . $clanA);
+            $imeB = $imenaClanova[$clanB] ?? ('Član #' . $clanB);
+            return strcmp($imeA, $imeB);
+        });
+
+        $label = implode(', ', array_map(static function (int $clanId) use ($imenaClanova): string {
+            return $imenaClanova[$clanId] ?? ('Član #' . $clanId);
+        }, $vodeciClanovi));
+
+        return [
+            'vrijednost' => $maksimum,
+            'clanovi' => $vodeciClanovi,
+            'label' => $label,
+        ];
     }
 
     /** @noinspection PhpUndefinedFieldInspection
