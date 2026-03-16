@@ -11,6 +11,7 @@ use App\Models\Klub;
 use App\Models\PolaznikSkole;
 use App\Models\RezultatiOpci;
 use App\Models\RezultatiPoTipuTurnira;
+use App\Models\RezultatiTim;
 use App\Models\Stilovi;
 use App\Models\TipoviTurnira;
 use App\Models\Turniri;
@@ -20,6 +21,7 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -35,31 +37,52 @@ class JavnoController extends Controller
      */
     public function prikazRezultata()
     {
-        $turniri = Turniri::orderByDesc('datum')->paginate(10);
+        $with = [
+            'tipTurnira.polja',
+            'rezultatiOpci.clan',
+            'rezultatiOpci.stil',
+            'rezultatiOpci.kategorija',
+            'rezultatiPoTipuTurnira',
+            'mediji',
+        ];
+
+        if ($this->timskeTabliceDostupne()) {
+            $with[] = 'rezultatiTimovi.stil';
+            $with[] = 'rezultatiTimovi.kategorija';
+            $with[] = 'rezultatiTimovi.clanoviStavke.rezultatOpci.clan';
+        }
+
+        $turniri = Turniri::with($with)->orderByDesc('datum')->paginate(10);
         $tipoviTurnira = TipoviTurnira::orderBy('naziv')->get();
 
         // statistika za tekuću i prošlu godinu
         $godina = date('Y');
         for ($i = 0; $i <= 1; $i++) {
             $godina = $godina - $i;
+            $timoviZaGodinu = null;
+            if ($this->timskeTabliceDostupne()) {
+                $timoviZaGodinu = RezultatiTim::query()->whereHas('turnir', function ($query) use ($godina) {
+                    $query->whereYear('datum', $godina);
+                });
+            }
             //prva mjesta ukupno
             $rezultati[$godina][1] = RezultatiOpci::whereHas('turnir', function ($query) use ($godina) {
                     $query->whereYear('datum', $godina)->where('eliminacije', '=', 0);
                 })->where('plasman', '=', 1)->count() + RezultatiOpci::whereHas('turnir', function ($query) use ($godina) {
                     $query->whereYear('datum', $godina)->where('eliminacije', '=', 1);
-                })->where('plasman_nakon_eliminacija', '=', 1)->count();
+                })->where('plasman_nakon_eliminacija', '=', 1)->count() + ($timoviZaGodinu ? (clone $timoviZaGodinu)->where('plasman', 1)->count() : 0);
             //druga mjesta ukupno
             $rezultati[$godina][2] = RezultatiOpci::whereHas('turnir', function ($query) use ($godina) {
                     $query->whereYear('datum', $godina)->where('eliminacije', '=', 0);
                 })->where('plasman', '=', 2)->count() + RezultatiOpci::whereHas('turnir', function ($query) use ($godina) {
                     $query->whereYear('datum', $godina)->where('eliminacije', '=', 1);
-                })->where('plasman_nakon_eliminacija', '=', 2)->count();
+                })->where('plasman_nakon_eliminacija', '=', 2)->count() + ($timoviZaGodinu ? (clone $timoviZaGodinu)->where('plasman', 2)->count() : 0);
             //treća mjesta ukupno
             $rezultati[$godina][3] = RezultatiOpci::whereHas('turnir', function ($query) use ($godina) {
                     $query->whereYear('datum', $godina)->where('eliminacije', '=', 0);
                 })->where('plasman', '=', 3)->count() + RezultatiOpci::whereHas('turnir', function ($query) use ($godina) {
                     $query->whereYear('datum', $godina)->where('eliminacije', '=', 1);
-                })->where('plasman_nakon_eliminacija', '=', 3)->count();
+                })->where('plasman_nakon_eliminacija', '=', 3)->count() + ($timoviZaGodinu ? (clone $timoviZaGodinu)->where('plasman', 3)->count() : 0);
         }
         return view('javno.rezultati', ['turniri' => $turniri, 'statistika' => $rezultati, 'tipoviTurnira' => $tipoviTurnira]);
     }
@@ -75,7 +98,20 @@ class JavnoController extends Controller
         $schoolPaymentService = app(SchoolPaymentService::class);
         $paymentTrackingEnabled = $paymentService->isEnabled();
         $schoolPaymentEnabled = $schoolPaymentService->isEnabled();
-        $turniri = Turniri::orderByDesc('datum')->take(5)->get();
+        $withTurniri = [
+            'tipTurnira.polja',
+            'rezultatiOpci.clan',
+            'rezultatiOpci.stil',
+            'rezultatiOpci.kategorija',
+            'rezultatiPoTipuTurnira',
+            'mediji',
+        ];
+        if ($this->timskeTabliceDostupne()) {
+            $withTurniri[] = 'rezultatiTimovi.stil';
+            $withTurniri[] = 'rezultatiTimovi.kategorija';
+            $withTurniri[] = 'rezultatiTimovi.clanoviStavke.rezultatOpci.clan';
+        }
+        $turniri = Turniri::with($withTurniri)->orderByDesc('datum')->take(5)->get();
         $clanciNaslovnica = Clanci::where('vrsta', '=', 'Naslovnica')->orderByDesc('datum')->get();
         $danas = now();
         $rodendaniDanas = Clanovi::query()
@@ -367,26 +403,66 @@ class JavnoController extends Controller
             }
         }
 
-        //broj odrađenih turnira
-        $turniri['ukupno'] = RezultatiOpci::where('clan_id', '=', $clan->id)->count();
+        $timoviClana = null;
+        if ($this->timskeTabliceDostupne()) {
+            $timoviClana = RezultatiTim::query()
+                ->whereHas('clanoviStavke.rezultatOpci', function ($query) use ($clan) {
+                    $query->where('clan_id', '=', $clan->id);
+                });
+        }
 
-        // broj osvojenih medalja
+        $turniriPojedinacnoIds = RezultatiOpci::query()
+            ->where('clan_id', '=', $clan->id)
+            ->pluck('turnir_id');
+        $turniriTimskiIds = $timoviClana ? (clone $timoviClana)->pluck('turnir_id') : collect();
+
+        // broj odrađenih turnira (pojedinačno + timski)
+        $turniri['ukupno'] = $turniriPojedinacnoIds
+            ->merge($turniriTimskiIds)
+            ->unique()
+            ->count();
+
+        // broj osvojenih medalja (pojedinačno + timski)
         $turniri['prva'] = RezultatiOpci::whereHas('turnir', function ($query) {
                 $query->where('eliminacije', '=', 0);
             })->where('clan_id', '=', $clan->id)->where('plasman', '=', 1)->count() + RezultatiOpci::whereHas('turnir', function ($query) {
                 $query->where('eliminacije', '=', 1);
-            })->where('clan_id', '=', $clan->id)->where('plasman_nakon_eliminacija', '=', 1)->count();
+            })->where('clan_id', '=', $clan->id)->where('plasman_nakon_eliminacija', '=', 1)->count() + ($timoviClana ? (clone $timoviClana)->where('plasman', 1)->count() : 0);
         $turniri['druga'] = RezultatiOpci::whereHas('turnir', function ($query) {
                 $query->where('eliminacije', '=', 0);
             })->where('clan_id', '=', $clan->id)->where('plasman', '=', 2)->count() + RezultatiOpci::whereHas('turnir', function ($query) {
                 $query->where('eliminacije', '=', 1);
-            })->where('clan_id', '=', $clan->id)->where('plasman_nakon_eliminacija', '=', 2)->count();
+            })->where('clan_id', '=', $clan->id)->where('plasman_nakon_eliminacija', '=', 2)->count() + ($timoviClana ? (clone $timoviClana)->where('plasman', 2)->count() : 0);
         $turniri['treca'] = RezultatiOpci::whereHas('turnir', function ($query) {
                 $query->where('eliminacije', '=', 0);
             })->where('clan_id', '=', $clan->id)->where('plasman', '=', 3)->count() + RezultatiOpci::whereHas('turnir', function ($query) {
                 $query->where('eliminacije', '=', 1);
-            })->where('clan_id', '=', $clan->id)->where('plasman_nakon_eliminacija', '=', 3)->count();
+            })->where('clan_id', '=', $clan->id)->where('plasman_nakon_eliminacija', '=', 3)->count() + ($timoviClana ? (clone $timoviClana)->where('plasman', 3)->count() : 0);
         $turniri['medalje'] = $turniri['prva'] + $turniri['druga'] + $turniri['treca'];
+
+        $timskeMedalje = collect();
+        if ($this->timskeTabliceDostupne()) {
+            $timskeMedalje = RezultatiTim::query()
+                ->whereIn('plasman', [1, 2, 3])
+                ->whereHas('clanoviStavke.rezultatOpci', function ($query) use ($clan) {
+                    $query->where('clan_id', '=', $clan->id);
+                })
+                ->with([
+                    'turnir.tipTurnira.polja',
+                    'turnir.rezultatiPoTipuTurnira',
+                    'stil',
+                    'kategorija',
+                    'clanoviStavke' => fn ($query) => $query
+                        ->with(['rezultatOpci.clan'])
+                        ->orderBy('redni_broj')
+                        ->orderBy('id'),
+                ])
+                ->get()
+                ->sortByDesc(function (RezultatiTim $tim) {
+                    return $tim->turnir?->datum ?? '';
+                })
+                ->values();
+        }
 
 
         $cl = $clan->id;
@@ -443,9 +519,16 @@ class JavnoController extends Controller
         if (!isset($osobniRekordi)) $osobniRekordi = array();
         if (!isset($datumiRekorda)) $datumiRekorda = array();
 
-        //popis svih turnira na kojima je sudelovao
-        $turniriPopis = Turniri::whereHas('rezultatiOpci', function ($query) use ($cl) {
-            $query->where('clan_id', '=', $cl);
+        //popis svih turnira na kojima je sudjelovao (pojedinačno ili u timu)
+        $turniriPopis = Turniri::where(function ($query) use ($cl) {
+            $query->whereHas('rezultatiOpci', function ($rezultatiQuery) use ($cl) {
+                $rezultatiQuery->where('clan_id', '=', $cl);
+            });
+            if ($this->timskeTabliceDostupne()) {
+                $query->orWhereHas('rezultatiTimovi.clanoviStavke.rezultatOpci', function ($timQuery) use ($cl) {
+                    $timQuery->where('clan_id', '=', $cl);
+                });
+            }
         })->orderByDesc('datum')->get();
         return view('javno.pregledClana', [
             'clan' => $clan,
@@ -465,6 +548,7 @@ class JavnoController extends Controller
             'paymentTrackingEnabled' => $paymentTrackingEnabled,
             'evidencijeSkole' => $evidencijeSkole,
             'jeRodendanDanas' => $jeRodendanDanas,
+            'timskeMedalje' => $timskeMedalje,
         ]);
     }
 
@@ -575,8 +659,26 @@ class JavnoController extends Controller
      */
     public function pokaziTurnir(Turniri $turnir): View
     {
-        $turniri = Turniri::where('id', '=', $turnir->id)->get();
+        $with = [
+            'tipTurnira.polja',
+            'rezultatiOpci.clan',
+            'rezultatiOpci.stil',
+            'rezultatiOpci.kategorija',
+            'rezultatiPoTipuTurnira',
+            'mediji',
+        ];
+        if ($this->timskeTabliceDostupne()) {
+            $with[] = 'rezultatiTimovi.stil';
+            $with[] = 'rezultatiTimovi.kategorija';
+            $with[] = 'rezultatiTimovi.clanoviStavke.rezultatOpci.clan';
+        }
+        $turniri = Turniri::with($with)->where('id', '=', $turnir->id)->get();
         return view('javno.pregledTurnira', ['turniri' => $turniri]);
+    }
+
+    private function timskeTabliceDostupne(): bool
+    {
+        return Schema::hasTable('rezultati_timovi') && Schema::hasTable('rezultati_tim_clanovi');
     }
 
     /**

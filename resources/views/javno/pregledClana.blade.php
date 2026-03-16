@@ -416,126 +416,142 @@
         @endif
     @endauth
 
-    @if(count($turniriPopis) != 0)
+    @php
+        $timskeMedaljePoTipu = (isset($timskeMedalje) && $timskeMedalje->count() > 0)
+            ? $timskeMedalje->groupBy(fn ($tim) => (int)($tim->turnir?->tipTurnira?->id ?? 0))
+            : collect();
+    @endphp
 
+    @if(count($turniriPopis) != 0 || $timskeMedaljePoTipu->count() > 0)
         @foreach($tipoviTurnira as $tip)
-            <div class="container-xxl bg-white shadow">
-                <div class="row pt-3 pb-3 mb-3 shadow">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0 border">
-                            <thead>
-                            <tr>
-                                <th class="border-0" colspan="@php echo(6 + $tip->polja->count());  @endphp">
-                                    {{$tip->naziv}}
-                                </th>
-                            </tr>
-                            <tr style="--bs-table-bg:var(--bs-success);">
-                                <th class="text-white">Datum</th>
-                                <th class="text-white">Turnir</th>
-                                <th class="text-white">Stil</th>
-                                <th class="text-white">Kategorija</th>
-                                @foreach($tip->polja as $polje)
-                                    <th class="text-white">{{ $polje->naziv }}</th>
-                                @endforeach
-                                <th class="text-white">Plasman (eliminacije)</th>
-                                <th class="text-white"></th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            @foreach($turniriPopis as $turnirClan)
-                                @if($turnirClan->tipTurnira->naziv == $tip->naziv)
-                                    @foreach($turnirClan->rezultatiOpci as $i => $rezultat)
-                                        @if( $rezultat->clan_id == $clan->id )
-                                            <tr
-                                                @if($turnirClan->eliminacije && $rezultat->plasman_nakon_eliminacija <=3)
-                                                    class="fw-bold"
-                                                @endif
-                                                @if(!($turnirClan->eliminacije) && $rezultat->plasman <=3)
-                                                    class="fw-bold"
-                                                @endif>
-                                                <td>
-                                                    <p class="mb-1">
-                                                        <a class="@if(in_array($turnirClan->datum, $datumiRekorda)) link-danger @else link-dark @endif"
-                                                           style="text-decoration: none"
-                                                           href="{{ route('javno.rezultati.prikaz_turnira', $turnirClan) }}">{{ date('d.m.Y.',strtotime($turnirClan->datum)) }}</a>
-                                                    </p>
-                                                </td>
-                                                <td class="@if(in_array($turnirClan->datum, $datumiRekorda)) text-danger @endif">
-                                                    <p class="mb-1">
-                                                        <a class="@if(in_array($turnirClan->datum, $datumiRekorda)) link-danger @else link-dark @endif"
-                                                           style="text-decoration: none"
-                                                           href="{{ route('javno.rezultati.prikaz_turnira', $turnirClan) }}">{{ $turnirClan->naziv }}</a>
-                                                    </p>
-                                                </td>
-                                                <td class="@if(in_array($turnirClan->datum, $datumiRekorda)) text-danger @endif">
-                                                    <p class="mb-1"> {{ $rezultat->stil->naziv }} </p>
-                                                </td>
-                                                <td class="@if(in_array($turnirClan->datum, $datumiRekorda)) text-danger @endif">
-                                                    <p class="mb-1"> {{ $rezultat->kategorija->naziv }} </p>
-                                                </td>
+            @php
+                $imaPojedinacno = $turniriPopis->contains(function ($turnirClan) use ($tip, $clan) {
+                    if ((int)$turnirClan->tipTurnira->id !== (int)$tip->id) {
+                        return false;
+                    }
 
-                                                @foreach($turnirClan->rezultatiPoTipuTurnira as $polje)
-                                                    @if ($rezultat->clan_id == $polje['clan_id']  && $rezultat->stil->id == $polje['stil_id'])
-                                                        <td class="@if(in_array($turnirClan->datum, $datumiRekorda)) text-danger @endif">
-                                                            <p class="mb-1"> {{ $polje['rezultat'] }}  </p>
-                                                        </td>
-                                                    @endif
-                                                @endforeach
-                                                <td class="@if(in_array($turnirClan->datum, $datumiRekorda)) text-danger @endif">
-                                                    <p class="mb-1">{{ $rezultat->plasman }}
-                                                        @if($turnirClan->eliminacije)
-                                                            ({{ $rezultat->plasman_nakon_eliminacija }})
-                                                        @endif
-                                                    </p>
-                                                </td>
-                                                <td class="@if(in_array($turnirClan->datum, $datumiRekorda)) text-danger align-text-bottom @endif">
-                                                    <p class="mb-1">
-                                                        @if(!($turnirClan->eliminacije))
-                                                            @switch($rezultat->plasman)
-                                                                @case(1)
-                                                                    <span
-                                                                        class="float-end"> @include('admin.SVG.gold') </span>
-                                                                    @break
-                                                                @case(2)
-                                                                    <span
-                                                                        class="float-end"> @include('admin.SVG.silver') </span>
-                                                                    @break
-                                                                @case(3)
-                                                                    <span
-                                                                        class="float-end"> @include('admin.SVG.bronze') </span>
-                                                                    @break
-                                                            @endswitch
-                                                        @endif
-                                                        @if($turnirClan->eliminacije)
-                                                            @switch($rezultat->plasman_nakon_eliminacija)
-                                                                @case(1)
-                                                                    <span
-                                                                        class="float-end"> @include('admin.SVG.gold') </span>
-                                                                    @break
-                                                                @case(2)
-                                                                    <span
-                                                                        class="float-end"> @include('admin.SVG.silver') </span>
-                                                                    @break
-                                                                @case(3)
-                                                                    <span
-                                                                        class="float-end"> @include('admin.SVG.bronze') </span>
-                                                                    @break
-                                                            @endswitch
-                                                    </p>
-                                                    @endif
-                                                </td>
+                    return $turnirClan->rezultatiOpci->contains('clan_id', $clan->id);
+                });
+            @endphp
 
-
-                                            </tr>
-                                        @endif
+            @if($imaPojedinacno)
+                <div class="container-xxl bg-white shadow">
+                    <div class="row pt-3 pb-3 mb-3 shadow">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 border">
+                                <thead>
+                                <tr>
+                                    <th class="border-0" colspan="@php echo(6 + $tip->polja->count());  @endphp">
+                                        {{$tip->naziv}}
+                                    </th>
+                                </tr>
+                                <tr style="--bs-table-bg:var(--bs-success);">
+                                    <th class="text-white">Datum</th>
+                                    <th class="text-white">Turnir</th>
+                                    <th class="text-white">Stil</th>
+                                    <th class="text-white">Kategorija</th>
+                                    @foreach($tip->polja as $polje)
+                                        <th class="text-white">{{ $polje->naziv }}</th>
                                     @endforeach
-                                @endif
-                            </tbody>
-                            @endforeach
-                        </table>
+                                    <th class="text-white">Plasman (eliminacije)</th>
+                                    <th class="text-white"></th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                @foreach($turniriPopis as $turnirClan)
+                                    @if((int)$turnirClan->tipTurnira->id === (int)$tip->id)
+                                        @foreach($turnirClan->rezultatiOpci as $i => $rezultat)
+                                            @if((int)$rezultat->clan_id === (int)$clan->id)
+                                                <tr
+                                                    @if($turnirClan->eliminacije && $rezultat->plasman_nakon_eliminacija <=3)
+                                                        class="fw-bold"
+                                                    @endif
+                                                    @if(!($turnirClan->eliminacije) && $rezultat->plasman <=3)
+                                                        class="fw-bold"
+                                                    @endif>
+                                                    <td>
+                                                        <p class="mb-1">
+                                                            <a class="@if(in_array($turnirClan->datum, $datumiRekorda)) link-danger @else link-dark @endif"
+                                                               style="text-decoration: none"
+                                                               href="{{ route('javno.rezultati.prikaz_turnira', $turnirClan) }}">{{ date('d.m.Y.',strtotime($turnirClan->datum)) }}</a>
+                                                        </p>
+                                                    </td>
+                                                    <td class="@if(in_array($turnirClan->datum, $datumiRekorda)) text-danger @endif">
+                                                        <p class="mb-1">
+                                                            <a class="@if(in_array($turnirClan->datum, $datumiRekorda)) link-danger @else link-dark @endif"
+                                                               style="text-decoration: none"
+                                                               href="{{ route('javno.rezultati.prikaz_turnira', $turnirClan) }}">{{ $turnirClan->naziv }}</a>
+                                                        </p>
+                                                    </td>
+                                                    <td class="@if(in_array($turnirClan->datum, $datumiRekorda)) text-danger @endif">
+                                                        <p class="mb-1"> {{ $rezultat->stil->naziv }} </p>
+                                                    </td>
+                                                    <td class="@if(in_array($turnirClan->datum, $datumiRekorda)) text-danger @endif">
+                                                        <p class="mb-1"> {{ $rezultat->kategorija->naziv }} </p>
+                                                    </td>
+
+                                                    @foreach($turnirClan->rezultatiPoTipuTurnira as $polje)
+                                                        @if ($rezultat->clan_id == $polje['clan_id']  && $rezultat->stil->id == $polje['stil_id'])
+                                                            <td class="@if(in_array($turnirClan->datum, $datumiRekorda)) text-danger @endif">
+                                                                <p class="mb-1"> {{ $polje['rezultat'] }}  </p>
+                                                            </td>
+                                                        @endif
+                                                    @endforeach
+                                                    <td class="@if(in_array($turnirClan->datum, $datumiRekorda)) text-danger @endif">
+                                                        <p class="mb-1">{{ $rezultat->plasman }}
+                                                            @if($turnirClan->eliminacije)
+                                                                ({{ $rezultat->plasman_nakon_eliminacija }})
+                                                            @endif
+                                                        </p>
+                                                    </td>
+                                                    <td class="@if(in_array($turnirClan->datum, $datumiRekorda)) text-danger align-text-bottom @endif">
+                                                        <p class="mb-1">
+                                                            @if(!($turnirClan->eliminacije))
+                                                                @switch($rezultat->plasman)
+                                                                    @case(1)
+                                                                        <span class="float-end"> @include('admin.SVG.gold') </span>
+                                                                        @break
+                                                                    @case(2)
+                                                                        <span class="float-end"> @include('admin.SVG.silver') </span>
+                                                                        @break
+                                                                    @case(3)
+                                                                        <span class="float-end"> @include('admin.SVG.bronze') </span>
+                                                                        @break
+                                                                @endswitch
+                                                            @endif
+                                                            @if($turnirClan->eliminacije)
+                                                                @switch($rezultat->plasman_nakon_eliminacija)
+                                                                    @case(1)
+                                                                        <span class="float-end"> @include('admin.SVG.gold') </span>
+                                                                        @break
+                                                                    @case(2)
+                                                                        <span class="float-end"> @include('admin.SVG.silver') </span>
+                                                                        @break
+                                                                    @case(3)
+                                                                        <span class="float-end"> @include('admin.SVG.bronze') </span>
+                                                                        @break
+                                                                @endswitch
+                                                        </p>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                            @endif
+                                        @endforeach
+                                    @endif
+                                </tbody>
+                                @endforeach
+                            </table>
+                        </div>
                     </div>
                 </div>
-            </div>
+            @endif
+
+            @php
+                $timoviTipa = $timskeMedaljePoTipu->get((int)$tip->id, collect());
+            @endphp
+            @if($timoviTipa->count() > 0)
+                @include('javno.partials.timskeMedaljeTablica', ['timoviTipa' => $timoviTipa, 'tipNaziv' => $tip->naziv])
+            @endif
         @endforeach
     @endif
 

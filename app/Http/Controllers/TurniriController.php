@@ -8,6 +8,8 @@ use App\Models\RezultatiLinkovi;
 use App\Models\RezultatiOpci;
 use App\Models\RezultatiPoTipuTurnira;
 use App\Models\RezultatiSlike;
+use App\Models\RezultatiTim;
+use App\Models\RezultatiTimClan;
 use App\Models\Stilovi;
 use App\Models\TipoviTurnira;
 use App\Models\Turniri;
@@ -15,6 +17,7 @@ use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -82,18 +85,58 @@ class TurniriController extends Controller
      */
     public function unosRezultataForma(int $id)
     {
-        $turnir = Turniri::findOrFail($id);
+        $with = [
+            'tipTurnira.polja',
+            'rezultatiOpci' => fn ($query) => $query
+                ->with(['clan', 'stil', 'kategorija'])
+                ->orderBy('plasman')
+                ->orderBy('id'),
+            'rezultatiPoTipuTurnira',
+        ];
+
+        if ($this->timskeTabliceDostupne()) {
+            $with['rezultatiTimovi'] = fn ($query) => $query
+                ->with([
+                    'stil',
+                    'kategorija',
+                    'clanoviStavke' => fn ($stavkeQuery) => $stavkeQuery
+                        ->with([
+                            'rezultatOpci.clan',
+                            'rezultatOpci.stil',
+                            'rezultatOpci.kategorija',
+                        ])
+                        ->orderBy('redni_broj')
+                        ->orderBy('id'),
+                ])
+                ->orderBy('plasman')
+                ->orderBy('id');
+        }
+
+        $turnir = Turniri::with($with)->findOrFail($id);
         $kategorije = Kategorije::orderBy('spol')->orderBy('naziv')->get(['id', 'spol', 'naziv']);
         $stilovi = Stilovi::where('id', '!=', self::STANDARDNI_LUK_STIL_ID)->orderBy('naziv')->get(['id', 'naziv']);
         $clanovi = Clanovi::where('aktivan', true)->orderBy('Prezime')->orderBy('Ime')->get(['id', 'Ime', 'Prezime', 'spol']);
         $opis2Editor = $this->ukloniFacebookBlokIzOpisa2($turnir->opis2);
         $facebookLinkOpis2 = $this->izvuciFacebookLinkIzOpisa2($turnir->opis2);
+        $ukupnoPoljeId = $this->odrediUkupnoPoljeId($turnir);
+        $dostupniRezultatiZaTim = $turnir->rezultatiOpci
+            ->map(function (RezultatiOpci $rezultat) use ($ukupnoPoljeId): array {
+                return [
+                    'id' => (int)$rezultat->id,
+                    'clan' => trim((string)$rezultat->clan?->Prezime . ' ' . (string)$rezultat->clan?->Ime),
+                    'stil' => (string)$rezultat->stil?->naziv,
+                    'kategorija' => (string)$rezultat->kategorija?->naziv,
+                    'rezultat' => $this->rezultatZaRezultatOpci($rezultat, $ukupnoPoljeId),
+                ];
+            })
+            ->values();
 
         return view('admin.rezultati.formaZaUnosRezultata', [
             'turnir' => $turnir,
             'kategorije' => $kategorije,
             'stilovi' => $stilovi,
             'clanovi' => $clanovi,
+            'dostupniRezultatiZaTim' => $dostupniRezultatiZaTim,
             'opis2Editor' => $opis2Editor,
             'facebookLinkOpis2' => $facebookLinkOpis2,
         ]);
@@ -242,7 +285,112 @@ class TurniriController extends Controller
         $rezOpci->plasman = $request->get('plasman');
         $rezOpci->plasman_nakon_eliminacija = ($request->get('plasman_eliminacije') !== null) ? $request->get('plasman_eliminacije') : null;
         $rezOpci->save();
+        if ($this->timskeTabliceDostupne()) {
+            $this->osvjeziTimoveTurnira((int)$turnir->id);
+        }
         return redirect()->route('admin.rezultati.unosRezultata', $turnir->id);
+    }
+
+    public function postaviTimoveAktivno(Request $request, Turniri $turnir): RedirectResponse
+    {
+        if (!$this->timskeTabliceDostupne()) {
+            return redirect()->route('admin.rezultati.unosRezultata', $turnir->id)
+                ->with('error', 'Timski rezultati nisu dostupni dok se ne pokrenu migracije.');
+        }
+
+        $turnir->ima_timove = (bool)$request->boolean('ima_timove');
+        $turnir->save();
+
+        return redirect()->route('admin.rezultati.unosRezultata', $turnir->id);
+    }
+
+    public function spremiTimskiRezultat(Request $request): RedirectResponse
+    {
+        if (!$this->timskeTabliceDostupne()) {
+            $turnirId = (int)$request->get('turnir_id');
+            return redirect()->route('admin.rezultati.unosRezultata', $turnirId)
+                ->with('error', 'Timski rezultati nisu dostupni dok se ne pokrenu migracije.');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'turnir_id' => ['required', 'integer', 'exists:turniris,id'],
+            'plasman_tima' => ['required', 'integer', 'min:1'],
+            'tim_clanovi' => ['required', 'array', 'min:2'],
+            'tim_clanovi.*' => ['required', 'integer', 'distinct', 'exists:rezultati_opcis,id'],
+        ], [
+            'turnir_id.required' => 'Turnir nije odabran.',
+            'turnir_id.exists' => 'Turnir nije pronađen.',
+            'plasman_tima.required' => 'Unesite plasman tima.',
+            'plasman_tima.min' => 'Plasman tima mora biti veći od 0.',
+            'tim_clanovi.required' => 'Odaberite članove tima.',
+            'tim_clanovi.min' => 'Tim mora imati najmanje 2 člana.',
+            'tim_clanovi.*.distinct' => 'Isti član ne može biti dva puta u istom timu.',
+        ]);
+
+        $turnirId = (int)$request->get('turnir_id');
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', $validator->errors()->first());
+        }
+
+        $turnir = Turniri::with('tipTurnira.polja')->findOrFail($turnirId);
+        $odabraniRezultatiIds = collect($request->input('tim_clanovi', []))
+            ->map(static fn ($id) => (int)$id)
+            ->filter(static fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+
+        $odabraniRezultati = RezultatiOpci::query()
+            ->with(['clan', 'stil', 'kategorija'])
+            ->where('turnir_id', $turnir->id)
+            ->whereIn('id', $odabraniRezultatiIds)
+            ->get();
+
+        if ($odabraniRezultati->count() !== $odabraniRezultatiIds->count()) {
+            return redirect()->route('admin.rezultati.unosRezultata', $turnir->id)
+                ->with('error', 'Odabrani članovi nemaju rezultate na ovom turniru.');
+        }
+
+        $stilIds = $odabraniRezultati->pluck('stil_id')->unique()->values();
+        $kategorijaIds = $odabraniRezultati->pluck('kategorija_id')->unique()->values();
+
+        $tim = new RezultatiTim();
+        $tim->turnir_id = $turnir->id;
+        $tim->plasman = (int)$request->input('plasman_tima');
+        $tim->stil_id = $stilIds->count() === 1 ? (int)$stilIds->first() : null;
+        $tim->kategorija_id = $kategorijaIds->count() === 1 ? (int)$kategorijaIds->first() : null;
+        $tim->rezultat = 0;
+        $tim->save();
+
+        foreach ($odabraniRezultatiIds as $index => $rezultatOpciId) {
+            $stavka = new RezultatiTimClan();
+            $stavka->rezultati_tim_id = $tim->id;
+            $stavka->rezultat_opci_id = $rezultatOpciId;
+            $stavka->redni_broj = $index + 1;
+            $stavka->save();
+        }
+
+        $turnir->ima_timove = true;
+        $turnir->save();
+
+        $this->osvjeziUkupniRezultatTima($tim->load('clanoviStavke.rezultatOpci'));
+
+        return redirect()->route('admin.rezultati.unosRezultata', $turnir->id);
+    }
+
+    public function brisanjeTimskogRezultata(int $id): RedirectResponse
+    {
+        if (!$this->timskeTabliceDostupne()) {
+            return redirect()->route('admin.rezultati.popisTurnira')
+                ->with('error', 'Timski rezultati nisu dostupni dok se ne pokrenu migracije.');
+        }
+
+        $tim = RezultatiTim::findOrFail($id);
+        $turnirId = (int)$tim->turnir_id;
+        $tim->delete();
+
+        return redirect()->route('admin.rezultati.unosRezultata', $turnirId);
     }
 
     /** @noinspection PhpUndefinedMethodInspection */
@@ -253,7 +401,109 @@ class TurniriController extends Controller
         $rezPoTipu = RezultatiPoTipuTurnira::where('turnir_id', $turnir_id)->where('clan_id', $rezOpci->clan->id)->get();
         $rezPoTipu->each->delete();
         $rezOpci->delete();
+        if ($this->timskeTabliceDostupne()) {
+            $this->osvjeziTimoveTurnira((int)$turnir_id);
+        }
         return redirect()->route('admin.rezultati.unosRezultata', $turnir_id);
+    }
+
+    private function timskeTabliceDostupne(): bool
+    {
+        return Schema::hasTable('rezultati_timovi') && Schema::hasTable('rezultati_tim_clanovi');
+    }
+
+    private function osvjeziTimoveTurnira(int $turnirId): void
+    {
+        $timovi = RezultatiTim::query()
+            ->where('turnir_id', $turnirId)
+            ->with([
+                'turnir.tipTurnira.polja',
+                'clanoviStavke.rezultatOpci',
+            ])
+            ->get();
+
+        foreach ($timovi as $tim) {
+            $brojClanova = $tim->clanoviStavke
+                ->filter(static fn (RezultatiTimClan $stavka): bool => $stavka->rezultatOpci !== null)
+                ->count();
+
+            if ($brojClanova < 2) {
+                $tim->delete();
+                continue;
+            }
+
+            $this->osvjeziUkupniRezultatTima($tim);
+        }
+    }
+
+    private function osvjeziUkupniRezultatTima(RezultatiTim $tim): void
+    {
+        $tim->loadMissing([
+            'turnir.tipTurnira.polja',
+            'clanoviStavke.rezultatOpci',
+        ]);
+
+        if ($tim->turnir === null) {
+            return;
+        }
+
+        $ukupnoPoljeId = $this->odrediUkupnoPoljeId($tim->turnir);
+        $ukupniRezultat = 0;
+        $stilIds = [];
+        $kategorijaIds = [];
+
+        foreach ($tim->clanoviStavke as $stavka) {
+            if ($stavka->rezultatOpci === null) {
+                continue;
+            }
+
+            $ukupniRezultat += $this->rezultatZaRezultatOpci($stavka->rezultatOpci, $ukupnoPoljeId);
+            $stilIds[] = (int)$stavka->rezultatOpci->stil_id;
+            $kategorijaIds[] = (int)$stavka->rezultatOpci->kategorija_id;
+        }
+
+        $stilIds = collect($stilIds)->unique()->values();
+        $kategorijaIds = collect($kategorijaIds)->unique()->values();
+
+        $tim->rezultat = $ukupniRezultat;
+        $tim->stil_id = $stilIds->count() === 1 ? (int)$stilIds->first() : null;
+        $tim->kategorija_id = $kategorijaIds->count() === 1 ? (int)$kategorijaIds->first() : null;
+        $tim->save();
+    }
+
+    private function odrediUkupnoPoljeId(Turniri $turnir): ?int
+    {
+        $turnir->loadMissing('tipTurnira.polja');
+
+        $ukupnoPolje = $turnir->tipTurnira?->polja
+            ?->first(function ($polje): bool {
+                $naziv = Str::lower(trim(Str::ascii((string)$polje->naziv)));
+                return $naziv === 'ukupno' || str_contains($naziv, 'ukupno');
+            });
+
+        return $ukupnoPolje ? (int)$ukupnoPolje->id : null;
+    }
+
+    private function rezultatZaRezultatOpci(RezultatiOpci $rezultat, ?int $ukupnoPoljeId): int
+    {
+        if ($ukupnoPoljeId !== null) {
+            $rezultatUkupno = RezultatiPoTipuTurnira::query()
+                ->where('turnir_id', (int)$rezultat->turnir_id)
+                ->where('clan_id', (int)$rezultat->clan_id)
+                ->where('kategorija_id', (int)$rezultat->kategorija_id)
+                ->where('stil_id', (int)$rezultat->stil_id)
+                ->where('polje_za_tipove_turnira_id', $ukupnoPoljeId)
+                ->value('rezultat');
+
+            return (int)($rezultatUkupno ?? 0);
+        }
+
+        return (int)RezultatiPoTipuTurnira::query()
+            ->where('turnir_id', (int)$rezultat->turnir_id)
+            ->where('clan_id', (int)$rezultat->clan_id)
+            ->where('kategorija_id', (int)$rezultat->kategorija_id)
+            ->where('stil_id', (int)$rezultat->stil_id)
+            ->sum('rezultat');
     }
 
     private function normalizirajSpol(?string $spol): string
