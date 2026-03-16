@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property mixed $turnir_id
@@ -38,5 +39,10 @@ class RezultatiOpci extends Model
     public function stil(): BelongsTo
     {
         return $this->belongsTo(Stilovi::class, 'stil_id');
+    }
+
+    public function timStavke(): HasMany
+    {
+        return $this->hasMany(RezultatiTimClan::class, 'rezultat_opci_id');
     }
 }

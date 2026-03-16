@@ -21,7 +21,11 @@ class Turniri extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['naziv', 'datum', 'lokacija', 'opis', 'opis2', 'tipovi_turnira_id'];
+    protected $fillable = ['naziv', 'datum', 'lokacija', 'opis', 'opis2', 'tipovi_turnira_id', 'ima_timove'];
+
+    protected $casts = [
+        'ima_timove' => 'bool',
+    ];
 
     public function tipTurnira(): BelongsTo
     {
@@ -43,5 +47,10 @@ class Turniri extends Model
     public function mediji(): HasMany
     {
         return $this->hasMany(RezultatiSlike::class, 'turnir_id', 'id');
+    }
+
+    public function rezultatiTimovi(): HasMany
+    {
+        return $this->hasMany(RezultatiTim::class, 'turnir_id', 'id');
     }
 }

@@ -39,6 +39,17 @@
 
         <div class="row justify-content-center p-2 shadow bg-success fw-bolder">
             <div class="col-lg-12 text-white">
+                Timski rezultati
+            </div>
+        </div>
+        <div class="row justify-content-center pt-2 pb-3 shadow bg-white fw-bolder mb-3">
+            <div class="col-lg-12">
+                @include('admin.rezultati.unosTimova')
+            </div>
+        </div>
+
+        <div class="row justify-content-center p-2 shadow bg-success fw-bolder">
+            <div class="col-lg-12 text-white">
                 Opis
             </div>
         </div>
