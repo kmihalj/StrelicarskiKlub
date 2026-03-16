@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
 
+/**
+ * Laravel kontroler za prijavu i odjavu korisnika.
+ */
 class LoginController extends Controller
 {
     /*
@@ -29,15 +32,16 @@ class LoginController extends Controller
     protected $redirectTo = '/';
 
     /**
-     * Create a new controller instance.
-     *
-     * @return void
+     * Omogućuje prijavu gostima, a odjavu samo već prijavljenim korisnicima.
      */
     public function __construct()
     {
         $this->middleware('guest')->except('logout');
     }
 
+    /**
+     * Nakon uspješne prijave preusmjerava bootstrap admina na upravljanje korisnicima.
+     */
     protected function authenticated(Request $request, $user)
     {
         if ((bool)($user->is_bootstrap_admin ?? false)) {

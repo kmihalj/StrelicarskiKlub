@@ -5,6 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Model PolaznikPaymentCharge predstavlja zapis baze podataka i definira relacije te pomoćne metode za rad s podacima.
+ */
 class PolaznikPaymentCharge extends Model
 {
     protected $fillable = [
@@ -33,11 +36,17 @@ class PolaznikPaymentCharge extends Model
         'updated_by' => 'integer',
     ];
 
+    /**
+     * Stavka školarine polaznika je povezan s jednim zapisom: polaznika škole.
+     */
     public function polaznik(): BelongsTo
     {
         return $this->belongsTo(PolaznikSkole::class, 'polaznik_skole_id', 'id');
     }
 
+    /**
+     * Stavka školarine polaznika je povezan s jednim zapisom: profil školarine polaznika.
+     */
     public function profile(): BelongsTo
     {
         return $this->belongsTo(PolaznikPaymentProfile::class, 'polaznik_payment_profile_id', 'id');

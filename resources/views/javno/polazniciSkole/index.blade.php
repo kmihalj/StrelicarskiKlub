@@ -1,3 +1,4 @@
+{{-- Popis polaznika škole streličarstva i brzi ulaz u profile. --}}
 @extends('layouts.app')
 
 @section('content')

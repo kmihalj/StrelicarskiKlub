@@ -1,3 +1,4 @@
+{{-- Korisnički pregled članarine/dugovanja s odabirom stavke za uplatu i generiranjem barkoda. --}}
 @extends('layouts.app')
 
 @section('content')

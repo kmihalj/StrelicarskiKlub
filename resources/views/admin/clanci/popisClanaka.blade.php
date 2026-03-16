@@ -1,3 +1,4 @@
+{{-- Javni/admin popis članaka po vrsti sadržaja. --}}
 @extends('layouts.app')
 @section('content')
 

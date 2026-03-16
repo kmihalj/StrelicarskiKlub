@@ -11,10 +11,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
+/**
+ * Admin kontroler za podatke kluba i dokumente koji se prikazuju članovima i javnosti.
+ */
 class KlubController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Prikazuje administracijski pregled kluba (osnovni podaci, treneri i dokumenti).
      * @noinspection PhpUndefinedMethodInspection
      * @noinspection PhpMissingReturnTypeInspection
      */
@@ -26,6 +29,9 @@ class KlubController extends Controller
         return view('admin.klub.podaciOklubu', ['klub' => $klub, 'clanovi' => $clanovi, 'treneri' => $treneri]);
     }
 
+    /**
+     * Prikazuje javnu stranicu kluba s osnovnim podacima, kontaktima i dokumentima.
+     */
     public function oKlubu()
     {
         $klub = Klub::with(['dokumenti' => fn ($query) => $query->orderBy('created_at', 'desc')])->first();
@@ -38,7 +44,6 @@ class KlubController extends Controller
      */
     public function spremanjePodataka(Request $request)
     {
-        //dd($request);
         $klub = Klub::first();
         if (is_null($klub)) {
             $klub = new Klub();
@@ -169,6 +174,9 @@ class KlubController extends Controller
         return redirect()->route('admin.klub.naslovna');
     }
 
+    /**
+     * Briše osobu iz popisa trenera/funkcija kluba.
+     */
     public function obrisiTrenera(int $id): RedirectResponse
     {
         $trener = clanoviFunkcije::findOrFail($id);
@@ -176,6 +184,9 @@ class KlubController extends Controller
         return redirect()->route('admin.klub.naslovna');
     }
 
+    /**
+     * Validira upload datoteka, sprema ih u storage i upisuje metapodatke u bazu.
+     */
     public function uploadMedija(Request $request): RedirectResponse
     {
         if (!(Storage::exists('public/klub'))) {
@@ -214,6 +225,9 @@ class KlubController extends Controller
         return redirect()->route('admin.klub.naslovna');
     }
 
+    /**
+     * Ažurira opis i javnu vidljivost dokumenta kluba u administraciji.
+     */
     public function updateMedija(Request $request): RedirectResponse
     {
         $medij = DokumentiKluba::findOrFail((int)$request->get('dokument_id'));

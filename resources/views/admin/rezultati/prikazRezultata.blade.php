@@ -1,3 +1,4 @@
+{{-- Prikaz rezultata turnira (tablice, medalje, opisi i mediji) na javnom/admin pogledu. --}}
 @foreach($turniri as $turnir)
     @php
         $timoviTurnira = $turnir->relationLoaded('rezultatiTimovi') ? $turnir->rezultatiTimovi : collect();

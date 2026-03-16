@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\VerifiesEmails;
 
+/**
+ * Laravel kontroler za potvrdu e-mail adrese korisničkog računa.
+ */
 class VerificationController extends Controller
 {
     /*
@@ -28,9 +31,7 @@ class VerificationController extends Controller
     protected $redirectTo = '/';
 
     /**
-     * Create a new controller instance.
-     *
-     * @return void
+     * Ograničava verifikaciju na prijavljenog korisnika i štiti rute potpisom/throttle pravilima.
      */
     public function __construct()
     {

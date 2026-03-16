@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Model PolaznikSkoleDokument predstavlja zapis baze podataka i definira relacije te pomoćne metode za rad s podacima.
+ */
 class PolaznikSkoleDokument extends Model
 {
     use HasFactory;
@@ -27,11 +30,17 @@ class PolaznikSkoleDokument extends Model
         'datum_dokumenta' => 'date',
     ];
 
+    /**
+     * Dokument polaznika škole je povezan s jednim zapisom: polaznika škole.
+     */
     public function polaznik(): BelongsTo
     {
         return $this->belongsTo(PolaznikSkole::class, 'polaznik_skole_id');
     }
 
+    /**
+     * Dokument polaznika škole je povezan s jednim zapisom: korisnički račun.
+     */
     public function autor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

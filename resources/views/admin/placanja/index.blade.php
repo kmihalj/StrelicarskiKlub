@@ -1,14 +1,18 @@
+{{-- Administratorski ekran za postavke plaćanja, profile članova/polaznika i izvještaje. --}}
 @extends('layouts.app')
 
 @auth()
     @if(auth()->user()->rola <= 1)
         @section('content')
             @php
+                // Filtre i agregate pripremamo iz kontrolera, a ovdje držimo fallback vrijednosti
+                // kako prikaz ostao stabilan i kad neki ključ nije postavljen.
                 $filters = $reportFilters ?? [];
                 $stats = $reportStats ?? [];
                 $rows = $reportRows ?? collect();
                 $debtors = $debtorsSummary ?? collect();
                 $persons = $personsSummary ?? collect();
+                // Ovaj query paket koristimo za CSV exporte tako da export uvijek prati aktivne filtre.
                 $exportBaseQuery = [
                     'period_preset' => $filters['period_preset'] ?? 'current_season',
                     'date_from' => $filters['date_from'] ?? null,
@@ -23,6 +27,7 @@
 
             <div class="row g-4">
                 <div class="col-12">
+                    {{-- Gornji setup blok: uključivanje praćenja članarina + definicija modela i cijena. --}}
                     @include('admin.turniri.placanja', ['paymentSetup' => $paymentSetup])
                 </div>
 
@@ -30,6 +35,7 @@
                     <div class="card shadow-sm">
                         <div class="card-header bg-danger text-white fw-bolder">Izvještaji plaćanja</div>
                         <div class="card-body bg-secondary-subtle">
+                            {{-- Operativni izvještajni filteri koji se primjenjuju na sve tablice i CSV export. --}}
                             <form method="GET" action="{{ route('admin.placanja.index') }}" class="row g-2 align-items-end">
                                 <div class="col-lg-2 col-md-4">
                                     <label for="period_preset" class="form-label mb-1">Razdoblje</label>
@@ -107,6 +113,7 @@
                 </div>
 
                 <div class="col-12">
+                    {{-- KPI kartice: brzi pregled stanja uplata, dugova i volumena stavki. --}}
                     <div class="row g-2">
                         <div class="col-lg-2 col-md-4 col-6">
                             <div class="card h-100">
@@ -172,6 +179,7 @@
                             @if($debtors->count() === 0)
                                 <p class="p-3 mb-0">Nema otvorenih dugovanja za odabrani filter.</p>
                             @else
+                                {{-- Tablica dužnika služi za brzu identifikaciju osoba s otvorenim obvezama. --}}
                                 <div class="table-responsive">
                                     <table class="table table-sm table-hover align-middle mb-0 js-sortable-table">
                                         <thead class="table-warning">
@@ -220,6 +228,7 @@
                             @if($persons->count() === 0)
                                 <p class="p-3 mb-0">Nema podataka za odabrani filter.</p>
                             @else
+                                {{-- Sažetak po osobi prikazuje ukupno plaćeno/otvoreno bez ulaska u pojedinačne stavke. --}}
                                 <div class="table-responsive">
                                     <table class="table table-sm table-hover align-middle mb-0 js-sortable-table">
                                         <thead class="table-warning">

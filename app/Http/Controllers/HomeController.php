@@ -4,12 +4,13 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 
+/**
+ * Kontroler početnog preusmjeravanja nakon prijave korisnika.
+ */
 class HomeController extends Controller
 {
     /**
-     * Create a new controller instance.
-     *
-     * @return void
+     * Ograničava pristup početnom dashboardu samo na prijavljene korisnike.
      */
     public function __construct()
     {
@@ -17,9 +18,7 @@ class HomeController extends Controller
     }
 
     /**
-     * Show the application dashboard.
-     *
-     * @return \Illuminate\Contracts\Support\Renderable
+     * Prikazuje internu početnu stranicu nakon prijave.
      */
     public function index()
     {

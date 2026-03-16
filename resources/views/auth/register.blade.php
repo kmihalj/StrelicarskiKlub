@@ -1,3 +1,4 @@
+{{-- Ekran registracije novog korisničkog računa. --}}
 @extends('layouts.app')
 
 @section('content')

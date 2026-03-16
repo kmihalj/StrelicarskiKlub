@@ -1,3 +1,4 @@
+{{-- Korisnički pregled osobnih treninga (dvorana/vanjski) s filtrima i grafovima napretka. --}}
 @extends('layouts.app')
 @section('content')
     <div class="container-xxl">

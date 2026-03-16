@@ -17,6 +17,9 @@ class RezultatiSlike extends Model
 
     protected $fillable = ['vrsta', 'link', 'turnir_id'];
 
+    /**
+     * Medij rezultata turnira je povezan s jednim zapisom: turnir.
+     */
     public function turnir(): BelongsTo
     {
         return $this->belongsTo(Turniri::class, 'turnir_id');

@@ -105,6 +105,7 @@ Route::prefix('admin/')->group(function () {
     Route::post('rezultati/unos/tim/spremi', [TurniriController::class, 'spremiTimskiRezultat'])->name('admin.rezultati.timovi.spremi')->middleware(['auth', 'admin']);
     Route::post('rezultati/unos/tim/{tim}/obrisi', [TurniriController::class, 'brisanjeTimskogRezultata'])->name('admin.rezultati.timovi.brisanje')->middleware(['auth', 'admin']);
     Route::post('rezultati/unos/rezultat/spremi', [TurniriController::class, 'SpremanjeRezultata'])->name('admin.rezultati.SpremanjeRezultata')->middleware(['auth', 'admin']);
+    Route::post('rezultati/unos/rezultat/{rezultat}/update', [TurniriController::class, 'updateRezultat'])->name('admin.rezultati.updateRezultat')->middleware(['auth', 'admin']);
     Route::post('rezultati/unos/rezultat/spremiDodatno', [TurniriController::class, 'dodatniPodaciRezultat'])->name('admin.rezultati.dodatniPodaciRezultat')->middleware(['auth', 'admin']);
     Route::post('rezultati/unos/rezultat/spremiDodatno2', [TurniriController::class, 'dodatniPodaci2Rezultat'])->name('admin.rezultati.dodatniPodaci2Rezultat')->middleware(['auth', 'admin']);
     Route::post('rezultati/unos/rezultat/spremiMedij', [TurniriController::class, 'uploadMedija'])->name('admin.rezultati.uploadMedija')->middleware(['auth', 'admin']);

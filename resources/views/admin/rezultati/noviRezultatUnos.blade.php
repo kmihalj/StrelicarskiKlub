@@ -1,11 +1,20 @@
+{{-- Forma za unos jednog novog pojedinačnog rezultata člana na turniru. --}}
 <div class="row">
     <div class="col-lg-12 col-md-12 col-12 fw-bolder">
-        <p>Unos rezultata:</p>
+        <p id="rezultat_form_title">Unos rezultata:</p>
     </div>
     <div class="col-lg-6 mb-2">
-        <form id="unos_rezultata" action="{{ route('admin.rezultati.SpremanjeRezultata') }}" method="POST">
+        {{-- Jedna forma pokriva oba slučaja:
+             1) novi unos (POST na SpremanjeRezultata)
+             2) uređivanje (POST na updateRezultat nakon klika na „Uredi“ u tablici). --}}
+        <form
+            id="unos_rezultata"
+            action="{{ route('admin.rezultati.SpremanjeRezultata') }}"
+            method="POST"
+            data-store-action="{{ route('admin.rezultati.SpremanjeRezultata') }}">
             @csrf
             <input type="hidden" id="turnir_id" name="turnir_id" value={{$turnir->id}}>
+            <input type="hidden" id="rezultat_id" name="rezultat_id" value="">
         </form>
         <label for="clan">Prezime i ime:</label>
         <select class="form-select" form="unos_rezultata" id="clan" name="clan" aria-label="Odabir člana" required>
@@ -35,8 +44,11 @@
     </div>
     @foreach($turnir->tipTurnira->polja as $index => $polje)
         <div class="col-lg-2 col-md-2 col-3 mb-2">
-            <label for="polje[]">{{ $polje->naziv }}</label>
-            <input type="number" form="unos_rezultata" class="form-control" name="polje[]" id="polje[]" aria-label="polje[]" required>
+            <label for="polje_{{ $index }}">{{ $polje->naziv }}</label>
+            {{-- Rezultat pojedinog polja definiranog tipom turnira (npr. 1. krug, 2. krug, ukupno). --}}
+            <input type="number" form="unos_rezultata" class="form-control" name="polje[]" id="polje_{{ $index }}" aria-label="polje_{{ $index }}" required>
+            {{-- Kod uređivanja čuvamo ID retka u tablici rezultati_po_tipu_turniras kako bi update bio precizan. --}}
+            <input type="hidden" form="unos_rezultata" name="rez_po_tipu_ids[]" id="rez_po_tipu_id_{{ $index }}">
         </div>
     @endforeach
     <div class="col-lg-2 col-md-2 col-3 mb-2">
@@ -50,15 +62,28 @@
         </div>
     @endif
     <div class="col-lg-12 col-md-12 col-12 mb-2 text-end">
-        <button type="submit" form="unos_rezultata" class="btn btn-danger">Spremi</button>
+        {{-- Odustani je vidljiv samo u edit modu; vraća formu na "novi unos". --}}
+        <button type="button" id="rezultat_odustani_btn" class="btn btn-outline-secondary d-none">Odustani</button>
+        <button type="submit" id="rezultat_spremi_btn" form="unos_rezultata" class="btn btn-danger">Spremi</button>
     </div>
 </div>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const rezultatForm = document.getElementById('unos_rezultata');
+        const formTitle = document.getElementById('rezultat_form_title');
         const clanSelect = document.getElementById('clan');
+        const stilSelect = document.getElementById('stil');
         const kategorijaSelect = document.getElementById('kategorija');
+        const plasmanInput = document.getElementById('plasman');
+        const plasmanEliminacijeInput = document.getElementById('plasman_eliminacije');
+        const rezultatIdInput = document.getElementById('rezultat_id');
+        const spremiButton = document.getElementById('rezultat_spremi_btn');
+        const odustaniButton = document.getElementById('rezultat_odustani_btn');
+        const poljeInputi = Array.from(document.querySelectorAll('input[name="polje[]"][form="unos_rezultata"]'));
+        const rezPoTipuIdInputi = Array.from(document.querySelectorAll('input[name="rez_po_tipu_ids[]"][form="unos_rezultata"]'));
+        const editButtons = Array.from(document.querySelectorAll('.js-rezultat-edit'));
 
-        if (!clanSelect || !kategorijaSelect || kategorijaSelect.options.length === 0) {
+        if (!rezultatForm || !clanSelect || !kategorijaSelect || kategorijaSelect.options.length === 0) {
             return;
         }
 
@@ -93,6 +118,7 @@
         }
 
         function osvjeziKategorije() {
+            // Kategorije se filtriraju prema spolu odabranog člana kako bi unos ostao valjan.
             const selectedClan = clanSelect.options[clanSelect.selectedIndex];
             const clanSpol = selectedClan ? normalizirajSpol(selectedClan.dataset.spol) : '';
             const prethodnaVrijednost = kategorijaSelect.value;
@@ -129,7 +155,105 @@
                 : 'Nema kategorija za odabrani spol';
         }
 
+        function procitajJson(niz, fallback) {
+            try {
+                const parsed = JSON.parse(niz);
+                return Array.isArray(parsed) ? parsed : fallback;
+            } catch (e) {
+                return fallback;
+            }
+        }
+
+        function prebaciUNoviUnos() {
+            // Reset svih polja i povratak na osnovnu akciju spremanja (novi redak).
+            rezultatForm.action = rezultatForm.dataset.storeAction || rezultatForm.action;
+            if (formTitle) {
+                formTitle.textContent = 'Unos rezultata:';
+            }
+            if (spremiButton) {
+                spremiButton.textContent = 'Spremi';
+            }
+            if (odustaniButton) {
+                odustaniButton.classList.add('d-none');
+            }
+
+            if (rezultatIdInput) {
+                rezultatIdInput.value = '';
+            }
+
+            clanSelect.value = '';
+            stilSelect.value = '';
+            osvjeziKategorije();
+            kategorijaSelect.value = '';
+            plasmanInput.value = '';
+
+            if (plasmanEliminacijeInput) {
+                plasmanEliminacijeInput.value = '';
+            }
+
+            poljeInputi.forEach((input) => {
+                input.value = '';
+            });
+
+            rezPoTipuIdInputi.forEach((input) => {
+                input.value = '';
+            });
+        }
+
+        function prebaciUUredjivanje(button) {
+            // Podatke čitamo iz data-* atributa retka tablice (bez dodatnog server round-tripa).
+            const polja = procitajJson(button.dataset.polja || '[]', []);
+            const poljaIds = procitajJson(button.dataset.poljaIds || '[]', []);
+
+            rezultatForm.action = button.dataset.updateUrl || rezultatForm.dataset.storeAction || rezultatForm.action;
+            if (rezultatIdInput) {
+                rezultatIdInput.value = button.dataset.rezultatId || '';
+            }
+
+            clanSelect.value = button.dataset.clanId || '';
+            osvjeziKategorije();
+            kategorijaSelect.value = button.dataset.kategorijaId || '';
+            stilSelect.value = button.dataset.stilId || '';
+            plasmanInput.value = button.dataset.plasman || '';
+
+            if (plasmanEliminacijeInput) {
+                plasmanEliminacijeInput.value = button.dataset.plasmanEliminacije || '';
+            }
+
+            poljeInputi.forEach((input, index) => {
+                const vrijednost = polja[index];
+                input.value = vrijednost === null || typeof vrijednost === 'undefined' ? '' : vrijednost;
+            });
+
+            rezPoTipuIdInputi.forEach((input, index) => {
+                const id = poljaIds[index];
+                input.value = id === null || typeof id === 'undefined' ? '' : id;
+            });
+
+            if (formTitle) {
+                formTitle.textContent = 'Uređivanje rezultata:';
+            }
+            if (spremiButton) {
+                spremiButton.textContent = 'Spremi izmjene';
+            }
+            if (odustaniButton) {
+                odustaniButton.classList.remove('d-none');
+            }
+
+            // Korisnika automatski dovodimo na formu da je uređivanje odmah vidljivo.
+            rezultatForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
         clanSelect.addEventListener('change', osvjeziKategorije);
+        editButtons.forEach((button) => {
+            button.addEventListener('click', function () {
+                prebaciUUredjivanje(button);
+            });
+        });
+        if (odustaniButton) {
+            odustaniButton.addEventListener('click', prebaciUNoviUnos);
+        }
+
         osvjeziKategorije();
     });
 </script>

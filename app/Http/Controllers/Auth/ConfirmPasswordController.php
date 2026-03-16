@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\ConfirmsPasswords;
 
+/**
+ * Laravel kontroler za dodatnu potvrdu lozinke prije osjetljivih akcija.
+ */
 class ConfirmPasswordController extends Controller
 {
     /*
@@ -28,9 +31,7 @@ class ConfirmPasswordController extends Controller
     protected $redirectTo = '/';
 
     /**
-     * Create a new controller instance.
-     *
-     * @return void
+     * Potvrdu lozinke dopušta samo prijavljenim korisnicima.
      */
     public function __construct()
     {

@@ -1,3 +1,4 @@
+{{-- Administratorski ekran za definiranje tipova turnira. --}}
 <div class="card">
     <div class="card-header bg-danger fw-bolder text-white">
         Tipovi turnira

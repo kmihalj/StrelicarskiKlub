@@ -1,3 +1,4 @@
+{{-- Administratorski popis svih članaka s pretragom i akcijama. --}}
 @extends('layouts.app')
 @auth()
     @if(auth()->user()->rola <= 1)

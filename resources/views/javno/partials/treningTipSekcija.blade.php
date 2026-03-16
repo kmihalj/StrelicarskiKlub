@@ -1,3 +1,4 @@
+{{-- Sekcija prikaza treninga po tipu (dvorana/vanjski) s tablicom i grafom napretka. --}}
 @php
     $sekcijaDomId = strtolower((string)($sekcijaId ?? ('trening-' . ($konfig['tip'] ?? 'tip'))));
     $sekcijaDomId = preg_replace('/[^a-z0-9\-]+/', '-', $sekcijaDomId);

@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Model TreninziVanjski predstavlja zapis baze podataka i definira relacije te pomoćne metode za rad s podacima.
+ */
 class TreninziVanjski extends Model
 {
     use HasFactory;
@@ -26,11 +29,17 @@ class TreninziVanjski extends Model
         'runda2' => 'array',
     ];
 
+    /**
+     * Evidencija vanjskog treninga je povezan s jednim zapisom: korisnički račun.
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    /**
+     * Evidencija vanjskog treninga je povezan s jednim zapisom: člana kluba.
+     */
     public function clan(): BelongsTo
     {
         return $this->belongsTo(Clanovi::class, 'clan_id');

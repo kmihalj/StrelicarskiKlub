@@ -6,12 +6,21 @@ use App\Services\ThemeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
+/**
+ * Kontroler korisničkog odabira svijetle/tamne varijante kada tema nije globalno zaključana od administratora.
+ */
 class UserThemePreferenceController extends Controller
 {
+    /**
+     * Učitava servis za korisnički odabir varijante teme.
+     */
     public function __construct(private readonly ThemeService $themeService)
     {
     }
 
+    /**
+     * Sprema osobnu postavku prikaza teme prijavljenog korisnika.
+     */
     public function update(Request $request): RedirectResponse
     {
         $siteModePolicy = $this->themeService->siteThemeModePolicy();

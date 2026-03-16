@@ -7,8 +7,14 @@ use App\Models\PolaznikSkole;
 use App\Models\User;
 use Illuminate\Support\Str;
 
+/**
+ * Servis povezuje korisničke račune sa stvarnim članovima kluba i polaznicima škole na temelju identiteta.
+ */
 class KorisnikClanService
 {
+    /**
+     * Pokušava pronaći postojećeg člana koji se registrira tako da uspoređuje OIB, e-mail, ime i telefon.
+     */
     public function pronadiClanaZaRegistraciju(string $imePrezime, string $email, string $oib, string $telefon): ?Clanovi
     {
         $normaliziraniOib = $this->normalizirajOib($oib);
@@ -36,6 +42,9 @@ class KorisnikClanService
         return $clan;
     }
 
+    /**
+     * Pokušava pronaći postojećeg polaznika škole koji se registrira, uz strogu provjeru identiteta.
+     */
     public function pronadiPolaznikaZaRegistraciju(string $imePrezime, string $email, string $oib, string $telefon): ?PolaznikSkole
     {
         $normaliziraniOib = $this->normalizirajOib($oib);
@@ -67,6 +76,9 @@ class KorisnikClanService
         return $polaznik;
     }
 
+    /**
+     * Traži najvjerojatnijeg člana za već postojeći korisnički račun (strogo, pa fallback po e-mailu/imenu).
+     */
     public function pronadiClanaZaPostojecegKorisnika(User $user): ?Clanovi
     {
         if (!empty($user->oib) && !empty($user->br_telefona)) {
@@ -90,6 +102,9 @@ class KorisnikClanService
         return $this->pronadiJedinstvenoPoImenu((string)$user->name);
     }
 
+    /**
+     * Provjerava je li član već povezan s nekim drugim korisničkim računom.
+     */
     public function clanJeSlobodan(int $clanId, ?int $ignorirajUserId = null): bool
     {
         $query = User::where('clan_id', $clanId);
@@ -100,6 +115,9 @@ class KorisnikClanService
         return !$query->exists();
     }
 
+    /**
+     * Provjerava je li polaznik škole već povezan s nekim drugim korisničkim računom.
+     */
     public function polaznikJeSlobodan(int $polaznikId, ?int $ignorirajUserId = null): bool
     {
         $query = User::where('polaznik_id', $polaznikId);
@@ -110,6 +128,9 @@ class KorisnikClanService
         return !$query->exists();
     }
 
+    /**
+     * Povezuje korisnički račun s članom kluba i po potrebi postavlja rolu člana.
+     */
     public function poveziKorisnika(User $user, Clanovi $clan, bool $postaviRoluNaClana = true): bool
     {
         $promijenjeno = false;
@@ -148,6 +169,9 @@ class KorisnikClanService
         return $promijenjeno;
     }
 
+    /**
+     * Povezuje korisnički račun s polaznikom škole i po potrebi postavlja rolu polaznika.
+     */
     public function poveziKorisnikaSPolaznikom(User $user, PolaznikSkole $polaznik, bool $postaviRoluNaPolaznika = true): bool
     {
         $promijenjeno = false;
@@ -186,6 +210,9 @@ class KorisnikClanService
         return $promijenjeno;
     }
 
+    /**
+     * Odspaja korisnički račun od člana/polaznika i po potrebi vraća rolu na nepovezanog korisnika.
+     */
     public function odspojiKorisnika(User $user, bool $postaviRoluNaNepovezanog = true): bool
     {
         $promijenjeno = false;
@@ -212,6 +239,9 @@ class KorisnikClanService
         return $promijenjeno;
     }
 
+    /**
+     * Normalizira broj telefona u jedinstveni format za spremanje (s međunarodnim prefiksom).
+     */
     public function normalizirajTelefonZaPohranu(?string $telefon): ?string
     {
         $normaliziraniTelefon = $this->normalizirajTelefon($telefon);
@@ -219,6 +249,9 @@ class KorisnikClanService
         return $normaliziraniTelefon === null ? null : '+' . $normaliziraniTelefon;
     }
 
+    /**
+     * Čisti i validira OIB te vraća samo ispravan 11-znamenkasti zapis.
+     */
     public function normalizirajOib(?string $oib): ?string
     {
         $oib = preg_replace('/\D+/', '', (string)$oib);
@@ -226,6 +259,9 @@ class KorisnikClanService
         return strlen($oib) === 11 ? $oib : null;
     }
 
+    /**
+     * Traži člana jedinstveno po e-mailu (vraća rezultat samo ako postoji točno jedno podudaranje).
+     */
     private function pronadiJedinstvenoPoEmailu(string $email): ?Clanovi
     {
         $normaliziraniEmail = $this->normalizirajEmail($email);
@@ -242,6 +278,9 @@ class KorisnikClanService
         return $kandidati->count() === 1 ? $kandidati->first() : null;
     }
 
+    /**
+     * Traži člana jedinstveno po imenu i prezimenu (vraća rezultat samo ako postoji točno jedno podudaranje).
+     */
     private function pronadiJedinstvenoPoImenu(string $imePrezime): ?Clanovi
     {
         $normaliziranoIme = $this->normalizirajImePrezime($imePrezime);
@@ -259,6 +298,9 @@ class KorisnikClanService
         return $kandidati->count() === 1 ? $kandidati->first() : null;
     }
 
+    /**
+     * Normalizira ime i prezime (mala slova, bez dijakritike, jedinstveni razmaci) radi pouzdane usporedbe.
+     */
     private function normalizirajImePrezime(?string $imePrezime): string
     {
         $imePrezime = mb_strtolower(trim((string)$imePrezime));
@@ -274,6 +316,9 @@ class KorisnikClanService
         return trim(preg_replace('/\s+/', ' ', (string)$imePrezime));
     }
 
+    /**
+     * Normalizira e-mail adresu (trim + lowercase) za usporedbu zapisa.
+     */
     private function normalizirajEmail(?string $email): ?string
     {
         $email = mb_strtolower(trim((string)$email));
@@ -281,6 +326,9 @@ class KorisnikClanService
         return $email === '' ? null : $email;
     }
 
+    /**
+     * Normalizira broj telefona u međunarodni brojčani oblik (HR prefiks).
+     */
     private function normalizirajTelefon(?string $telefon): ?string
     {
         $telefon = preg_replace('/\D+/', '', (string)$telefon);

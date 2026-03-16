@@ -1,3 +1,4 @@
+{{-- Mobilna navigacija glavnog izbornika aplikacije. --}}
 @include('layouts.nav2CSS')
 <nav class="navbar navbar-expand-xxl navbar-dark" style="background-color: var(--theme-nav-solid-bg, #000);">
     <div class="container-fluid">

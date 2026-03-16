@@ -1,3 +1,4 @@
+{{-- Administratorski popis korisničkih računa s rolama i povezivanjem na člana/polaznika. --}}
 @extends('layouts.app')
 
 @section('content')

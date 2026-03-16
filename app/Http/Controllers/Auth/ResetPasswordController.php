@@ -8,6 +8,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 
+/**
+ * Laravel kontroler za promjenu lozinke putem reset tokena.
+ */
 class ResetPasswordController extends Controller
 {
     /*
@@ -30,6 +33,9 @@ class ResetPasswordController extends Controller
      */
     protected $redirectTo = '/';
 
+    /**
+     * Definira validacijska pravila za samu promjenu lozinke putem reset forme.
+     */
     protected function rules(): array
     {
         return [
@@ -39,6 +45,9 @@ class ResetPasswordController extends Controller
         ];
     }
 
+    /**
+     * Vraća poruke greške za validaciju unosa kod reseta lozinke.
+     */
     protected function validationErrorMessages(): array
     {
         return [
@@ -51,11 +60,17 @@ class ResetPasswordController extends Controller
         ];
     }
 
+    /**
+     * Nakon uspješnog reseta prikazuje status poruku i preusmjerava korisnika na zadanu rutu.
+     */
     protected function sendResetResponse(Request $request, $response): RedirectResponse
     {
         return redirect($this->redirectPath())->with('status', 'Lozinka je uspješno promijenjena.');
     }
 
+    /**
+     * Prevodi kod greške reseta lozinke u korisniku razumljivu poruku.
+     */
     protected function sendResetFailedResponse(Request $request, $response): RedirectResponse
     {
         $poruka = match ($response) {

@@ -1,3 +1,4 @@
+{{-- Zajednički blok paginacije za listne prikaze. --}}
 @if($paginator->hasPages())
     <div class="container-xxl bg-white shadow">
         <div class="row justify-content-center py-2 @if(!empty($isTop)) mb-3 @endif shadow">

@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/**
+ * Model PolaznikSkole predstavlja zapis baze podataka i definira relacije te pomoćne metode za rad s podacima.
+ */
 class PolaznikSkole extends Model
 {
     use HasFactory;
@@ -36,36 +39,57 @@ class PolaznikSkole extends Model
         'prebacen_at' => 'datetime',
     ];
 
+    /**
+     * Vraća evidenciju dolazaka polaznika škole na treninge.
+     */
     public function dolasci(): HasMany
     {
         return $this->hasMany(PolaznikSkoleDolazak::class, 'polaznik_skole_id', 'id');
     }
 
+    /**
+     * Vraća korisnički račun povezan s ovim polaznikom.
+     */
     public function povezaniKorisnik(): HasOne
     {
         return $this->hasOne(User::class, 'polaznik_id', 'id');
     }
 
+    /**
+     * Ako je polaznik prešao u članstvo, vraća povezani zapis člana.
+     */
     public function prebacenClan(): BelongsTo
     {
         return $this->belongsTo(Clanovi::class, 'prebacen_u_clana_id');
     }
 
+    /**
+     * Vraća dokumente učitane za polaznika škole.
+     */
     public function dokumenti(): HasMany
     {
         return $this->hasMany(PolaznikSkoleDokument::class, 'polaznik_skole_id', 'id');
     }
 
+    /**
+     * Vraća roditeljske račune koji imaju pristup podacima ovog polaznika.
+     */
     public function roditelji(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'roditelj_polaznik', 'polaznik_id', 'roditelj_user_id');
     }
 
+    /**
+     * Vraća profil praćenja školarine za ovog polaznika.
+     */
     public function paymentProfile(): HasOne
     {
         return $this->hasOne(PolaznikPaymentProfile::class, 'polaznik_skole_id', 'id');
     }
 
+    /**
+     * Vraća sve stavke zaduženja i uplata školarine polaznika.
+     */
     public function paymentCharges(): HasMany
     {
         return $this->hasMany(PolaznikPaymentCharge::class, 'polaznik_skole_id', 'id');

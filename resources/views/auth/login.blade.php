@@ -1,3 +1,4 @@
+{{-- Ekran prijave postojećeg korisnika u aplikaciju. --}}
 @extends('layouts.app')
 
 @section('content')

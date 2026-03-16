@@ -1,3 +1,4 @@
+{{-- Tablica rezultata runde treninga (serije, strijele i zbroj). --}}
 @once
     <style>
         .trening-hit-chip {

@@ -1,3 +1,4 @@
+{{-- Ekran za slanje zahtjeva za reset lozinke e-mailom. --}}
 @extends('layouts.app')
 
 @section('content')

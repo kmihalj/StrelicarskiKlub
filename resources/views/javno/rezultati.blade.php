@@ -1,3 +1,4 @@
+{{-- Ekran rezultata kluba: medalje po godinama, statistika i popis turnira s rezultatima. --}}
 @extends('layouts.app')
 @section('content')
     <div class="container-xxl bg-white shadow">
@@ -17,10 +18,10 @@
             ];
         @endphp
 
-        <div class="row g-3 p-3 mb-3 shadow">
+        <div class="row g-3 p-3 mb-3">
             <div class="col-xxl-3 col-lg-4 col-md-6">
-                <div class="card h-100">
-                    <div class="card-header bg-light fw-bold">{{ $trenutnaGodina }}. godina</div>
+                <div class="card h-100 border">
+                    <div class="card-header bg-white fw-bold">{{ $trenutnaGodina }}. godina</div>
                     <div class="card-body py-2">
                         <p class="fw-bold mb-2">Ukupno medalja: {{ $statistikaTekuca['ukupno'] }}</p>
                         <p class="mb-0">
@@ -33,8 +34,8 @@
             </div>
 
             <div class="col-xxl-3 col-lg-4 col-md-6">
-                <div class="card h-100">
-                    <div class="card-header bg-light fw-bold d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="card h-100 border">
+                    <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <span>Statistika za {{ $odabranaGodinaStatistike }}.</span>
                         <form method="GET" action="{{ route('javno.rezultati') }}" class="d-flex align-items-center gap-2">
                             <label for="godina" class="small mb-0">Godina:</label>
@@ -62,8 +63,8 @@
             </div>
 
             <div class="col-xxl-6 col-lg-4 col-md-12">
-                <div class="card h-100">
-                    <div class="card-header bg-light fw-bold">
+                <div class="card h-100 border">
+                    <div class="card-header bg-white fw-bold">
                         Detaljna statistika za {{ $odabranaGodinaStatistike }}.
                     </div>
                     <div class="card-body py-2">
@@ -139,4 +140,5 @@
 
         @include('layouts.paginationBlok', ['paginator' => $turniri])
     @endif
+
 @endsection

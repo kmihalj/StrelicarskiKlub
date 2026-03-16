@@ -1,3 +1,4 @@
+{{-- Naslovnica aplikacije s personaliziranim blokovima (statusi, rezultati, članci, rođendani). --}}
 @extends('layouts.app')
 @section('content')
     <div class="container-xxl">
@@ -5,6 +6,7 @@
             <!-- Prikaz na desktop browseru -->
             <div class="d-none d-xxl-block col-lg-3">
                 <!-- Kontakt podaci -->
+                {{-- Lijevi stupac (desktop): fiksni kontakt podaci kluba + statični članci naslovnice. --}}
                 <div class="row justify-content-center p-2 shadow bg-danger fw-bolder me-lg-1">
                     <div class="col-lg-12 text-white">
                         Kontakt
@@ -31,6 +33,7 @@
                 </div>
                 <!-- Članci za naslovnicu -->
                 @if($clanciNaslovnica->count() != 0)
+                    {{-- "Škola streličarstva" ide prva jer je najčešće ključna informacija za nove korisnike. --}}
                     @foreach($clanciNaslovnica as $clanak)
                         @if($clanak->naslov == "Škola streličarstva")
                             <div class="row justify-content-center p-2 shadow bg-danger fw-bolder me-lg-1">
@@ -46,6 +49,7 @@
                             @break
                         @endif
                     @endforeach
+                    {{-- Ostali naslovni članci slijede nakon škole, redoslijedom iz baze. --}}
                     @foreach($clanciNaslovnica as $clanak)
                         @if($clanak->naslov != "Škola streličarstva")
                             <div class="row justify-content-center p-2 shadow bg-danger fw-bolder me-lg-1">
@@ -68,6 +72,7 @@
             <!-- Prikaz na smanjenom prozoru -->
             <div class="d-xxl-none col-lg-6 pe-lg-4">
                 <!-- Kontakt podaci -->
+                {{-- Mobilni/suženi prikaz koristi isti sadržaj, ali drugačiji raspored radi čitljivosti. --}}
                 <div class="row justify-content-center p-2 shadow bg-danger fw-bolder">
                     <div class="col-lg-12 text-white">
                         Kontakt
@@ -118,6 +123,7 @@
 
             <!-- Zadnjih 5 rezultata -->
             <div class="col-xxl-9 col-xl-12 col-lg-12 col-md-12 col-sm-12">
+                {{-- Informativni status blokovi (rođendani, liječnički, škola, status djece) prikazuju se kontekstualno po ulozi korisnika. --}}
                 @include('javno.naslovnaRodjendani', ['rodendaniDanas' => $rodendaniDanas])
                 @include('javno.naslovnaLijecnickiStatus', ['statusLijecnickiKorisnika' => $statusLijecnickiKorisnika])
                 @include('javno.naslovnaSkolaStatus', ['statusSkolaKorisnika' => $statusSkolaKorisnika ?? null])
@@ -136,6 +142,7 @@
                         Rezultati zadnjih 5 turnira i ostali članci
                     </div>
                 </div>
+                {{-- Kombinirani feed rezultata i članaka predstavlja glavni dinamički sadržaj naslovnice. --}}
                 @include('javno.naslovnaRezultatiClanci', ['stavkeRezultataIClanaka' => $stavkeRezultataIClanaka])
             </div>
 

@@ -21,26 +21,41 @@ class RezultatiOpci extends Model
 
     protected $fillable = ['turnir_id', 'clan_id', 'kategorija_id', 'stil_id', 'plasman', 'plasman_nakon_eliminacija' ];
 
+    /**
+     * Pojedinačni rezultat člana je povezan s jednim zapisom: turnir.
+     */
     public function turnir(): BelongsTo
     {
         return $this->belongsTo(Turniri::class, 'turnir_id');
     }
 
+    /**
+     * Pojedinačni rezultat člana je povezan s jednim zapisom: člana kluba.
+     */
     public function clan(): BelongsTo
     {
         return $this->belongsTo(Clanovi::class, 'clan_id');
     }
 
+    /**
+     * Pojedinačni rezultat člana je povezan s jednim zapisom: natjecateljsku kategoriju.
+     */
     public function kategorija(): BelongsTo
     {
         return $this->belongsTo(Kategorije::class, 'kategorija_id');
     }
 
+    /**
+     * Pojedinačni rezultat člana je povezan s jednim zapisom: stil luka.
+     */
     public function stil(): BelongsTo
     {
         return $this->belongsTo(Stilovi::class, 'stil_id');
     }
 
+    /**
+     * Vraća timske stavke u kojima je ovaj pojedinačni rezultat uključen.
+     */
     public function timStavke(): HasMany
     {
         return $this->hasMany(RezultatiTimClan::class, 'rezultat_opci_id');

@@ -1,3 +1,4 @@
+{{-- Administratorski profil člana: podaci, dokumenti, liječnički, treninzi i plaćanja. --}}
 @extends('layouts.app')
 
 @section('content')

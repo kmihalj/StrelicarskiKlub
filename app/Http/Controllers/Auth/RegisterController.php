@@ -9,6 +9,9 @@ use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
+/**
+ * Kontroler registracije koji povezuje novi korisnički račun s članom ili polaznikom škole.
+ */
 class RegisterController extends Controller
 {
     /*
@@ -32,9 +35,7 @@ class RegisterController extends Controller
     protected $redirectTo = '/';
 
     /**
-     * Create a new controller instance.
-     *
-     * @return void
+     * Registraciju dopušta samo korisnicima koji trenutno nisu prijavljeni.
      */
     public function __construct()
     {
@@ -42,10 +43,7 @@ class RegisterController extends Controller
     }
 
     /**
-     * Get a validator for an incoming registration request.
-     *
-     * @param  array  $data
-     * @return \Illuminate\Contracts\Validation\Validator
+     * Validira obavezne podatke registracije (identitet i kontakt korisnika).
      */
     protected function validator(array $data)
     {
@@ -66,10 +64,7 @@ class RegisterController extends Controller
     }
 
     /**
-     * Create a new user instance after a valid registration.
-     *
-     * @param  array  $data
-     * @return \App\Models\User
+     * Kreira korisnički račun i pokušava ga odmah povezati s postojećim članom/polaznikom.
      */
     protected function create(array $data)
     {

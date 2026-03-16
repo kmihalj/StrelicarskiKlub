@@ -10,6 +10,15 @@ use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 
+/**
+ * Servis za školarinu polaznika škole streličarstva.
+ *
+ * Pokriva:
+ * - automatsko otvaranje stavki školarine,
+ * - model plaćanja u cijelosti ili u dvije rate,
+ * - logiku aktivacije druge rate nakon određenog broja treninga,
+ * - pripremu statusa i poruka za admin i korisničke prikaze.
+ */
 class SchoolPaymentService
 {
     public const STATUS_OPEN = 'open';
@@ -31,6 +40,9 @@ class SchoolPaymentService
     private const DEFAULT_ADULT_AMOUNT = 100.00;
     private const DEFAULT_MINOR_AMOUNT = 70.00;
 
+    /**
+     * Provjerava je li praćenje školarine uključeno u postavkama sitea.
+     */
     public function isEnabled(): bool
     {
         if (!$this->supportsSchoolPayments()) {
@@ -40,6 +52,9 @@ class SchoolPaymentService
         return (bool)SiteSetting::query()->value('payment_tracking_enabled');
     }
 
+    /**
+     * Vraća trenutačno važeći iznos školarine za punoljetne polaznike.
+     */
     public function adultAmount(): float
     {
         if (!$this->supportsSchoolPayments()) {
@@ -55,6 +70,9 @@ class SchoolPaymentService
         return $value > 0 ? round($value, 2) : self::DEFAULT_ADULT_AMOUNT;
     }
 
+    /**
+     * Vraća trenutačno važeći iznos školarine za maloljetne polaznike.
+     */
     public function minorAmount(): float
     {
         if (!$this->supportsSchoolPayments()) {
@@ -70,6 +88,9 @@ class SchoolPaymentService
         return $value > 0 ? round($value, 2) : self::DEFAULT_MINOR_AMOUNT;
     }
 
+    /**
+     * Sprema globalne postavke školarine (uključeno/isključeno i iznosi za punoljetne/maloljetne).
+     */
     public function updateSetup(array $data): void
     {
         if (!$this->supportsSchoolPayments()) {
@@ -100,6 +121,11 @@ class SchoolPaymentService
         }
     }
 
+    /**
+     * Osigurava da polaznik ima payment profil i inicijalni iznos školarine.
+     *
+     * Poziva se prije svih operacija nad stavkama kako bi stanje bilo konzistentno.
+     */
     public function ensureProfile(PolaznikSkole $polaznik, ?int $adminUserId = null): ?PolaznikPaymentProfile
     {
         if (!$this->isEnabled()) {
@@ -130,6 +156,9 @@ class SchoolPaymentService
         return $profile->fresh();
     }
 
+    /**
+     * Dodjeljuje model plaćanja (cijelost/rate/oslobođen) i sinkronizira stavke.
+     */
     public function assignMode(PolaznikSkole $polaznik, string $mode, int $adminUserId): ?PolaznikPaymentProfile
     {
         $normalizedMode = $this->normalizeMode($mode) ?? self::MODE_FULL;
@@ -150,6 +179,11 @@ class SchoolPaymentService
         return $profile->fresh();
     }
 
+    /**
+     * Potvrđuje ili vraća status stavke školarine.
+     *
+     * Kod prve stavke podržava odabir "pola" kako bi se automatski otvorila druga rata.
+     */
     public function updateChargeStatus(
         PolaznikSkole $polaznik,
         PolaznikPaymentCharge $charge,
@@ -192,6 +226,9 @@ class SchoolPaymentService
         }
 
         if ($charge->source === self::SOURCE_TUITION) {
+            // Prva uplata određuje režim:
+            // - full => smatra se da je cijela školarina podmirena,
+            // - half => otvara se logika druge rate nakon praga treninga.
             if ($settlement === self::SETTLEMENT_HALF) {
                 $profile->payment_mode = self::MODE_INSTALLMENTS;
                 $profile->updated_by = $adminUserId;
@@ -220,6 +257,9 @@ class SchoolPaymentService
         $this->syncCharges($profile->fresh(), $attendanceCount, $adminUserId);
     }
 
+    /**
+     * Slaže sažetak školarine polaznika: profil, otvorene/plaćene stavke, broj dolazaka i iduću obvezu.
+     */
     public function summary(PolaznikSkole $polaznik): array
     {
         if (!$this->isEnabled()) {
@@ -272,6 +312,9 @@ class SchoolPaymentService
         ];
     }
 
+    /**
+     * Generira korisničku obavijest o stanju školarine (plaćeno, djelomično, dug).
+     */
     public function noticeForPolaznik(PolaznikSkole $polaznik): ?array
     {
         $summary = $this->summary($polaznik);
@@ -347,6 +390,9 @@ class SchoolPaymentService
         ];
     }
 
+    /**
+     * Vraća čitljiv naziv odabranog modela plaćanja školarine.
+     */
     public function modeLabel(?string $mode): string
     {
         return match ($mode) {
@@ -356,6 +402,9 @@ class SchoolPaymentService
         };
     }
 
+    /**
+     * Vraća dostupne opcije podmirenja za početnu stavku školarine (u cijelosti ili pola iznosa).
+     */
     public function settlementOptionsForCharge(PolaznikPaymentCharge $charge): array
     {
         if ($charge->source !== self::SOURCE_TUITION) {
@@ -368,6 +417,9 @@ class SchoolPaymentService
         ];
     }
 
+    /**
+     * Vraća sažeti status školarine polaznika za prikaz u tablicama/listama (plaćeno, dug, pending).
+     */
     public function listStatusForPolaznik(PolaznikSkole $polaznik): ?array
     {
         $summary = $this->summary($polaznik);
@@ -420,6 +472,9 @@ class SchoolPaymentService
         ];
     }
 
+    /**
+     * Generira ili ažurira zaduženja školarine prema broju odrađenih treninga i odabranom modelu plaćanja.
+     */
     private function syncCharges(PolaznikPaymentProfile $profile, int $attendanceCount, ?int $adminUserId): void
     {
         $mode = $this->normalizeMode($profile->payment_mode) ?? self::MODE_FULL;
@@ -516,6 +571,9 @@ class SchoolPaymentService
         }
     }
 
+    /**
+     * Broji evidentirane dolaske polaznika koji ulaze u pravilo druge rate.
+     */
     private function attendanceCount(PolaznikSkole $polaznik): int
     {
         return (int)$polaznik->dolasci()
@@ -523,6 +581,9 @@ class SchoolPaymentService
             ->count();
     }
 
+    /**
+     * Određuje osnovni iznos školarine prema dobi polaznika na referentni datum.
+     */
     private function baseTuitionAmountForPolaznik(PolaznikSkole $polaznik, Carbon $referenceDate): float
     {
         $isAdult = false;
@@ -534,6 +595,9 @@ class SchoolPaymentService
         return $isAdult ? $this->adultAmount() : $this->minorAmount();
     }
 
+    /**
+     * Dijeli iznos školarine na dvije rate (prva i druga polovica).
+     */
     private function splitAmount(float $total): array
     {
         $first = round($total / 2, 2);
@@ -541,6 +605,9 @@ class SchoolPaymentService
         return [$first, $second];
     }
 
+    /**
+     * Normalizira model školarine na podržane vrijednosti (`full`, `installments`, `exempt`).
+     */
     private function normalizeMode(?string $mode): ?string
     {
         $value = trim((string)$mode);
@@ -555,6 +622,9 @@ class SchoolPaymentService
         return $value;
     }
 
+    /**
+     * Normalizira datum plaćanja školarine u format `Y-m-d`.
+     */
     private function normalizeDate(?string $value): ?string
     {
         $candidate = trim((string)$value);
@@ -569,6 +639,9 @@ class SchoolPaymentService
         }
     }
 
+    /**
+     * Normalizira iznos školarine iz forme u decimalni broj.
+     */
     private function normalizeAmount(mixed $value): ?float
     {
         if (is_int($value) || is_float($value)) {
@@ -588,11 +661,17 @@ class SchoolPaymentService
         return round((float)$normalized, 2);
     }
 
+    /**
+     * Osigurava da metadata školarine uvijek bude u ispravnom polju tipa array.
+     */
     private function normalizeMetadata(mixed $metadata): array
     {
         return is_array($metadata) ? $metadata : [];
     }
 
+    /**
+     * Provjerava podržava li okruženje ili konfiguracija traženu mogućnost.
+     */
     private function supportsSchoolPayments(): bool
     {
         return Schema::hasTable('site_settings')

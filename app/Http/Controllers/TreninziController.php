@@ -11,6 +11,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
+/**
+ * Kontroler za evidenciju treninga članova (dvorana i vanjski treninzi).
+ */
 class TreninziController extends Controller
 {
     private const KONFIG_DVORANSKI = [
@@ -29,6 +32,9 @@ class TreninziController extends Controller
         'ima_x_kolonu' => true,
     ];
 
+    /**
+     * Prikazuje treninge prijavljenog člana, statistiku pogodaka i graf napretka.
+     */
     public function index(): View
     {
         $clanKorisnika = $this->dohvatiPovezanogClana();
@@ -43,6 +49,9 @@ class TreninziController extends Controller
         ]);
     }
 
+    /**
+     * Administratoru prikazuje sve treninge odabranog člana, statistiku i graf napretka.
+     */
     public function adminIndex(Clanovi $clan): View
     {
         $this->potvrdiAdminPravo();
@@ -58,6 +67,9 @@ class TreninziController extends Controller
         ]);
     }
 
+    /**
+     * Prikazuje treninge pojedinog člana korisniku koji ima pravo uvida (član/roditelj/admin).
+     */
     public function pregledClana(Clanovi $clan): View
     {
         $this->potvrdiPravoNaPregledTreningaClana($clan);
@@ -73,7 +85,10 @@ class TreninziController extends Controller
         ]);
     }
 
-    public function pripremiPrikazTreningaZaClana(Clanovi $clan, ?int $userId = null): array
+    /**
+     * Sastavlja kompletan prikaz treninga člana (tablice + podaci za grafove).
+     */
+    private function pripremiPrikazTreningaZaClana(Clanovi $clan, ?int $userId = null): array
     {
         $dvoranskiUpit = TreninziDvorana::query()
             ->where('clan_id', (int)$clan->id);
@@ -104,6 +119,9 @@ class TreninziController extends Controller
         ];
     }
 
+    /**
+     * Otvara prazan obrazac za unos novog dvoranskog treninga.
+     */
     public function createDvoranski(): View
     {
         return $this->prikazUnosaTreninga(
@@ -112,6 +130,9 @@ class TreninziController extends Controller
         );
     }
 
+    /**
+     * Otvara obrazac za izmjenu postojećeg dvoranskog treninga.
+     */
     public function editDvoranski(TreninziDvorana $trening): View
     {
         $this->potvrdiVlasnistvoNadTreningom((int)$trening->user_id);
@@ -127,6 +148,9 @@ class TreninziController extends Controller
         );
     }
 
+    /**
+     * Sprema novi dvoranski trening člana (dvije runde pogodaka).
+     */
     public function storeDvoranski(Request $request): RedirectResponse|JsonResponse
     {
         return $this->spremiTrening($request, self::KONFIG_DVORANSKI, function (Clanovi $clanKorisnika, string $datum, array $runda1, array $runda2): void {
@@ -140,6 +164,9 @@ class TreninziController extends Controller
         });
     }
 
+    /**
+     * Ažurira postojeći dvoranski trening člana.
+     */
     public function updateDvoranski(Request $request, TreninziDvorana $trening): RedirectResponse|JsonResponse
     {
         $this->potvrdiVlasnistvoNadTreningom((int)$trening->user_id);
@@ -160,6 +187,9 @@ class TreninziController extends Controller
         );
     }
 
+    /**
+     * Briše dvoranski trening iz osobne evidencije člana.
+     */
     public function destroyDvoranski(TreninziDvorana $trening): RedirectResponse
     {
         $this->potvrdiVlasnistvoNadTreningom((int)$trening->user_id);
@@ -168,6 +198,9 @@ class TreninziController extends Controller
         return redirect()->route('javno.treninzi.index')->with('success', 'Dvoranski trening je obrisan.');
     }
 
+    /**
+     * Administrator briše dvoranski trening iz profila odabranog člana.
+     */
     public function destroyDvoranskiAdmin(Clanovi $clan, TreninziDvorana $trening): RedirectResponse
     {
         $this->potvrdiAdminPravo();
@@ -177,6 +210,9 @@ class TreninziController extends Controller
         return redirect()->route('admin.treninzi.index', $clan)->with('success', 'Dvoranski trening je obrisan.');
     }
 
+    /**
+     * Otvara prazan obrazac za unos novog vanjskog treninga.
+     */
     public function createVanjski(): View
     {
         return $this->prikazUnosaTreninga(
@@ -185,6 +221,9 @@ class TreninziController extends Controller
         );
     }
 
+    /**
+     * Otvara obrazac za izmjenu postojećeg vanjskog treninga.
+     */
     public function editVanjski(TreninziVanjski $trening): View
     {
         $this->potvrdiVlasnistvoNadTreningom((int)$trening->user_id);
@@ -200,6 +239,9 @@ class TreninziController extends Controller
         );
     }
 
+    /**
+     * Sprema novi vanjski trening člana (dvije runde pogodaka).
+     */
     public function storeVanjski(Request $request): RedirectResponse|JsonResponse
     {
         return $this->spremiTrening($request, self::KONFIG_VANJSKI, function (Clanovi $clanKorisnika, string $datum, array $runda1, array $runda2): void {
@@ -213,6 +255,9 @@ class TreninziController extends Controller
         });
     }
 
+    /**
+     * Ažurira postojeći vanjski trening člana.
+     */
     public function updateVanjski(Request $request, TreninziVanjski $trening): RedirectResponse|JsonResponse
     {
         $this->potvrdiVlasnistvoNadTreningom((int)$trening->user_id);
@@ -233,6 +278,9 @@ class TreninziController extends Controller
         );
     }
 
+    /**
+     * Briše vanjski trening iz osobne evidencije člana.
+     */
     public function destroyVanjski(TreninziVanjski $trening): RedirectResponse
     {
         $this->potvrdiVlasnistvoNadTreningom((int)$trening->user_id);
@@ -241,6 +289,9 @@ class TreninziController extends Controller
         return redirect()->route('javno.treninzi.index')->with('success', 'Vanjski trening je obrisan.');
     }
 
+    /**
+     * Administrator briše vanjski trening iz profila odabranog člana.
+     */
     public function destroyVanjskiAdmin(Clanovi $clan, TreninziVanjski $trening): RedirectResponse
     {
         $this->potvrdiAdminPravo();
@@ -250,6 +301,9 @@ class TreninziController extends Controller
         return redirect()->route('admin.treninzi.index', $clan)->with('success', 'Vanjski trening je obrisan.');
     }
 
+    /**
+     * Priprema formu za unos/izmjenu treninga s inicijalnim vrijednostima rundi i konfiguracijom tipa treninga.
+     */
     private function prikazUnosaTreninga(
         array $konfig,
         string $formAction,
@@ -313,6 +367,9 @@ class TreninziController extends Controller
         ]);
     }
 
+    /**
+     * Validira ulaz i sprema promjene prema pravilima modula treninga članova.
+     */
     private function spremiTrening(
         Request $request,
         array $konfig,
@@ -369,6 +426,9 @@ class TreninziController extends Controller
             ->with('saved_toast', $poruka);
     }
 
+    /**
+     * Pretvara pojedini trening u strukturiran prikaz s rundama, zbrojevima i statistikom pogodaka.
+     */
     private function pripremiTreningZaPrikaz(TreninziDvorana|TreninziVanjski $trening, array $konfig): array
     {
         $runda1 = $this->izracunajRundu(
@@ -402,6 +462,9 @@ class TreninziController extends Controller
         ];
     }
 
+    /**
+     * Priprema niz podataka za graf napretka treninga kroz vrijeme.
+     */
     private function pripremiGrafPodatke(Collection $treninziPrikaz): array
     {
         return $treninziPrikaz
@@ -415,6 +478,9 @@ class TreninziController extends Controller
             ->all();
     }
 
+    /**
+     * Računa zbroj bodova jedne runde treninga iz pojedinačnih pogodaka.
+     */
     private function izracunajRundu(array $runda, array $konfig): array
     {
         $serije = [];
@@ -485,6 +551,9 @@ class TreninziController extends Controller
         ];
     }
 
+    /**
+     * Računa sažetak treninga (ukupno, prosjek, najbolji/najlošiji rezultat).
+     */
     private function izracunajStatistiku(array $runda1, array $runda2): array
     {
         $sveVrijednosti = array_merge($runda1['vrijednosti'], $runda2['vrijednosti']);
@@ -603,6 +672,9 @@ class TreninziController extends Controller
         ];
     }
 
+    /**
+     * Generira početnu praznu strukturu runde za broj serija i strijela.
+     */
     private function inicijalnaRunda(int $brojSerija, int $brojStrijelaUSeriji): array
     {
         $runda = [];
@@ -613,6 +685,9 @@ class TreninziController extends Controller
         return $runda;
     }
 
+    /**
+     * Normalizira i popunjava rundu treninga na očekivani broj serija/strijela te sortira pogotke po vrijednosti.
+     */
     private function normalizirajRundu(mixed $runda, int $brojSerija, int $brojStrijelaUSeriji): array
     {
         $normaliziranaRunda = [];
@@ -631,6 +706,9 @@ class TreninziController extends Controller
         return $normaliziranaRunda;
     }
 
+    /**
+     * Slaže redoslijed pogodaka u prikazni red za tablični unos treninga.
+     */
     private function posloziRedPogodaka(array $red, int $brojStrijelaUSeriji): array
     {
         $redoslijed = [
@@ -657,6 +735,9 @@ class TreninziController extends Controller
         return array_merge($uneseniPogoci, $praznaPolja);
     }
 
+    /**
+     * Normalizira jedan uneseni pogodak (`X`, `10`...`1`, `M`) ili vraća `null` za prazno polje.
+     */
     private function normalizirajPogodak(mixed $pogodak): ?string
     {
         if (is_null($pogodak)) {
@@ -682,6 +763,9 @@ class TreninziController extends Controller
         return null;
     }
 
+    /**
+     * Pretvara oznaku pogotka (X/M/10...) u numeričku vrijednost za izračun.
+     */
     private function vrijednostPogotka(?string $pogodak): ?int
     {
         if (is_null($pogodak)) {
@@ -706,6 +790,9 @@ class TreninziController extends Controller
         return null;
     }
 
+    /**
+     * Pretvara numeričku vrijednost pogotka natrag u prikaznu oznaku.
+     */
     private function vrijednostPogotkaUOznaku(int $vrijednost): string
     {
         if ($vrijednost === 0) {
@@ -715,6 +802,9 @@ class TreninziController extends Controller
         return (string)$vrijednost;
     }
 
+    /**
+     * Dohvaća potrebne podatke iz baze za prikaz ili daljnju obradu u modulu evidencije treninga.
+     */
     private function dohvatiPovezanogClana(): Clanovi
     {
         if (!auth()->check() || empty(auth()->user()->clan_id)) {
@@ -729,6 +819,9 @@ class TreninziController extends Controller
         return $clan;
     }
 
+    /**
+     * Sigurnosna provjera: trening smije uređivati/snimati samo korisnik koji je taj trening i unio.
+     */
     private function potvrdiVlasnistvoNadTreningom(int $userIdTreninga): void
     {
         if (!auth()->check() || (int)auth()->id() !== $userIdTreninga) {
@@ -736,6 +829,9 @@ class TreninziController extends Controller
         }
     }
 
+    /**
+     * Sigurnosna provjera: akciju smije izvršiti samo administrator (rola = 1).
+     */
     private function potvrdiAdminPravo(): void
     {
         if (!auth()->check() || (int)auth()->user()->rola !== 1) {
@@ -743,6 +839,9 @@ class TreninziController extends Controller
         }
     }
 
+    /**
+     * Provjerava ima li korisnik pravo pregleda treninga zadanog člana (vlastiti profil, admin ili roditelj).
+     */
     private function potvrdiPravoNaPregledTreningaClana(Clanovi $clan): void
     {
         if (!auth()->check()) {
@@ -756,6 +855,9 @@ class TreninziController extends Controller
         abort(403);
     }
 
+    /**
+     * Provjerava da uređivani trening pripada istom članu koji je u URL-u, inače vraća 404.
+     */
     private function potvrdiPripadnostClanu(int $clanId, int $resourceClanId): void
     {
         if ($clanId !== $resourceClanId) {

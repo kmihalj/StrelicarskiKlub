@@ -1,3 +1,4 @@
+{{-- Administratorski ekran pravila forsiranja svijetle/tamne varijante teme. --}}
 <div class="card">
     <div class="card-header bg-danger fw-bolder text-white">
         Prikaz teme na cijelom siteu

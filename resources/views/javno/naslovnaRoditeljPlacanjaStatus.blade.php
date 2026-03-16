@@ -1,3 +1,4 @@
+{{-- Roditeljski blok: pregled statusa članarine djece članova. --}}
 @php
     $statusPlacanjaDijete = $statusPlacanjaDijete ?? null;
     $placanjeNotice = $statusPlacanjaDijete['notice'] ?? null;

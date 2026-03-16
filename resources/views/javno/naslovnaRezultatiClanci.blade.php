@@ -1,3 +1,4 @@
+{{-- Kombinirani prikaz najnovijih rezultata turnira i članaka na naslovnici. --}}
 @foreach($stavkeRezultataIClanaka as $stavka)
     @if($stavka['tip'] === 'turnir')
         @include('admin.rezultati.prikazRezultata', ['turniri' => collect([$stavka['model']])])

@@ -8,6 +8,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 
+/**
+ * Laravel kontroler za slanje poveznice za reset zaboravljene lozinke.
+ */
 class ForgotPasswordController extends Controller
 {
     /*
@@ -23,6 +26,9 @@ class ForgotPasswordController extends Controller
 
     use SendsPasswordResetEmails;
 
+    /**
+     * Validira e-mail prije slanja zahtjeva za reset lozinke.
+     */
     protected function validateEmail(Request $request): void
     {
         $request->validate([
@@ -33,11 +39,17 @@ class ForgotPasswordController extends Controller
         ]);
     }
 
+    /**
+     * Vraća korisničku poruku nakon uspješnog slanja poveznice za reset lozinke.
+     */
     protected function sendResetLinkResponse(Request $request, $response): RedirectResponse
     {
         return back()->with('status', 'Poslana je poveznica za reset lozinke na unesenu e-mail adresu.');
     }
 
+    /**
+     * Prevodi tehnički kod greške u razumljivu poruku za korisnika kada slanje nije uspjelo.
+     */
     protected function sendResetLinkFailedResponse(Request $request, $response): RedirectResponse
     {
         $poruka = match ($response) {

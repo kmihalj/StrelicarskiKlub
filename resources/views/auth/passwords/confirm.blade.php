@@ -1,3 +1,4 @@
+{{-- Ekran za potvrdu lozinke prije osjetljivih korisničkih akcija. --}}
 @extends('layouts.app')
 
 @section('content')

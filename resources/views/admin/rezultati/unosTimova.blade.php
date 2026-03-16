@@ -1,11 +1,15 @@
+{{-- Unos timskih rezultata: odabir članova tima, zbroj rezultata i plasman. --}}
 @php
+    // Samo administrator može mijenjati stanje "ima timove" i dodavati/brisati timske rezultate.
     $mozeUredivatiTimove = auth()->check() && (int)auth()->user()->rola === 1;
     $timovi = $turnir->relationLoaded('rezultatiTimovi') ? $turnir->rezultatiTimovi : collect();
+    // Blok držimo otvorenim ako je turnir označen da ima timove ili već postoje spremljeni timovi.
     $prikazTimova = (bool)$turnir->ima_timove || ($timovi->count() > 0);
 @endphp
 
 <div class="row g-3">
     <div class="col-12">
+        {{-- "Master switch" kojim turnir aktivira/deaktivira timski modul u obrascu. --}}
         <form id="timovi_aktivno_form" action="{{ route('admin.rezultati.timovi.aktivno', $turnir) }}" method="POST">
             @csrf
             <input type="hidden" name="ima_timove" value="0">
@@ -42,6 +46,7 @@
                         <tbody>
                         @foreach($timovi as $tim)
                             @php
+                                // Sastavljamo tekst članova tima iz relacije stavki tima.
                                 $naziviClanova = $tim->clanoviStavke
                                     ->filter(fn ($stavka) => $stavka->rezultatOpci !== null && $stavka->rezultatOpci->clan !== null)
                                     ->map(function ($stavka) {
@@ -83,6 +88,7 @@
             <div class="col-12">
                 <hr class="my-2">
                 <p class="fw-bold mb-2">Dodavanje tima</p>
+                {{-- Novi tim se formira iz već unesenih pojedinačnih rezultata na ovom turniru. --}}
                 <form action="{{ route('admin.rezultati.timovi.spremi') }}" method="POST" class="row g-2">
                     @csrf
                     <input type="hidden" name="turnir_id" value="{{ $turnir->id }}">
@@ -98,6 +104,8 @@
                     </div>
                     <div class="col-lg-12">
                         <label for="tim_clanovi" class="form-label">Članovi tima (odaberite 2 ili više)</label>
+                        {{-- U selectu se svaka stavka opisuje član + stil + kategorija + pojedinačni rezultat,
+                             kako bi administrator jasno vidio što kombinira u timski rezultat. --}}
                         <select class="form-select" id="tim_clanovi" name="tim_clanovi[]" multiple size="8" required>
                             @foreach($dostupniRezultatiZaTim as $stavka)
                                 <option value="{{ $stavka['id'] }}" @selected(collect(old('tim_clanovi', []))->contains($stavka['id']))>

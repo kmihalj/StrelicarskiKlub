@@ -1,3 +1,4 @@
+{{-- Profil polaznika škole: osobni podaci, dolasci, dokumenti i školarina. --}}
 @extends('layouts.app')
 
 @section('content')

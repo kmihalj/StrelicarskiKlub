@@ -1,3 +1,4 @@
+{{-- Sažeti prikaz članka unutar liste članaka. --}}
 <div class="row justify-content-center p-2 shadow bg-white">
     <div class="col-lg-10 mt-3 mb-3">
         <h3 class="fw-semibold">

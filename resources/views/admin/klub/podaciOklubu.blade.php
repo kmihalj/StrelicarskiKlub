@@ -1,3 +1,4 @@
+{{-- Administratorski ekran za uređivanje podataka kluba (naziv, adresa, račun, kontakti). --}}
 @extends('layouts.app')
 @auth()
     @if(auth()->user()->rola <= 1)

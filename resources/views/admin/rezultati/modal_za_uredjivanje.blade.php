@@ -1,3 +1,4 @@
+{{-- Modal forma za uređivanje osnovnih podataka postojećeg turnira. --}}
 
 <div class="modal fade" id="UredjivanjeTurnira_modal">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
