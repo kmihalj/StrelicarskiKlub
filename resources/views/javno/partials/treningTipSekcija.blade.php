@@ -6,6 +6,7 @@
         $sekcijaDomId = 'trening-sekcija';
     }
     $imaTablicu = $treninziPrikaz->count() > 0;
+    $prikaziGraf = count($grafPodaci) >= 2;
     $editRouteName = $editRouteName ?? null;
     $editRouteExtraParams = $editRouteExtraParams ?? [];
     $destroyRouteName = $destroyRouteName ?? null;
@@ -136,29 +137,31 @@
     </script>
 @endonce
 
-<div class="container-xxl">
-    <div id="{{ $sekcijaDomId }}_graf_okvir" class="row justify-content-center pt-3 pb-0 mb-3 shadow bg-white">
-        <div class="col-lg-12">
-            @if(count($grafPodaci) > 0)
-                <div class="border rounded p-2 mb-3 bg-light-subtle">
-                    <p class="fw-bold mb-2">Graf napretka (Total po datumu)</p>
-                    <div class="trening-chart-wrap">
-                        <svg class="js-trening-chart"
-                             data-points='@json($grafPodaci)'
-                             viewBox="0 0 1000 320"
-                             preserveAspectRatio="none"
-                             role="img"
-                             aria-label="Graf napretka"></svg>
+@if($prikaziGraf || !$imaTablicu)
+    <div class="container-xxl">
+        <div id="{{ $sekcijaDomId }}_graf_okvir" class="row justify-content-center pt-3 pb-0 mb-3 shadow bg-white">
+            <div class="col-lg-12">
+                @if($prikaziGraf)
+                    <div class="border rounded p-2 mb-3 bg-light-subtle">
+                        <p class="fw-bold mb-2">Graf napretka (Total po datumu)</p>
+                        <div class="trening-chart-wrap">
+                            <svg class="js-trening-chart"
+                                 data-points='@json($grafPodaci)'
+                                 role="img"
+                                 aria-label="Graf napretka"></svg>
+                        </div>
                     </div>
-                </div>
-            @endif
+                @endif
 
-            @if(!$imaTablicu)
-                <p class="mb-0">Nema unesenih treninga.</p>
-            @endif
+                @if(!$imaTablicu)
+                    <p class="mb-0">Nema unesenih treninga.</p>
+                @elseif(!$prikaziGraf)
+                    <p class="mb-3 text-muted">Graf napretka prikazuje se od 2 treninga.</p>
+                @endif
+            </div>
         </div>
     </div>
-</div>
+@endif
 
 @if($imaTablicu)
     <div id="{{ $sekcijaDomId }}_tablica" class="container-xxl" style="display: none;">
