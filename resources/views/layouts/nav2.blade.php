@@ -1,5 +1,5 @@
 @include('layouts.nav2CSS')
-<nav class="navbar navbar-expand-lg navbar-dark" style="background-color: var(--theme-nav-solid-bg, #000);">
+<nav class="navbar navbar-expand-xxl navbar-dark" style="background-color: var(--theme-nav-solid-bg, #000);">
     <div class="container-fluid">
         <a class="navbar-brand" href="{{ url('/') }}">
             <img src="{{ $activeThemeLogoUrl ?? asset('storage/slike/logo.png') }}" height="50" alt="Streličarski klub Dubrava"/>
@@ -11,12 +11,23 @@
 
         <div class="collapse navbar-collapse" id="collapsibleNavbar">
             <ul class="navbar-nav ms-auto">
+                <li class="nav-item nav-item-home px-4 py-2 text-center position-relative">
+                    <a class="nav-link" href="{{ url('/') }}" title="Naslovnica" aria-label="Naslovnica">
+                        <span class="nav-icon" aria-hidden="true">
+                            <svg viewBox="0 0 16 16" fill="currentColor" role="img" focusable="false">
+                                <path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 2 8h1v6a1 1 0 0 0 1 1h3.5v-4.5h1V15H12a1 1 0 0 0 1-1V8h1a.5.5 0 0 0 .354-.854z"/>
+                            </svg>
+                        </span>
+                    </a>
+                </li>
+
                 @auth()
                     @php
                         $authUser = auth()->user();
                         $mozePregledClanova = $authUser->imaPravoAdminOrMember();
                         $mozePregledPolaznika = $authUser->imaPravoAdminMemberOrSchool();
                         $mozeSkolaEvidencija = (int)$authUser->rola === 1;
+                        $povezaniClanId = (int)($authUser->clan_id ?? 0);
                     @endphp
                     @if(auth()->user()->rola <= 1)
                         <li class="nav-item dropdown px-4 py-2 text-center position-relative">
@@ -38,21 +49,23 @@
 
                 <li class="nav-item dropdown px-4 py-2 text-center position-relative">
                     <span class="btn-group">
-                        <a class="nav-link js-mobile-dropdown-toggle" href="#" role="button" aria-expanded="false">Početna</a>
+                        <a class="nav-link js-mobile-dropdown-toggle" href="#" role="button" aria-expanded="false">Korisnik</a>
                         <a class="nav-link dropdown-toggle js-mobile-dropdown-toggle" href="#" role="button" aria-expanded="false"></a>
                     </span>
                     <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ url('/') }}">Početna</a></li>
                         @guest
                             @if (Route::has('login'))
                                 <li><a class="dropdown-item" href="{{ route('login') }}">{{ __('Prijava') }}</a></li>
-                                <li><a class="dropdown-item" href="{{ route('register') }}">{{ __('Registriraj se') }}</a></li>
+                                <li><a class="dropdown-item" href="{{ route('register') }}">{{ __('Registracija') }}</a></li>
                             @endif
                         @else
+                            @if($povezaniClanId > 0)
+                                <li><a class="dropdown-item" href="{{ route('javno.clanovi.prikaz_clana', $povezaniClanId) }}">Profil</a></li>
+                            @endif
                             <li>
                                 <form action="{{ route('logout') }}" method="POST" class="m-0">
                                     @csrf
-                                    <button type="submit" class="dropdown-item">{{ __('Logout') }}</button>
+                                    <button type="submit" class="dropdown-item">{{ __('Odjava') }}</button>
                                 </form>
                             </li>
                         @endguest
@@ -157,7 +170,7 @@
             return;
         }
 
-        const mobileQuery = window.matchMedia('(max-width: 991.98px)');
+        const mobileQuery = window.matchMedia('(max-width: 1399.98px)');
         const dropdownItems = Array.from(collapseEl.querySelectorAll('.nav-item.dropdown'));
 
         function setExpanded(dropdownItem, isExpanded) {
