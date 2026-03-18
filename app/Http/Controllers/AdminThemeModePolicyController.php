@@ -52,8 +52,12 @@ class AdminThemeModePolicyController extends Controller
             ->back()
             ->with('success', 'Globalna politika prikaza teme je spremljena.');
 
-        $response->withCookie(cookie()->forever($this->themeService->modePreferenceCookieName(), $policy));
-        $response->withCookie(cookie()->forever($this->themeService->resolvedModeCookieName(), $resolvedMode));
+        $response->withCookie(
+            $this->themeService->makeThemeModeCookie($this->themeService->modePreferenceCookieName(), $policy)
+        );
+        $response->withCookie(
+            $this->themeService->makeThemeModeCookie($this->themeService->resolvedModeCookieName(), $resolvedMode)
+        );
 
         return $response;
     }

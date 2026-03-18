@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Cookie;
 
 /**
  * Servis za upravljanje temama i varijantama prikaza (svijetla/tamna).
@@ -226,6 +227,64 @@ class ThemeService
     }
 
     /**
+     * Vraća standardizirane opcije cookie-ja za spremanje postavki prikaza teme.
+     */
+    public function themeModeCookieOptions(): array
+    {
+        $path = trim((string)config('session.path', '/'));
+        if ($path === '') {
+            $path = '/';
+        }
+
+        $domain = config('session.domain');
+        $domain = is_string($domain) ? trim($domain) : null;
+        if ($domain === '') {
+            $domain = null;
+        }
+
+        $sameSite = strtolower(trim((string)config('session.same_site', 'lax')));
+        if (!in_array($sameSite, ['lax', 'strict', 'none'], true)) {
+            $sameSite = 'lax';
+        }
+
+        $secureSetting = config('session.secure');
+        if (is_bool($secureSetting)) {
+            $secure = $secureSetting;
+        } elseif ($secureSetting === null && app()->bound('request')) {
+            $request = app('request');
+            $secure = method_exists($request, 'isSecure') ? (bool)$request->isSecure() : false;
+        } else {
+            $secure = false;
+        }
+
+        return [
+            'path' => $path,
+            'domain' => $domain,
+            'secure' => $secure,
+            'same_site' => $sameSite,
+        ];
+    }
+
+    /**
+     * Kreira trajni cookie za postavke prikaza teme usklađen između backenda i JS-a.
+     */
+    public function makeThemeModeCookie(string $name, string $value): Cookie
+    {
+        $options = $this->themeModeCookieOptions();
+
+        return cookie()->forever(
+            $name,
+            $value,
+            $options['path'],
+            $options['domain'],
+            $options['secure'],
+            false,
+            false,
+            $options['same_site']
+        );
+    }
+
+    /**
      * Vraća trenutno aktivnu temu; ako nijedna nije aktivna, koristi prvu dostupnu kao fallback.
      */
     public function getActiveTheme(): ?Theme
@@ -347,6 +406,7 @@ class ThemeService
     public function sharedThemeData(): array
     {
         $activeTheme = $this->getActiveTheme();
+        $cookieOptions = $this->themeModeCookieOptions();
 
         $siteModePolicy = $this->siteThemeModePolicy();
         $isThemeModeForced = in_array($siteModePolicy, [self::MODE_LIGHT, self::MODE_DARK], true);
@@ -403,6 +463,10 @@ class ThemeService
             'siteThemeModePolicy' => $siteModePolicy,
             'themeModePreferenceCookieName' => $this->modePreferenceCookieName(),
             'themeModeResolvedCookieName' => $this->resolvedModeCookieName(),
+            'themeModeCookiePath' => $cookieOptions['path'],
+            'themeModeCookieDomain' => $cookieOptions['domain'],
+            'themeModeCookieSecure' => $cookieOptions['secure'],
+            'themeModeCookieSameSite' => $cookieOptions['same_site'],
         ];
     }
 

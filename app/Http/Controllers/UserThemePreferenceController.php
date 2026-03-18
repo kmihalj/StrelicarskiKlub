@@ -28,8 +28,12 @@ class UserThemePreferenceController extends Controller
 
         if ($isForced) {
             $response = redirect()->back()->with('error', 'Prikaz teme je trenutno postavljen globalno od strane administratora.');
-            $response->withCookie(cookie()->forever($this->themeService->modePreferenceCookieName(), $siteModePolicy));
-            $response->withCookie(cookie()->forever($this->themeService->resolvedModeCookieName(), $siteModePolicy));
+            $response->withCookie(
+                $this->themeService->makeThemeModeCookie($this->themeService->modePreferenceCookieName(), $siteModePolicy)
+            );
+            $response->withCookie(
+                $this->themeService->makeThemeModeCookie($this->themeService->resolvedModeCookieName(), $siteModePolicy)
+            );
 
             return $response;
         }
@@ -54,8 +58,12 @@ class UserThemePreferenceController extends Controller
 
         $response = redirect()->back()->with('success', 'Postavka prikaza je spremljena.');
 
-        $response->withCookie(cookie()->forever($this->themeService->modePreferenceCookieName(), $modePreference));
-        $response->withCookie(cookie()->forever($this->themeService->resolvedModeCookieName(), $resolvedMode));
+        $response->withCookie(
+            $this->themeService->makeThemeModeCookie($this->themeService->modePreferenceCookieName(), $modePreference)
+        );
+        $response->withCookie(
+            $this->themeService->makeThemeModeCookie($this->themeService->resolvedModeCookieName(), $resolvedMode)
+        );
 
         return $response;
     }

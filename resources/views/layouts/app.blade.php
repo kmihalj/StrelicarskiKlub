@@ -85,10 +85,83 @@
             const preferenceCookieName = @json($themeModePreferenceCookieName ?? 'theme_mode_preference');
             const resolvedCookieName = @json($themeModeResolvedCookieName ?? 'theme_mode_resolved');
             const currentResolvedMode = @json($resolvedThemeMode);
+            const cookiePath = @json($themeModeCookiePath ?? '/');
+            const cookieDomain = @json($themeModeCookieDomain ?? null);
+            const cookieSecure = @json($themeModeCookieSecure ?? false);
+            const cookieSameSiteConfig = @json($themeModeCookieSameSite ?? 'lax');
+            const reloadGuardKey = 'theme_mode_auto_reload_guard';
+            const reloadGuardTtlMs = 3000;
             const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
+            const resolveSameSiteValue = function (value) {
+                const normalized = String(value || '').trim().toLowerCase();
+                if (normalized === 'strict') {
+                    return 'Strict';
+                }
+
+                if (normalized === 'none') {
+                    return 'None';
+                }
+
+                return 'Lax';
+            };
+
+            const sameSiteValue = resolveSameSiteValue(cookieSameSiteConfig);
+
             const writeCookie = function (name, value) {
-                document.cookie = name + '=' + value + '; path=/; max-age=31536000; SameSite=Lax';
+                let serialized = name + '=' + encodeURIComponent(value);
+                serialized += '; path=' + (cookiePath || '/');
+                serialized += '; max-age=31536000';
+                serialized += '; SameSite=' + sameSiteValue;
+
+                if (cookieDomain) {
+                    serialized += '; domain=' + cookieDomain;
+                }
+
+                if (cookieSecure || window.location.protocol === 'https:') {
+                    serialized += '; Secure';
+                }
+
+                document.cookie = serialized;
+            };
+
+            const recentlyReloadedForMode = function (mode) {
+                try {
+                    const raw = sessionStorage.getItem(reloadGuardKey);
+                    if (!raw) {
+                        return false;
+                    }
+
+                    const parsed = JSON.parse(raw);
+                    if (!parsed || parsed.mode !== mode) {
+                        return false;
+                    }
+
+                    const ts = Number(parsed.ts || 0);
+
+                    return Number.isFinite(ts) && (Date.now() - ts) < reloadGuardTtlMs;
+                } catch (error) {
+                    return false;
+                }
+            };
+
+            const markReloadForMode = function (mode) {
+                try {
+                    sessionStorage.setItem(reloadGuardKey, JSON.stringify({
+                        mode: mode,
+                        ts: Date.now(),
+                    }));
+                } catch (error) {
+                    // Best effort guard; failure here must not break theme switching.
+                }
+            };
+
+            const clearReloadGuard = function () {
+                try {
+                    sessionStorage.removeItem(reloadGuardKey);
+                } catch (error) {
+                    // No-op: if storage is blocked, theme behavior still works.
+                }
             };
 
             const detectedMode = mediaQuery.matches ? 'dark' : 'light';
@@ -96,13 +169,19 @@
 
             if (detectedMode !== currentResolvedMode) {
                 writeCookie(resolvedCookieName, detectedMode);
-                window.location.reload();
+                if (!recentlyReloadedForMode(detectedMode)) {
+                    markReloadForMode(detectedMode);
+                    window.location.reload();
+                }
                 return;
             }
+
+            clearReloadGuard();
 
             const handleModeChange = function (event) {
                 const nextMode = event.matches ? 'dark' : 'light';
                 writeCookie(resolvedCookieName, nextMode);
+                markReloadForMode(nextMode);
                 window.location.reload();
             };
 
