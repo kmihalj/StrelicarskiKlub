@@ -382,13 +382,13 @@ class PolazniciSkoleController extends Controller
 
         $pohrana = $this->spremiDatoteku('dokument', 'private/polaznici_skole/' . $polaznik->id . '/dokumenti');
 
-        $vrsta = (string)$request->get('vrsta');
+        $vrsta = (string)$request->input('vrsta');
         $dokument = new PolaznikSkoleDokument();
         $dokument->polaznik_skole_id = $polaznik->id;
         $dokument->vrsta = $vrsta;
-        $dokument->naziv = $this->odrediNazivDokumenta($vrsta, (string)$request->get('naziv'));
-        $dokument->datum_dokumenta = $request->get('datum_dokumenta');
-        $dokument->napomena = $request->get('napomena');
+        $dokument->naziv = $this->odrediNazivDokumenta($vrsta, (string)$request->input('naziv'));
+        $dokument->datum_dokumenta = $request->input('datum_dokumenta');
+        $dokument->napomena = $request->input('napomena');
         $dokument->putanja = $pohrana['putanja'];
         $dokument->originalni_naziv = $pohrana['originalni_naziv'];
         $dokument->created_by = auth()->id();

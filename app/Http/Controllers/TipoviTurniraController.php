@@ -40,7 +40,7 @@ class TipoviTurniraController extends Controller
         if ($validator->errors()->isEmpty()) {
             try {
                 $tipTurnira = new TipoviTurnira();
-                $tipTurnira->naziv = $request->get('naziv_tipa_turnira_za_unos');
+                $tipTurnira->naziv = $request->input('naziv_tipa_turnira_za_unos');
                 $tipTurnira->save();
                 return redirect()->route('admin.turniri.naslovna');
             } catch (Throwable $e) {
@@ -67,7 +67,7 @@ class TipoviTurniraController extends Controller
         $tipoviTurnira = TipoviTurnira::orderBy('naziv')->get();
         $kategorije = Kategorije::orderBy('spol')->orderBy('naziv')->get();
         $stilovi = Stilovi::get();
-        $tipTurnira = TipoviTurnira::findOrFail((int)$request->get('odabir_tipa_turnira'));
+        $tipTurnira = TipoviTurnira::findOrFail((int)$request->input('odabir_tipa_turnira'));
         return view('admin.turniri.pocetna', ['tipoviTurnira' => $tipoviTurnira, 'kategorije' => $kategorije, 'stilovi'=>$stilovi, 'odabraniTipTurnira' => $tipTurnira]);
     }
 
@@ -79,15 +79,15 @@ class TipoviTurniraController extends Controller
         $tipoviTurnira = TipoviTurnira::orderBy('naziv')->get();
         $kategorije = Kategorije::orderBy('spol')->orderBy('naziv')->get();
         $stilovi = Stilovi::get();
-        $tipTurnira = TipoviTurnira::findOrFail((int)$request->get('odabir_tipa_turnira'));
+        $tipTurnira = TipoviTurnira::findOrFail((int)$request->input('odabir_tipa_turnira'));
         $rules = array('naziv_polja_za_tip_turnira_unos' => 'required');
         $messages = array('naziv_polja_za_tip_turnira_unos.required' => 'Naziv polja za tip turnira ne može biti prazan.');
         $validator = Validator::make($request->all(), $rules, $messages);
         if ($validator->errors()->isEmpty()) {
             try {
                 $poljeZatipTurnira = new PoljaZaTipoveTurnira();
-                $poljeZatipTurnira->naziv = $request->get('naziv_polja_za_tip_turnira_unos');
-                $poljeZatipTurnira->tipovi_turnira_id = $request->get('odabir_tipa_turnira');
+                $poljeZatipTurnira->naziv = $request->input('naziv_polja_za_tip_turnira_unos');
+                $poljeZatipTurnira->tipovi_turnira_id = $request->input('odabir_tipa_turnira');
                 $poljeZatipTurnira->save();
                 return view('admin.turniri.pocetna', ['tipoviTurnira' => $tipoviTurnira, 'kategorije' => $kategorije, 'stilovi'=>$stilovi, 'odabraniTipTurnira' => $tipTurnira]);
             } catch (Throwable $e) {
@@ -106,7 +106,7 @@ class TipoviTurniraController extends Controller
         $tipoviTurnira = TipoviTurnira::orderBy('naziv')->get();
         $kategorije = Kategorije::orderBy('spol')->orderBy('naziv')->get();
         $stilovi = Stilovi::get();
-        $polje = PoljaZaTipoveTurnira::findOrFail((int)$request->get('zadnje_polje'));
+        $polje = PoljaZaTipoveTurnira::findOrFail((int)$request->input('zadnje_polje'));
         $tipTurnira = TipoviTurnira::findOrFail((int)$polje->tipovi_turnira_id);
         $polje->delete();
         return view('admin.turniri.pocetna', ['tipoviTurnira' => $tipoviTurnira, 'kategorije' => $kategorije, 'stilovi'=>$stilovi, 'odabraniTipTurnira' => $tipTurnira]);
@@ -126,8 +126,8 @@ class TipoviTurniraController extends Controller
         if ($validator->errors()->isEmpty()) {
             try {
                 $kategorija = new Kategorije();
-                $kategorija->spol = $request->get('spol_kategorija');
-                $kategorija->naziv = $request->get('naziv_kategorije');
+                $kategorija->spol = $request->input('spol_kategorija');
+                $kategorija->naziv = $request->input('naziv_kategorije');
                 $kategorija->save();
                 return redirect()->route('admin.turniri.naslovna');
             } catch (Throwable $e) {
@@ -157,7 +157,7 @@ class TipoviTurniraController extends Controller
         if ($validator->errors()->isEmpty()) {
             try {
                 $stilLuka = new Stilovi();
-                $stilLuka->naziv = $request->get('naziv_stila_luka_za_unos');
+                $stilLuka->naziv = $request->input('naziv_stila_luka_za_unos');
                 $stilLuka->save();
                 return redirect()->route('admin.turniri.naslovna');
             } catch (Throwable $e) {

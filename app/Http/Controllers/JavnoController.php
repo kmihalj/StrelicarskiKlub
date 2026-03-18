@@ -17,7 +17,6 @@ use App\Models\TipoviTurnira;
 use App\Models\Turniri;
 use App\Services\PaymentTrackingService;
 use App\Services\SchoolPaymentService;
-use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
@@ -35,7 +34,8 @@ class JavnoController extends Controller
 {
 
 
-    /** @noinspection PhpUndefinedMethodInspection
+    /**
+     *
      * @noinspection PhpMissingReturnTypeInspection
      *
      * stavka u meniju "REZULTATI"
@@ -86,9 +86,9 @@ class JavnoController extends Controller
         foreach ($godineZaStatistiku as $godina) {
             $godinaStat = $this->izracunajGodisnjuStatistiku((int)$godina);
             $statistikaGodine[(int)$godina] = $godinaStat;
-            $statistika[(int)$godina][1] = (int)$godinaStat['zlato'];
-            $statistika[(int)$godina][2] = (int)$godinaStat['srebro'];
-            $statistika[(int)$godina][3] = (int)$godinaStat['bronca'];
+            $statistika[(int)$godina][1] = $godinaStat['zlato'];
+            $statistika[(int)$godina][2] = $godinaStat['srebro'];
+            $statistika[(int)$godina][3] = $godinaStat['bronca'];
         }
 
         return view('javno.rezultati', [
@@ -106,7 +106,6 @@ class JavnoController extends Controller
 
 
     /** @noinspection PhpMissingReturnTypeInspection
-     * @noinspection PhpUndefinedMethodInspection
      */
     public function naslovnaStranica()
     {
@@ -145,7 +144,6 @@ class JavnoController extends Controller
         $statusSkolaDjeca = collect();
         $statusPlacanjaKorisnika = null;
         $statusPlacanjaDjeca = collect();
-        $clanKorisnika = null;
 
         if (auth()->check() && !empty(auth()->user()->clan_id)) {
             $clanKorisnika = Clanovi::query()
@@ -157,9 +155,9 @@ class JavnoController extends Controller
 
                 if ($paymentTrackingEnabled) {
                     $placanjeSummary = $paymentService->memberSummary($clanKorisnika);
-                    $placanjeProfilPostavljen = isset($placanjeSummary['profile'])
-                        && $placanjeSummary['profile'] !== null
-                        && $placanjeSummary['profile']->paymentOption !== null;
+                    $placanjeProfil = $placanjeSummary['profile'] ?? null;
+                    $placanjeProfilPostavljen = $placanjeProfil !== null
+                        && data_get($placanjeProfil, 'paymentOption') !== null;
                     $placanjeImaStavke = ($placanjeSummary['charges'] ?? collect())->count() > 0;
                     $placanjeVidljivo = $placanjeProfilPostavljen || $placanjeImaStavke;
 
@@ -206,9 +204,9 @@ class JavnoController extends Controller
                     $status = $this->pripremiStatusLijecnickogZaClana($clan);
                     if ($paymentTrackingEnabled) {
                         $placanjeSummary = $paymentService->memberSummary($clan);
-                        $placanjeProfilPostavljen = isset($placanjeSummary['profile'])
-                            && $placanjeSummary['profile'] !== null
-                            && $placanjeSummary['profile']->paymentOption !== null;
+                        $placanjeProfil = $placanjeSummary['profile'] ?? null;
+                        $placanjeProfilPostavljen = $placanjeProfil !== null
+                            && data_get($placanjeProfil, 'paymentOption') !== null;
                         $placanjeImaStavke = ($placanjeSummary['charges'] ?? collect())->count() > 0;
                         if ($placanjeProfilPostavljen || $placanjeImaStavke) {
                             $status['paymentNotice'] = $paymentService->noticeForClan($clan);
@@ -239,9 +237,9 @@ class JavnoController extends Controller
                 $statusPlacanjaDjeca = $roditelj->djecaClanovi
                     ->map(function (Clanovi $clan) use ($paymentService): array {
                         $placanjeSummary = $paymentService->memberSummary($clan);
-                        $placanjeProfilPostavljen = isset($placanjeSummary['profile'])
-                            && $placanjeSummary['profile'] !== null
-                            && $placanjeSummary['profile']->paymentOption !== null;
+                        $placanjeProfil = $placanjeSummary['profile'] ?? null;
+                        $placanjeProfilPostavljen = $placanjeProfil !== null
+                            && data_get($placanjeProfil, 'paymentOption') !== null;
                         $placanjeImaStavke = ($placanjeSummary['charges'] ?? collect())->count() > 0;
 
                         return [
@@ -256,11 +254,11 @@ class JavnoController extends Controller
             }
         }
 
-        $stavkeRezultataIClanaka = $turniri->map(fn (Turniri $turnir) => [
+        $stavkeRezultataIClanaka = collect($turniri->map(fn (Turniri $turnir) => [
             'tip' => 'turnir',
             'datum' => $turnir->datum,
             'model' => $turnir,
-        ]);
+        ])->all());
 
         if ($turniri->isNotEmpty()) {
             $najstarijiDatumTurnira = $turniri->min('datum');
@@ -278,7 +276,7 @@ class JavnoController extends Controller
                     'tip' => 'clanak',
                     'datum' => $clanak->datum,
                     'model' => $clanak,
-                ])
+                ])->all()
             );
         }
 
@@ -300,7 +298,6 @@ class JavnoController extends Controller
         ]);
     }
 
-    /** @noinspection PhpUndefinedMethodInspection */
     public function popisClanova(): Renderable
     {
         $paymentService = app(PaymentTrackingService::class);
@@ -367,8 +364,7 @@ class JavnoController extends Controller
 
     /**
      * @param Clanovi $clan
-     * @noinspection PhpMissingReturnTypeInspection
-     * @noinspection PhpUndefinedMethodInspection
+     * @return Factory|View|\Illuminate\View\View
      */
     public function pregledClana(Clanovi $clan)
     {
@@ -411,9 +407,9 @@ class JavnoController extends Controller
 
         if ($mozeVidjetiPlacanja) {
             $paymentSummary = $paymentService->memberSummary($clan);
-            $profilPostavljen = isset($paymentSummary['profile'])
-                && $paymentSummary['profile'] !== null
-                && $paymentSummary['profile']->paymentOption !== null;
+            $paymentProfile = $paymentSummary['profile'] ?? null;
+            $profilPostavljen = $paymentProfile !== null
+                && data_get($paymentProfile, 'paymentOption') !== null;
             $imaStavkePlacanja = ($paymentSummary['charges'] ?? collect())->count() > 0;
             $paymentProfileConfigured = $profilPostavljen || $imaStavkePlacanja;
             if ($paymentProfileConfigured) {
@@ -516,7 +512,7 @@ class JavnoController extends Controller
         $osobniRekordi = [];
         $datumiRekorda = [];
         if ($rekordiKandidati->isNotEmpty()) {
-            $tipoviMapa = $tipoviTurnira->keyBy('id');
+            $tipoviMapa = $tipoviTurnira->pluck('naziv', 'id');
             $stiloviMapa = Stilovi::query()
                 ->whereIn('id', $rekordiKandidati->pluck('stil_id')->unique()->values())
                 ->pluck('naziv', 'id');
@@ -535,18 +531,18 @@ class JavnoController extends Controller
                     continue;
                 }
 
-                $tip = $tipoviMapa->get((int)$kandidat->tip_turnira_id);
+                $tipNaziv = $tipoviMapa->get((int)$kandidat->tip_turnira_id);
                 $stilNaziv = $stiloviMapa->get((int)$kandidat->stil_id);
                 $kategorijaNaziv = $kategorijeMapa->get((int)$kandidat->kategorija_id);
                 $turnirRekorda = $turniriMapa->get((int)$kandidat->turnir_id);
-                if ($tip === null || $turnirRekorda === null || empty($stilNaziv) || empty($kategorijaNaziv)) {
+                if (empty($tipNaziv) || !($turnirRekorda instanceof Turniri) || empty($stilNaziv) || empty($kategorijaNaziv)) {
                     continue;
                 }
 
                 $osobniRekordi[] = [
                     'stil' => (string)$stilNaziv,
                     'kategorija' => (string)$kategorijaNaziv,
-                    'tipTurnira' => (string)$tip->naziv,
+                    'tipTurnira' => (string)$tipNaziv,
                     'rezultat' => (int)$kandidat->rezultat,
                     'turnir' => $turnirRekorda,
                 ];
@@ -745,14 +741,23 @@ class JavnoController extends Controller
                 'rezultati_opcis.plasman',
                 'rezultati_opcis.plasman_nakon_eliminacija',
             ])
-            ->get();
+            ->get()
+            ->map(static function ($rezultat): array {
+                return [
+                    'clan_id' => (int)data_get($rezultat, 'clan_id', 0),
+                    'turnir_id' => (int)data_get($rezultat, 'turnir_id', 0),
+                    'eliminacije' => (int)data_get($rezultat, 'eliminacije', 0),
+                    'plasman' => (int)data_get($rezultat, 'plasman', 0),
+                    'plasman_nakon_eliminacija' => (int)data_get($rezultat, 'plasman_nakon_eliminacija', 0),
+                ];
+            });
 
         foreach ($individualniRezultati as $rezultat) {
-            $clanId = (int)$rezultat->clan_id;
-            $turnirId = (int)$rezultat->turnir_id;
-            $plasman = ((int)$rezultat->eliminacije === 1)
-                ? (int)$rezultat->plasman_nakon_eliminacija
-                : (int)$rezultat->plasman;
+            $clanId = $rezultat['clan_id'];
+            $turnirId = $rezultat['turnir_id'];
+            $plasman = ($rezultat['eliminacije'] === 1)
+                ? $rezultat['plasman_nakon_eliminacija']
+                : $rezultat['plasman'];
 
             $this->dodajTurnirClanu($turniriPoClanu, $clanId, $turnirId);
             $this->dodajMedaljuClanu($medaljePoClanu, $clanId, $plasman);
@@ -814,7 +819,7 @@ class JavnoController extends Controller
             'srebro' => $srebro,
             'bronca' => $bronca,
             'ukupno' => $zlato + $srebro + $bronca,
-            'broj_turnira' => (int)$brojTurnira,
+            'broj_turnira' => $brojTurnira,
             'najvise_medalja' => $this->izracunajVodece($ukupnoMedaljaPoClanu, $imenaClanova),
             'najvise_zlatnih' => $this->izracunajVodece($zlatnePoClanu, $imenaClanova),
             'najvise_srebrnih' => $this->izracunajVodece($srebrnePoClanu, $imenaClanova),
@@ -901,7 +906,7 @@ class JavnoController extends Controller
             ->whereIn('id', $clanoviIds)
             ->get(['id', 'Ime', 'Prezime'])
             ->mapWithKeys(static function (Clanovi $clan): array {
-                return [(int)$clan->id => trim((string)$clan->Prezime . ' ' . (string)$clan->Ime)];
+                return [(int)$clan->id => trim($clan->Prezime . ' ' . $clan->Ime)];
             })
             ->all();
     }
@@ -950,9 +955,6 @@ class JavnoController extends Controller
         ];
     }
 
-    /** @noinspection PhpUndefinedFieldInspection
-     * @noinspection PhpUndefinedMethodInspection
-     */
     public function pokaziTurnir(Turniri $turnir): View
     {
         $with = [

@@ -29,7 +29,7 @@ class LoginController extends Controller
      *
      * @var string
      */
-    protected $redirectTo = '/';
+    protected string $redirectTo = '/';
 
     /**
      * Omogućuje prijavu gostima, a odjavu samo već prijavljenim korisnicima.
@@ -44,7 +44,7 @@ class LoginController extends Controller
      */
     protected function authenticated(Request $request, $user)
     {
-        if ((bool)($user->is_bootstrap_admin ?? false)) {
+        if ($user->is_bootstrap_admin ?? false) {
             return redirect()->route('admin.korisnici.index');
         }
 

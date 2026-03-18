@@ -28,7 +28,7 @@ class VerificationController extends Controller
      *
      * @var string
      */
-    protected $redirectTo = '/';
+    protected string $redirectTo = '/';
 
     /**
      * Ograničava verifikaciju na prijavljenog korisnika i štiti rute potpisom/throttle pravilima.

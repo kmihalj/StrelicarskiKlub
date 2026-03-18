@@ -18,6 +18,7 @@ class SiteSetting extends Model
         'logo_path',
         'logo_dark_path',
         'favicon_path',
+        'id',
     ];
 
     protected $casts = [

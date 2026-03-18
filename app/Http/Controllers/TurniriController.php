@@ -53,7 +53,7 @@ class TurniriController extends Controller
      */
     public function updateTurnir(Request $request): RedirectResponse
     {
-        $turnir = Turniri::findOrFail((int)$request->get('turnir_id'));
+        $turnir = Turniri::findOrFail((int)$request->input('turnir_id'));
         return $this->spremanjeTurnira($request, $turnir);
     }
     /**
@@ -61,12 +61,12 @@ class TurniriController extends Controller
      */
     private function spremanjeTurnira(Request $request, Turniri $turnir): RedirectResponse
     {
-        $stranica = $request->get('stranica') ?? 1;
-        $turnir->datum = $request->get('datum_turnira');
-        $turnir->naziv = $request->get('naziv_turnira');
-        $turnir->lokacija = $request->get('lokacija_turnira');
-        $turnir->tipovi_turnira_id = $request->get('odabir_tipa_turnira');
-        $turnir->eliminacije = (bool)$request->get('eliminacije');
+        $stranica = $request->input('stranica') ?? 1;
+        $turnir->datum = $request->input('datum_turnira');
+        $turnir->naziv = $request->input('naziv_turnira');
+        $turnir->lokacija = $request->input('lokacija_turnira');
+        $turnir->tipovi_turnira_id = $request->input('odabir_tipa_turnira');
+        $turnir->eliminacije = (bool)$request->input('eliminacije');
         $turnir->save();
         return redirect()->route('admin.rezultati.popisTurnira', ['page'=>$stranica]);
     }
@@ -74,8 +74,8 @@ class TurniriController extends Controller
     /** @noinspection PhpMissingReturnTypeInspection */
     public function urediTurnirForma(Request $request)
     {
-        $stranica = $request->get('stranica') ?? 1;
-        $turnir = Turniri::findOrFail((int)$request->get('turnir_id'));
+        $stranica = $request->input('stranica') ?? 1;
+        $turnir = Turniri::findOrFail((int)$request->input('turnir_id'));
         $turniri = Turniri::orderByDesc('datum')->paginate(15, ['*'], 'page', $stranica);
         $tipoviTurnira = TipoviTurnira::orderBy('naziv')->get();
         return view('admin.rezultati.popisTurnira', ['turniri' => $turniri, 'tipoviTurnira' => $tipoviTurnira, 'uredi_turnir'=>$turnir]);
@@ -164,8 +164,8 @@ class TurniriController extends Controller
     /** @noinspection PhpMissingReturnTypeInspection */
     public function dodatniPodaciRezultat(Request $request)
     {
-        $turnir = Turniri::findOrFail((int)$request->get('turnir_id'));
-        $turnir->opis = $request->get('opis_turnira');
+        $turnir = Turniri::findOrFail((int)$request->input('turnir_id'));
+        $turnir->opis = $request->input('opis_turnira');
         $turnir->save();
         return redirect()->route('admin.rezultati.unosRezultata', $turnir->id);
     }
@@ -175,9 +175,9 @@ class TurniriController extends Controller
      */
     public function dodatniPodaci2Rezultat(Request $request)
     {
-        $turnir = Turniri::findOrFail((int)$request->get('turnir_id'));
-        $opis2Editor = $this->ukloniFacebookBlokIzOpisa2((string)$request->get('opis_turnira2'));
-        $uneseniFacebookLink = $request->get('facebook_link_opis2');
+        $turnir = Turniri::findOrFail((int)$request->input('turnir_id'));
+        $opis2Editor = $this->ukloniFacebookBlokIzOpisa2((string)$request->input('opis_turnira2'));
+        $uneseniFacebookLink = $request->input('facebook_link_opis2');
         $facebookLink = $this->normalizirajFacebookLink($uneseniFacebookLink);
 
         if (trim((string)$uneseniFacebookLink) !== '' && $facebookLink === null) {
@@ -219,7 +219,7 @@ class TurniriController extends Controller
             'medij.*.extensions' => 'Datoteka nije slika (jpg, jpeg, png, webp) niti video (mp4).'
         );
         $validator = Validator::make($request->all(), $rules, $messages);
-        $turnir = Turniri::findOrFail((int)$request->get('turnir_id'));
+        $turnir = Turniri::findOrFail((int)$request->input('turnir_id'));
         if (!$validator->errors()->isEmpty()) {
             if ($request->expectsJson()) {
                 return response()->json(['message' => $validator->errors()->first()], 422);
@@ -257,7 +257,7 @@ class TurniriController extends Controller
     /** @noinspection PhpUndefinedMethodInspection */
     public function brisanjeMedija(Request $request): RedirectResponse
     {
-        $medij = RezultatiSlike::findOrFail((int)$request->get('medijBrisanje'));
+        $medij = RezultatiSlike::findOrFail((int)$request->input('medijBrisanje'));
         Storage::delete( 'public/turniri/' . $medij->turnir->id . '/' . $medij->link);
         $medij->delete();
         return redirect()->route('admin.rezultati.unosRezultata', $medij->turnir->id);
@@ -268,14 +268,14 @@ class TurniriController extends Controller
      */
     public function SpremanjeRezultata(Request $request): RedirectResponse
     {
-        $turnir = Turniri::find($request->get('turnir_id'));
+        $turnir = Turniri::find($request->input('turnir_id'));
         if (!$turnir) {
             return redirect()->route('admin.rezultati.popisTurnira')->with('error', 'Turnir nije pronaden.');
         }
 
-        $clan = Clanovi::find($request->get('clan'));
-        $kategorija = Kategorije::find($request->get('kategorija'));
-        $stil = Stilovi::where('id', $request->get('stil'))
+        $clan = Clanovi::find($request->input('clan'));
+        $kategorija = Kategorije::find($request->input('kategorija'));
+        $stil = Stilovi::where('id', $request->input('stil'))
             ->where('id', '!=', self::STANDARDNI_LUK_STIL_ID)
             ->first();
 
@@ -292,13 +292,13 @@ class TurniriController extends Controller
                 ->with('error', 'Odabrana kategorija ne odgovara spolu clana.');
         }
 
-        $polja_iz_forme = $request->get('polje');
+        $polja_iz_forme = $request->input('polje');
         $i=0;
         foreach ($turnir->tipTurnira->polja as $polje_za_unos) {
             // Za svaki definirani stupac tipa turnira spremamo zaseban redak rezultata.
             // Ovim pristupom tip turnira može imati proizvoljan broj polja.
             $rezPoTipu = new RezultatiPoTipuTurnira();
-            $rezPoTipu->turnir_id = $request->get('turnir_id');
+            $rezPoTipu->turnir_id = $request->input('turnir_id');
             $rezPoTipu->clan_id = $clan->id;
             $rezPoTipu->kategorija_id = $kategorija->id;
             $rezPoTipu->stil_id = $stil->id;
@@ -308,12 +308,12 @@ class TurniriController extends Controller
             $i++;
         }
         $rezOpci = new RezultatiOpci();
-        $rezOpci->turnir_id = $request->get('turnir_id');
+        $rezOpci->turnir_id = $request->input('turnir_id');
         $rezOpci->clan_id = $clan->id;
         $rezOpci->kategorija_id = $kategorija->id;
         $rezOpci->stil_id = $stil->id;
-        $rezOpci->plasman = $request->get('plasman');
-        $rezOpci->plasman_nakon_eliminacija = ($request->get('plasman_eliminacije') !== null) ? $request->get('plasman_eliminacije') : null;
+        $rezOpci->plasman = $request->input('plasman');
+        $rezOpci->plasman_nakon_eliminacija = ($request->input('plasman_eliminacije') !== null) ? $request->input('plasman_eliminacije') : null;
         $rezOpci->save();
         if ($this->timskeTabliceDostupne()) {
             $this->osvjeziTimoveTurnira((int)$turnir->id);
@@ -331,14 +331,14 @@ class TurniriController extends Controller
             return redirect()->route('admin.rezultati.popisTurnira')->with('error', 'Turnir nije pronaden.');
         }
 
-        if ((int)$request->get('turnir_id') !== (int)$turnir->id) {
+        if ((int)$request->input('turnir_id') !== (int)$turnir->id) {
             return redirect()->route('admin.rezultati.unosRezultata', $turnir->id)
                 ->with('error', 'Neispravan zahtjev za uređivanje rezultata.');
         }
 
-        $clan = Clanovi::find($request->get('clan'));
-        $kategorija = Kategorije::find($request->get('kategorija'));
-        $stil = Stilovi::where('id', $request->get('stil'))
+        $clan = Clanovi::find($request->input('clan'));
+        $kategorija = Kategorije::find($request->input('kategorija'));
+        $stil = Stilovi::where('id', $request->input('stil'))
             ->where('id', '!=', self::STANDARDNI_LUK_STIL_ID)
             ->first();
 
@@ -440,9 +440,9 @@ class TurniriController extends Controller
             $rezultat->clan_id = (int)$clan->id;
             $rezultat->kategorija_id = (int)$kategorija->id;
             $rezultat->stil_id = (int)$stil->id;
-            $rezultat->plasman = $request->get('plasman');
+            $rezultat->plasman = $request->input('plasman');
             $rezultat->plasman_nakon_eliminacija = $turnir->eliminacije
-                ? ($request->get('plasman_eliminacije') !== null ? $request->get('plasman_eliminacije') : null)
+                ? ($request->input('plasman_eliminacije') !== null ? $request->input('plasman_eliminacije') : null)
                 : null;
             $rezultat->save();
         });
@@ -477,7 +477,7 @@ class TurniriController extends Controller
     public function spremiTimskiRezultat(Request $request): RedirectResponse
     {
         if (!$this->timskeTabliceDostupne()) {
-            $turnirId = (int)$request->get('turnir_id');
+            $turnirId = (int)$request->input('turnir_id');
             return redirect()->route('admin.rezultati.unosRezultata', $turnirId)
                 ->with('error', 'Timski rezultati nisu dostupni dok se ne pokrenu migracije.');
         }
@@ -497,7 +497,7 @@ class TurniriController extends Controller
             'tim_clanovi.*.distinct' => 'Isti član ne može biti dva puta u istom timu.',
         ]);
 
-        $turnirId = (int)$request->get('turnir_id');
+        $turnirId = (int)$request->input('turnir_id');
         if ($validator->fails()) {
             return redirect()->back()
                 ->withInput()

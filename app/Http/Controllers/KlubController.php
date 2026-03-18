@@ -18,7 +18,6 @@ class KlubController extends Controller
 {
     /**
      * Prikazuje administracijski pregled kluba (osnovni podaci, treneri i dokumenti).
-     * @noinspection PhpUndefinedMethodInspection
      * @noinspection PhpMissingReturnTypeInspection
      */
     public function index()
@@ -39,7 +38,7 @@ class KlubController extends Controller
         return view('javno.oKlubu', ['klub' => $klub, 'clanovi' => $clanovi]);
     }
 
-    /** @noinspection PhpUndefinedMethodInspection
+    /**
      * @noinspection PhpMissingReturnTypeInspection
      */
     public function spremanjePodataka(Request $request)
@@ -48,23 +47,23 @@ class KlubController extends Controller
         if (is_null($klub)) {
             $klub = new Klub();
         }
-        $klub->naziv = $request->get('naziv');
-        $klub->adresa = $request->get('adresa');
-        $klub->telefon = $request->get('telefon');
-        $klub->email = $request->get('email');
-        $klub->racun = $request->get('racun');
+        $klub->naziv = $request->input('naziv');
+        $klub->adresa = $request->input('adresa');
+        $klub->telefon = $request->input('telefon');
+        $klub->email = $request->input('email');
+        $klub->racun = $request->input('racun');
         $klub->save();
         return redirect()->route('admin.klub.naslovna');
     }
 
-    /** @noinspection PhpUndefinedMethodInspection
+    /**
      * @noinspection PhpMissingReturnTypeInspection
      */
     public function spremanjeFunkcija(Request $request)
     {
 
         //klub
-        $klub = $request->get('klub_id');
+        $klub = $request->input('klub_id');
 
         // predsjednik
         $predsjednik = clanoviFunkcije::where('funkcija', '=', 'Predsjednik kluba')->first();
@@ -72,7 +71,7 @@ class KlubController extends Controller
             $predsjednik = new clanoviFunkcije();
         }
         $predsjednik->klub_id = $klub;
-        $predsjednik->clan_id = $request->get('predsjednik');
+        $predsjednik->clan_id = $request->input('predsjednik');
         $predsjednik->funkcija = 'Predsjednik kluba';
         $predsjednik->save();
 
@@ -82,7 +81,7 @@ class KlubController extends Controller
             $tajnik = new clanoviFunkcije();
         }
         $tajnik->klub_id = $klub;
-        $tajnik->clan_id = $request->get('tajnik');
+        $tajnik->clan_id = $request->input('tajnik');
         $tajnik->funkcija = 'Tajnik';
         $tajnik->save();
 
@@ -95,13 +94,13 @@ class KlubController extends Controller
         }
         $upravni1 = new clanoviFunkcije();
         $upravni1->klub_id = $klub;
-        $upravni1->clan_id = $request->get('upravni1');
+        $upravni1->clan_id = $request->input('upravni1');
         $upravni1->redniBroj = 1;
         $upravni1->funkcija = 'Upravni odbor';
         $upravni1->save();
         $upravni2 = new clanoviFunkcije();
         $upravni2->klub_id = $klub;
-        $upravni2->clan_id = $request->get('upravni2');
+        $upravni2->clan_id = $request->input('upravni2');
         $upravni2->redniBroj = 2;
         $upravni2->funkcija = 'Upravni odbor';
         $upravni2->save();
@@ -115,19 +114,19 @@ class KlubController extends Controller
         }
         $nadzorni1 = new clanoviFunkcije();
         $nadzorni1->klub_id = $klub;
-        $nadzorni1->clan_id = $request->get('nadzorni1');
+        $nadzorni1->clan_id = $request->input('nadzorni1');
         $nadzorni1->redniBroj = 1;
         $nadzorni1->funkcija = 'Nadzorni odbor';
         $nadzorni1->save();
         $nadzorni2 = new clanoviFunkcije();
         $nadzorni2->klub_id = $klub;
-        $nadzorni2->clan_id = $request->get('nadzorni2');
+        $nadzorni2->clan_id = $request->input('nadzorni2');
         $nadzorni2->redniBroj = 2;
         $nadzorni2->funkcija = 'Nadzorni odbor';
         $nadzorni2->save();
         $nadzorni3 = new clanoviFunkcije();
         $nadzorni3->klub_id = $klub;
-        $nadzorni3->clan_id = $request->get('nadzorni3');
+        $nadzorni3->clan_id = $request->input('nadzorni3');
         $nadzorni3->redniBroj = 3;
         $nadzorni3->funkcija = 'Nadzorni odbor';
         $nadzorni3->save();
@@ -141,19 +140,19 @@ class KlubController extends Controller
         }
         $arbitrazni1 = new clanoviFunkcije();
         $arbitrazni1->klub_id = $klub;
-        $arbitrazni1->clan_id = $request->get('arbitrazni1');
+        $arbitrazni1->clan_id = $request->input('arbitrazni1');
         $arbitrazni1->redniBroj = 1;
         $arbitrazni1->funkcija = 'Arbitražno vijeće';
         $arbitrazni1->save();
         $arbitrazni2 = new clanoviFunkcije();
         $arbitrazni2->klub_id = $klub;
-        $arbitrazni2->clan_id = $request->get('arbitrazni2');
+        $arbitrazni2->clan_id = $request->input('arbitrazni2');
         $arbitrazni2->redniBroj = 2;
         $arbitrazni2->funkcija = 'Arbitražno vijeće';
         $arbitrazni2->save();
         $arbitrazni3 = new clanoviFunkcije();
         $arbitrazni3->klub_id = $klub;
-        $arbitrazni3->clan_id = $request->get('arbitrazni3');
+        $arbitrazni3->clan_id = $request->input('arbitrazni3');
         $arbitrazni3->redniBroj = 3;
         $arbitrazni3->funkcija = 'Arbitražno vijeće';
         $arbitrazni3->save();
@@ -165,10 +164,10 @@ class KlubController extends Controller
     /** @noinspection PhpMissingReturnTypeInspection */
     public function spremanjeTrenera(Request $request)
     {
-        $klub = $request->get('klub_id');
+        $klub = $request->input('klub_id');
         $trener = new clanoviFunkcije();
         $trener->klub_id = $klub;
-        $trener->clan_id = $request->get('trener');
+        $trener->clan_id = $request->input('trener');
         $trener->funkcija = "Trener";
         $trener->save();
         return redirect()->route('admin.klub.naslovna');
@@ -195,7 +194,7 @@ class KlubController extends Controller
         $rules = array('medij' => 'required|extensions:jpg,jpeg,png,webp,mp4,pdf,doc,docx,xls,xlsx');
         $messages = array('medij.required' => 'Nije odabrana datoteka.', 'medij.extensions' => 'Datoteka nije slika (jpg,jpeg,png,webp), dokument (pdf,doc,docx,xls,xlsx) niti video (mp4).');
         $validator = Validator::make($request->all(), $rules, $messages);
-        $klub = Klub::findOrFail((int)$request->get('klub_id'));
+        $klub = Klub::findOrFail((int)$request->input('klub_id'));
         if ($validator->errors()->isEmpty()) {
             if (!(Storage::exists('public/klub'))) {
                 Storage::makeDirectory('public/klub');
@@ -205,8 +204,8 @@ class KlubController extends Controller
             $request->file('medij')->storeAs('public/klub/' . $ime_datoteke);
             $medij = new DokumentiKluba();
             $medij->klub_id = $klub->id;
-            $medij->opis = $request->get('opis');
-            $medij->javno = (bool)$request->get('javno');
+            $medij->opis = $request->input('opis');
+            $medij->javno = (bool)$request->input('javno');
             $medij->link_text = $ime_datoteke;
             $medij->save();
 
@@ -216,10 +215,9 @@ class KlubController extends Controller
         }
     }
 
-    /** @noinspection PhpUndefinedMethodInspection */
     public function brisanjeMedija(Request $request): RedirectResponse
     {
-        $medij = DokumentiKluba::findOrFail((int)$request->get('medijBrisanje'));
+        $medij = DokumentiKluba::findOrFail((int)$request->input('medijBrisanje'));
         Storage::delete('public/klub/' . $medij->link_text);
         $medij->delete();
         return redirect()->route('admin.klub.naslovna');
@@ -230,9 +228,9 @@ class KlubController extends Controller
      */
     public function updateMedija(Request $request): RedirectResponse
     {
-        $medij = DokumentiKluba::findOrFail((int)$request->get('dokument_id'));
-        $medij->opis = $request->get('opis');
-        $medij->javno = (bool)$request->get('javno');
+        $medij = DokumentiKluba::findOrFail((int)$request->input('dokument_id'));
+        $medij->opis = $request->input('opis');
+        $medij->javno = (bool)$request->input('javno');
         $medij->save();
         return redirect()->route('admin.klub.naslovna');
     }

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 
 /**
  * Kontroler početnog preusmjeravanja nakon prijave korisnika.
@@ -20,8 +20,8 @@ class HomeController extends Controller
     /**
      * Prikazuje internu početnu stranicu nakon prijave.
      */
-    public function index()
+    public function index(): RedirectResponse
     {
-        return view('home');
+        return redirect()->route('javno.naslovnaStranica');
     }
 }

@@ -30,19 +30,19 @@ class ClanoviController extends Controller
     public function store(Request $request): RedirectResponse
     {
         try {
-            $datumPocetkaClanstva = $request->get('datum_pocetka_clanstva');
+            $datumPocetkaClanstva = $request->input('datum_pocetka_clanstva');
             $clan = new Clanovi();
-            $clan->Prezime = $request->get('Prezime');
-            $clan->Ime = $request->get('Ime');
-            $clan->datum_rodjenja = $request->get('datum_rodjenja');
-            $clan->oib = $request->get('oib');
-            $clan->br_telefona = $request->get('br_telefona');
-            $clan->email = $request->get('email');
+            $clan->Prezime = $request->input('Prezime');
+            $clan->Ime = $request->input('Ime');
+            $clan->datum_rodjenja = $request->input('datum_rodjenja');
+            $clan->oib = $request->input('oib');
+            $clan->br_telefona = $request->input('br_telefona');
+            $clan->email = $request->input('email');
             $clan->datum_pocetka_clanstva = $datumPocetkaClanstva;
             $clan->clan_od = empty($datumPocetkaClanstva) ? null : (int)date('Y', strtotime((string)$datumPocetkaClanstva));
             $clan->broj_licence = (isset($request->broj_licence)) ? $request->broj_licence : 'nema licencu';
-            $clan->spol = $request->get('spol');
-            $clan->aktivan = (bool)$request->get('aktivan');
+            $clan->spol = $request->input('spol');
+            $clan->aktivan = (bool)$request->input('aktivan');
             $clan->save();
             return redirect()->route('javno.clanovi');
         } catch (Throwable $e) {
@@ -76,21 +76,21 @@ class ClanoviController extends Controller
      */
     public function update(Request $request): RedirectResponse
     {
-        $clan = Clanovi::where('id', $request->get('clan_id'))->firstOrFail();
-        $datumPocetkaClanstva = $request->get('datum_pocetka_clanstva');
-        $clan->Prezime = $request->get('Prezime');
-        $clan->Ime = $request->get('Ime');
-        $clan->datum_rodjenja = $request->get('datum_rodjenja');
-        $clan->oib = $request->get('oib');
-        $clan->br_telefona = $request->get('br_telefona');
-        $clan->email = $request->get('email');
+        $clan = Clanovi::where('id', $request->input('clan_id'))->firstOrFail();
+        $datumPocetkaClanstva = $request->input('datum_pocetka_clanstva');
+        $clan->Prezime = $request->input('Prezime');
+        $clan->Ime = $request->input('Ime');
+        $clan->datum_rodjenja = $request->input('datum_rodjenja');
+        $clan->oib = $request->input('oib');
+        $clan->br_telefona = $request->input('br_telefona');
+        $clan->email = $request->input('email');
         $clan->datum_pocetka_clanstva = $datumPocetkaClanstva;
         if (!empty($datumPocetkaClanstva)) {
             $clan->clan_od = (int)date('Y', strtotime((string)$datumPocetkaClanstva));
         }
         $clan->broj_licence = (isset($request->broj_licence)) ? $request->broj_licence : 'nema licencu';
-        $clan->spol = $request->get('spol');
-        $clan->aktivan = (bool)$request->get('aktivan');
+        $clan->spol = $request->input('spol');
+        $clan->aktivan = (bool)$request->input('aktivan');
         $clan->save();
         return redirect()->route('admin.clanovi.prikaz_clana', $clan)->with('success', 'Spremanje podataka OK');
     }
@@ -103,15 +103,15 @@ class ClanoviController extends Controller
         $clan = Clanovi::with(['lijecnickiPregledi', 'dokumenti'])->where('id', $id)->firstOrFail();
 
         foreach ($clan->lijecnickiPregledi as $pregled) {
-            $this->obrisiDatotekuAkoPostoji($pregled->putanja, 'local');
+            $this->obrisiDatotekuAkoPostoji($pregled->putanja);
         }
 
         foreach ($clan->dokumenti as $dokument) {
-            $this->obrisiDatotekuAkoPostoji($dokument->putanja, 'local');
+            $this->obrisiDatotekuAkoPostoji($dokument->putanja);
         }
 
-        $this->obrisiDatotekuAkoPostoji($clan->slika_link ? 'public/slike_clanova/' . $clan->slika_link : null, 'local');
-        $this->obrisiDatotekuAkoPostoji($clan->lijecnicki_dokument ? 'public/lijecnicki_dokumenti/' . $clan->lijecnicki_dokument : null, 'local');
+        $this->obrisiDatotekuAkoPostoji($clan->slika_link ? 'public/slike_clanova/' . $clan->slika_link : null);
+        $this->obrisiDatotekuAkoPostoji($clan->lijecnicki_dokument ? 'public/lijecnicki_dokumenti/' . $clan->lijecnicki_dokument : null);
 
         $clan->delete();
         return redirect()->route('javno.clanovi');
@@ -134,9 +134,9 @@ class ClanoviController extends Controller
                 'clan_slika.image' => 'Nije odabrana slika.'
         );
         $validator = Validator::make( $request->all(), $rules, $messages );
-        $clan = Clanovi::where('id',  $request->get('clan_id'))->firstOrFail();
+        $clan = Clanovi::where('id',  $request->input('clan_id'))->firstOrFail();
         if ($validator->errors()->isEmpty()) {
-            $ime_datoteke = $request->get('clan_id') . '.' . $request->file('clan_slika')->extension();
+            $ime_datoteke = $request->input('clan_id') . '.' . $request->file('clan_slika')->extension();
             if(!(empty($clan->slika_link))) {
                 Storage::disk('local')->delete('public/slike_clanova/' . $clan->slika_link);
             }
@@ -154,8 +154,8 @@ class ClanoviController extends Controller
      */
     public function brisanje_slike_clana(Request $request): RedirectResponse
     {
-        $clan = Clanovi::where('id',  $request->get('clan_id'))->firstOrFail();
-        $this->obrisiDatotekuAkoPostoji($clan->slika_link ? 'public/slike_clanova/' . $clan->slika_link : null, 'local');
+        $clan = Clanovi::where('id',  $request->input('clan_id'))->firstOrFail();
+        $this->obrisiDatotekuAkoPostoji($clan->slika_link ? 'public/slike_clanova/' . $clan->slika_link : null);
         $clan->slika_link = NULL;
         $clan->save();
         return redirect()->route('admin.clanovi.prikaz_clana', $clan)->with('success', 'Brisanje slike OK');
@@ -182,7 +182,7 @@ class ClanoviController extends Controller
 
         $pregled = new ClanLijecnickiPregled();
         $pregled->clan_id = $clan->id;
-        $pregled->vrijedi_do = $request->get('vrijedi_do');
+        $pregled->vrijedi_do = $request->input('vrijedi_do');
         $pregled->created_by = auth()->id();
         $pregled->legacy_import = false;
 
@@ -218,10 +218,10 @@ class ClanoviController extends Controller
             return redirect()->route('admin.clanovi.prikaz_clana', ['clan' => $clan, 'open_documents' => 1])->with('error', $validator->errors()->first());
         }
 
-        $pregled->vrijedi_do = $request->get('vrijedi_do');
+        $pregled->vrijedi_do = $request->input('vrijedi_do');
 
         if ($request->hasFile('lijecnicki_dokument')) {
-            $this->obrisiDatotekuAkoPostoji($pregled->putanja, 'local');
+            $this->obrisiDatotekuAkoPostoji($pregled->putanja);
             $pohrana = $this->spremiDatoteku('lijecnicki_dokument', 'private/clanovi/' . $clan->id . '/lijecnicki');
             $pregled->putanja = $pohrana['putanja'];
             $pregled->originalni_naziv = $pohrana['originalni_naziv'];
@@ -240,7 +240,7 @@ class ClanoviController extends Controller
     {
         $this->potvrdiPripadnostClanu($clan->id, $pregled->clan_id);
 
-        $this->obrisiDatotekuAkoPostoji($pregled->putanja, 'local');
+        $this->obrisiDatotekuAkoPostoji($pregled->putanja);
         $pregled->delete();
         $clan->osvjeziLijecnickiDo();
 
@@ -285,13 +285,13 @@ class ClanoviController extends Controller
 
         $pohrana = $this->spremiDatoteku('dokument', 'private/clanovi/' . $clan->id . '/dokumenti');
 
-        $vrsta = (string)$request->get('vrsta');
+        $vrsta = (string)$request->input('vrsta');
         $dokument = new ClanDokument();
         $dokument->clan_id = $clan->id;
         $dokument->vrsta = $vrsta;
-        $dokument->naziv = $this->odrediNazivDokumenta($vrsta, (string)$request->get('naziv'));
-        $dokument->datum_dokumenta = $request->get('datum_dokumenta');
-        $dokument->napomena = $request->get('napomena');
+        $dokument->naziv = $this->odrediNazivDokumenta($vrsta, (string)$request->input('naziv'));
+        $dokument->datum_dokumenta = $request->input('datum_dokumenta');
+        $dokument->napomena = $request->input('napomena');
         $dokument->putanja = $pohrana['putanja'];
         $dokument->originalni_naziv = $pohrana['originalni_naziv'];
         $dokument->created_by = auth()->id();
@@ -324,14 +324,14 @@ class ClanoviController extends Controller
             return redirect()->route('admin.clanovi.prikaz_clana', ['clan' => $clan, 'open_documents' => 1])->with('error', $validator->errors()->first());
         }
 
-        $vrsta = (string)$request->get('vrsta');
+        $vrsta = (string)$request->input('vrsta');
         $dokument->vrsta = $vrsta;
-        $dokument->naziv = $this->odrediNazivDokumenta($vrsta, (string)$request->get('naziv'));
-        $dokument->datum_dokumenta = $request->get('datum_dokumenta');
-        $dokument->napomena = $request->get('napomena');
+        $dokument->naziv = $this->odrediNazivDokumenta($vrsta, (string)$request->input('naziv'));
+        $dokument->datum_dokumenta = $request->input('datum_dokumenta');
+        $dokument->napomena = $request->input('napomena');
 
         if ($request->hasFile('dokument')) {
-            $this->obrisiDatotekuAkoPostoji($dokument->putanja, 'local');
+            $this->obrisiDatotekuAkoPostoji($dokument->putanja);
             $pohrana = $this->spremiDatoteku('dokument', 'private/clanovi/' . $clan->id . '/dokumenti');
             $dokument->putanja = $pohrana['putanja'];
             $dokument->originalni_naziv = $pohrana['originalni_naziv'];
@@ -349,7 +349,7 @@ class ClanoviController extends Controller
     {
         $this->potvrdiPripadnostClanu($clan->id, $dokument->clan_id);
 
-        $this->obrisiDatotekuAkoPostoji($dokument->putanja, 'local');
+        $this->obrisiDatotekuAkoPostoji($dokument->putanja);
         $dokument->delete();
 
         return redirect()->route('admin.clanovi.prikaz_clana', ['clan' => $clan, 'open_documents' => 1])->with('success', 'Dokument je obrisan.');
@@ -400,10 +400,10 @@ class ClanoviController extends Controller
     /**
      * Briše datoteku s diska ako putanja postoji.
      */
-    private function obrisiDatotekuAkoPostoji(?string $putanja, string $disk = 'local'): void
+    private function obrisiDatotekuAkoPostoji(?string $putanja): void
     {
-        if (!empty($putanja) && Storage::disk($disk)->exists($putanja)) {
-            Storage::disk($disk)->delete($putanja);
+        if (!empty($putanja) && Storage::disk('local')->exists($putanja)) {
+            Storage::disk('local')->delete($putanja);
         }
     }
 

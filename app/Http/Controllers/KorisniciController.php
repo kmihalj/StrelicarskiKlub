@@ -99,9 +99,7 @@ class KorisniciController extends Controller
                 ->unique()
                 ->values();
 
-            if ($rola === 3) {
-                // Bez dodatnih obaveznih pravila za nepovezanog korisnika.
-            } elseif (in_array($rola, [1, 2], true)) {
+            if (in_array($rola, [1, 2], true)) {
                 if ($rola === 2 && empty($povezaniId)) {
                     $validator->errors()->add('povezani_id', 'Za rolu član potrebno je povezati korisnika sa članom.');
                     return;
@@ -273,7 +271,7 @@ class KorisniciController extends Controller
 
         $trenutniKorisnik = Auth::user();
         $jeBootstrapAdmin = $trenutniKorisnik instanceof User
-            && (bool)$trenutniKorisnik->is_bootstrap_admin;
+            && $trenutniKorisnik->is_bootstrap_admin;
         $promoviranNoviAdmin = !$targetWasAdmin && (int)$user->rola === 1;
         $promoviranJeDrugiKorisnik = $trenutniKorisnik instanceof User
             && (int)$trenutniKorisnik->id !== (int)$user->id;

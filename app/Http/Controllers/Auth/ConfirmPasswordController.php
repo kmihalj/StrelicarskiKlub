@@ -28,7 +28,7 @@ class ConfirmPasswordController extends Controller
      *
      * @var string
      */
-    protected $redirectTo = '/';
+    protected string $redirectTo = '/';
 
     /**
      * Potvrdu lozinke dopušta samo prijavljenim korisnicima.

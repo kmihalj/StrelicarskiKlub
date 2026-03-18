@@ -64,9 +64,9 @@ class ClanciController extends Controller
      */
     public function spremanjeClanka(Request $request)
     {
-        $postojeciClanakId = $request->get('id_clanka');
-        $sadrzajEditor = $this->ukloniFacebookBlokIzSadrzaja((string)$request->get('sadrzaj'));
-        $uneseniFacebookLink = $request->get('facebook_link_sadrzaj');
+        $postojeciClanakId = $request->input('id_clanka');
+        $sadrzajEditor = $this->ukloniFacebookBlokIzSadrzaja((string)$request->input('sadrzaj'));
+        $uneseniFacebookLink = $request->input('facebook_link_sadrzaj');
         $facebookLink = $this->normalizirajFacebookLink($uneseniFacebookLink);
 
         if (trim((string)$uneseniFacebookLink) !== '' && $facebookLink === null) {
@@ -80,14 +80,14 @@ class ClanciController extends Controller
                 ->with('error', 'Facebook link nije ispravan URL.');
         }
 
-        if ($request->get('id_clanka')) {
-            $clanak = Clanci::findOrFail((int)$request->get('id_clanka'));
+        if ($request->filled('id_clanka')) {
+            $clanak = Clanci::findOrFail((int)$request->input('id_clanka'));
         } else {
             $clanak = new Clanci();
         }
-        $clanak->vrsta = $request->get('vrsta');
-        $clanak->naslov = $request->get('naslov');
-        $clanak->datum = $request->get('datum');
+        $clanak->vrsta = $request->input('vrsta');
+        $clanak->naslov = $request->input('naslov');
+        $clanak->datum = $request->input('datum');
         $sadrzajEditor = trim($sadrzajEditor);
         if ($facebookLink !== null) {
             $facebookBlok = $this->izradiFacebookBlokZaSadrzaj($facebookLink);
@@ -95,8 +95,8 @@ class ClanciController extends Controller
         } else {
             $clanak->sadrzaj = $sadrzajEditor;
         }
-        $clanak->menu_naslov = $request->get('menu_naslov');
-        if ($request->get('menu') !== null) {
+        $clanak->menu_naslov = $request->input('menu_naslov');
+        if ($request->has('menu')) {
             $clanak->menu = true;
         } else {
             $clanak->menu = false;
@@ -110,8 +110,8 @@ class ClanciController extends Controller
      */
     public function galerija(Request $request)
     {
-        $clanak = Clanci::findOrFail((int)$request->get('id_clanka'));
-        if ($request->get('galerija') !== null) {
+        $clanak = Clanci::findOrFail((int)$request->input('id_clanka'));
+        if ($request->has('galerija')) {
             $clanak->galerija = true;
         } else {
             $clanak->galerija = false;
@@ -167,7 +167,7 @@ class ClanciController extends Controller
             'medij.*.extensions' => 'Datoteka nije slika (jpg,jpeg,png,webp), dokument (pdf,doc,docx) niti video (mp4).'
         );
         $validator = Validator::make($request->all(), $rules, $messages);
-        $clanak = Clanci::findOrFail((int)$request->get('clanak_id'));
+        $clanak = Clanci::findOrFail((int)$request->input('clanak_id'));
         if (!$validator->errors()->isEmpty()) {
             if ($request->expectsJson()) {
                 return response()->json(['message' => $validator->errors()->first()], 422);
@@ -218,7 +218,7 @@ class ClanciController extends Controller
      */
     public function brisanjeMedija(Request $request): RedirectResponse
     {
-        $medij = MedijiClanaka::findOrFail((int)$request->get('medijBrisanje'));
+        $medij = MedijiClanaka::findOrFail((int)$request->input('medijBrisanje'));
         Storage::delete('public/clanci/' . $medij->clanak->id . '/' . $medij->link);
         $medij->delete();
         return redirect()->route('admin.clanci.uredjivanje', $medij->clanak->id);
@@ -264,12 +264,12 @@ class ClanciController extends Controller
         $oznaceniBlokRegex = '/<!--\s*AUTO_FACEBOOK_LINK_START\s*-->(.*?)<!--\s*AUTO_FACEBOOK_LINK_END\s*-->/is';
         if (preg_match($oznaceniBlokRegex, $vrijednost, $blokPodudaranje) === 1
             && preg_match('/href=(["\'])(.*?)\1/i', $blokPodudaranje[1], $linkPodudaranje) === 1) {
-            return html_entity_decode((string)$linkPodudaranje[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            return html_entity_decode($linkPodudaranje[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
         }
 
         $legacyRegex = '/<a[^>]*href=(["\'])(.*?)\1[^>]*>\s*(?:<svg[\s\S]*?<\/svg>\s*)?Facebook\s*<\/a>/iu';
         if (preg_match($legacyRegex, $vrijednost, $legacyPodudaranje) === 1) {
-            return html_entity_decode((string)$legacyPodudaranje[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            return html_entity_decode($legacyPodudaranje[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
         }
 
         return null;
@@ -288,7 +288,7 @@ class ClanciController extends Controller
         $oznaceniBlokRegex = '/<!--\s*AUTO_FACEBOOK_LINK_START\s*-->.*?<!--\s*AUTO_FACEBOOK_LINK_END\s*-->/is';
         $vrijednost = preg_replace($oznaceniBlokRegex, '', $vrijednost) ?? $vrijednost;
 
-        $legacyRegex = '/<p[^>]*>\s*(?:<a[^>]*>\s*)?(?:<svg[\s\S]*?<\/svg>)\s*Facebook\s*(?:<\/a>)?\s*<\/p>/iu';
+        $legacyRegex = '/<p[^>]*>\s*(?:<a[^>]*>\s*)?<svg[\s\S]*?<\/svg>\s*Facebook\s*(?:<\/a>)?\s*<\/p>/iu';
         $vrijednost = preg_replace($legacyRegex, '', $vrijednost) ?? $vrijednost;
 
         return trim($vrijednost);
