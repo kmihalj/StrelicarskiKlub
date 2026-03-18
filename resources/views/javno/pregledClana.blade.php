@@ -794,8 +794,7 @@
 
                     const rootStyles = getComputedStyle(document.documentElement);
                     const bodyStyles = getComputedStyle(document.body);
-                    const fallbackSecondary = bodyStyles.getPropertyValue('--bs-secondary-color')?.trim() || '#6c757d';
-                    const fallbackBody = bodyStyles.getPropertyValue('--bs-body-color')?.trim() || '#495057';
+                    const bodyTextColor = bodyStyles.color?.trim() || '#495057';
                     const primaryColor = rootStyles.getPropertyValue('--theme-primary')?.trim() || '#dc3545';
                     const gridColor = document.body.classList.contains('theme-dark') ? 'rgba(255,255,255,0.18)' : '#dee2e6';
                     const axisColor = document.body.classList.contains('theme-dark') ? 'rgba(255,255,255,0.45)' : '#adb5bd';
@@ -853,7 +852,8 @@
                             y: y + 4,
                             'text-anchor': 'end',
                             'font-size': 11,
-                            fill: fallbackSecondary
+                            fill: bodyTextColor,
+                            'fill-opacity': document.body.classList.contains('theme-dark') ? 0.92 : 0.75
                         });
                         label.textContent = value;
                         svg.appendChild(label);
@@ -971,7 +971,7 @@
                                 'text-anchor': valueLabelPos.anchor,
                                 'font-size': brojTocaka > 35 ? 9 : 10,
                                 'font-weight': isMinOrMax ? '700' : '600',
-                                fill: fallbackBody
+                                fill: bodyTextColor
                             });
                             valueLabel.textContent = String(pointTotal);
                             svg.appendChild(valueLabel);
