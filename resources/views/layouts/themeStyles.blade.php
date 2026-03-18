@@ -405,14 +405,18 @@
     }
 
     .table thead.theme-thead-accent > tr > *,
-    .table > :not(caption) > thead.theme-thead-accent > tr > * {
+    .table > :not(caption) > thead.theme-thead-accent > tr > *,
+    .table thead > tr.theme-thead-accent > *,
+    .table > :not(caption) > thead > tr.theme-thead-accent > * {
         background-color: var(--bs-primary) !important;
         color: var(--theme-on-primary, #ffffff) !important;
         border-color: rgba(var(--bs-primary-rgb), 0.65) !important;
     }
 
     .table thead.theme-thead-accent > tr > *.text-white,
-    .table > :not(caption) > thead.theme-thead-accent > tr > *.text-white {
+    .table > :not(caption) > thead.theme-thead-accent > tr > *.text-white,
+    .table thead > tr.theme-thead-accent > *.text-white,
+    .table > :not(caption) > thead > tr.theme-thead-accent > *.text-white {
         color: var(--theme-on-primary, #ffffff) !important;
     }
 
