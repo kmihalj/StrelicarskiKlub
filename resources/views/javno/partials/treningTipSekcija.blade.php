@@ -30,7 +30,8 @@
                     <button id="pregled-toggle-{{ $sekcijaDomId }}" class="btn btn-sm btn-outline-light"
                             type="button"
                             aria-expanded="false"
-                            onclick="window.toggleTreningTablica('{{ $sekcijaDomId }}', null);">
+                            data-trening-tablica-toggle="1"
+                            data-sekcija-dom-id="{{ $sekcijaDomId }}">
                         Pregled
                     </button>
                 @endif
@@ -41,6 +42,7 @@
 
 @once
     <style>
+        /*noinspection CssUnusedSymbol*/
         .trening-th-r1 {
             background-color: #ffd447 !important;
             color: #1f1f1f !important;
@@ -52,9 +54,9 @@
         }
 
         .trening-th-total {
-            background-color: var(--bs-primary) !important;
-            color: var(--theme-on-primary, #ffffff) !important;
-            border-color: rgba(var(--bs-primary-rgb), 0.65) !important;
+            background-color: #0d6efd !important;
+            color: #ffffff !important;
+            border-color: rgba(13, 110, 253, 0.65) !important;
         }
 
         .trening-td-runda {
@@ -62,8 +64,8 @@
         }
 
         .theme-dark .trening-td-runda {
-            background-color: var(--bs-secondary-bg-subtle) !important;
-            color: var(--bs-body-color) !important;
+            background-color: #2b3035 !important;
+            color: #e9ecef !important;
         }
 
         .trening-mobile-card {
@@ -75,7 +77,7 @@
 
         .theme-dark .trening-mobile-card {
             border-color: rgba(255, 255, 255, 0.2);
-            background: var(--bs-dark-bg-subtle);
+            background: #2b3035;
         }
 
         .trening-mobile-card + .trening-mobile-card {
@@ -110,18 +112,17 @@
     </style>
 
     <script>
-        if (typeof window.toggleTreningTablica !== 'function') {
-            window.toggleTreningTablica = function (sekcijaDomId, shouldShow) {
-                var tableWrap = document.getElementById(sekcijaDomId + '_tablica');
-                var pregledToggle = document.getElementById('pregled-toggle-' + sekcijaDomId);
-                var graphWrap = document.getElementById(sekcijaDomId + '_graf_okvir');
-
+        (function () {
+            const toggleTreningTablica = function (sekcijaDomId, shouldShow) {
+                const tableWrap = /** @type {HTMLElement|null} */ (document.getElementById(sekcijaDomId + '_tablica'));
+                const pregledToggle = /** @type {HTMLElement|null} */ (document.getElementById('pregled-toggle-' + sekcijaDomId));
+                const graphWrap = /** @type {HTMLElement|null} */ (document.getElementById(sekcijaDomId + '_graf_okvir'));
                 if (!tableWrap) {
                     return;
                 }
 
-                var currentlyVisible = tableWrap.style.display !== 'none';
-                var visible = typeof shouldShow === 'boolean' ? shouldShow : !currentlyVisible;
+                const currentlyVisible = tableWrap.style.display !== 'none';
+                const visible = typeof shouldShow === 'boolean' ? shouldShow : !currentlyVisible;
 
                 tableWrap.style.display = visible ? 'block' : 'none';
                 if (pregledToggle) {
@@ -134,7 +135,26 @@
                     graphWrap.classList.toggle('mb-3', !visible);
                 }
             };
-        }
+
+            document.addEventListener('click', function (event) {
+                const target = event.target;
+                if (!(target instanceof Element)) {
+                    return;
+                }
+
+                const toggleButton = target.closest('[data-trening-tablica-toggle]');
+                if (!toggleButton) {
+                    return;
+                }
+
+                const sekcijaDomId = toggleButton.getAttribute('data-sekcija-dom-id');
+                if (!sekcijaDomId) {
+                    return;
+                }
+
+                toggleTreningTablica(sekcijaDomId, null);
+            });
+        })();
     </script>
 @endonce
 

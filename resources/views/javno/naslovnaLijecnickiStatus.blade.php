@@ -1,5 +1,5 @@
 {{-- Blok statusa liječničkog pregleda za prijavljenog člana. --}}
-@if(isset($statusLijecnickiKorisnika) && !is_null($statusLijecnickiKorisnika))
+@if(isset($statusLijecnickiKorisnika))
     @php
         $placanjeNotice = $statusLijecnickiKorisnika['paymentNotice'] ?? null;
     @endphp

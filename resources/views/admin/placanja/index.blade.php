@@ -329,11 +329,15 @@
                 </div>
             </div>
 
-            <script>
-                (function () {
-                    const presetInput = document.getElementById('period_preset');
-                    const dateFromInput = document.getElementById('date_from');
-                    const dateToInput = document.getElementById('date_to');
+                <script>
+                    (function () {
+                    const presetInput = /** @type {HTMLSelectElement|null} */ (document.getElementById('period_preset'));
+                    const dateFromInput = /** @type {HTMLInputElement|null} */ (document.getElementById('date_from'));
+                    const dateToInput = /** @type {HTMLInputElement|null} */ (document.getElementById('date_to'));
+
+                    if (!presetInput || !dateFromInput || !dateToInput) {
+                        return;
+                    }
 
                     const toIsoDate = function (date) {
                         const year = date.getFullYear();
@@ -378,10 +382,6 @@
                     };
 
                     const syncDateInputsState = function (isInitial) {
-                        if (!presetInput || !dateFromInput || !dateToInput) {
-                            return;
-                        }
-
                         const preset = presetInput.value;
                         const isAll = preset === 'all';
                         dateFromInput.disabled = isAll;

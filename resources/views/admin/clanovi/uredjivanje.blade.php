@@ -5,9 +5,10 @@
     @php
         $otvoriDokumente = request()->boolean('open_documents');
         $otvoriPlacanja = $otvoriPlacanja ?? request()->boolean('open_payments');
-        $paymentSetup = $paymentSetup ?? app(\App\Services\PaymentTrackingService::class)->setupViewData();
-        $paymentSummary = $paymentSummary ?? app(\App\Services\PaymentTrackingService::class)->memberSummary($clan);
-        $paymentNotice = $paymentNotice ?? app(\App\Services\PaymentTrackingService::class)->noticeForClan($clan);
+        $paymentTrackingService = $paymentTrackingService ?? app('App\\Services\\PaymentTrackingService');
+        $paymentSetup = $paymentSetup ?? $paymentTrackingService->setupViewData();
+        $paymentSummary = $paymentSummary ?? $paymentTrackingService->memberSummary($clan);
+        $paymentNotice = $paymentNotice ?? $paymentTrackingService->noticeForClan($clan);
         $paymentTrackingEnabled = (bool)($paymentSetup['paymentTrackingEnabled'] ?? false);
         $paymentOptions = $paymentSetup['paymentOptions'] ?? collect();
         $paymentProfile = $paymentSummary['profile'] ?? null;
@@ -86,7 +87,7 @@
                                 <div class="col-lg-3 mb-2">
                                     <label for="datum_pocetka_clanstva" class="fw-bold">Datum početka članstva:</label>
                                     <input type="date" form="uredjivanje_clana" class="form-control" name="datum_pocetka_clanstva" id="datum_pocetka_clanstva"
-                                           value="{{ optional($clan->datum_pocetka_clanstva)->format('Y-m-d') }}">
+                                           value="{{ $clan->datum_pocetka_clanstva?->format('Y-m-d') }}">
                                 </div>
                                 <div class="col-lg-3 mb-2">
                                     <label for="broj_licence">Br. licence:</label>
@@ -138,9 +139,11 @@
                 <div class="card-header bg-danger fw-bolder text-white">
                     Praćenje plaćanja člana
                     <span id="skrivanje_admin_placanja" class="text-white" style="float: right; cursor: pointer; @if($otvoriPlacanja) display: block; @else display: none; @endif"
-                          onclick="document.getElementById('admin_placanja_dropdown').style.display = 'none';document.getElementById('skrivanje_admin_placanja').style.display = 'none';document.getElementById('pokazivanje_admin_placanja').style.display = 'block';">_</span>
+                          data-admin-sekcija="placanja"
+                          data-admin-open="0">_</span>
                     <span id="pokazivanje_admin_placanja" class="text-white" style="float: right; cursor: pointer; @if($otvoriPlacanja) display: none; @endif"
-                          onclick="document.getElementById('admin_placanja_dropdown').style.display = 'block';document.getElementById('skrivanje_admin_placanja').style.display = 'block';document.getElementById('pokazivanje_admin_placanja').style.display = 'none';">+</span>
+                          data-admin-sekcija="placanja"
+                          data-admin-open="1">+</span>
                 </div>
                 <div id="admin_placanja_dropdown" class="card-body bg-secondary-subtle shadow" style="@if($otvoriPlacanja) display: block; @else display: none; @endif">
                     @if(!empty($paymentNotice))
@@ -157,7 +160,7 @@
                                 @csrf
                                 @php
                                     $selectedOptionId = old('membership_payment_option_id', $paymentProfile?->membership_payment_option_id);
-                                    $startDateValue = old('start_date', optional($paymentProfile?->start_date)->format('Y-m-d') ?? now()->toDateString());
+                                    $startDateValue = old('start_date', $paymentProfile?->start_date?->format('Y-m-d') ?? now()->toDateString());
                                     $selectedOptionModel = $paymentProfile?->paymentOption;
                                     $optionsForSelect = collect($paymentOptions->all());
                                     if ($selectedOptionModel !== null && !$optionsForSelect->contains(fn ($option) => (int)$option->id === (int)$selectedOptionModel->id)) {
@@ -280,7 +283,7 @@
                                 <div class="small text-muted mt-2">
                                     @if($paymentProfile?->paymentOption)
                                         Trenutni model: <strong>{{ $paymentProfile->paymentOption->name }}</strong>
-                                        (vrijedi od {{ optional($paymentProfile->start_date)->format('d.m.Y.') }})
+                                        (vrijedi od {{ $paymentProfile->start_date?->format('d.m.Y.') }})
                                     @else
                                         Trenutni model nije postavljen.
                                     @endif
@@ -340,12 +343,12 @@
                                         </tr>
                                         </thead>
                                         <tbody>
-                                        @php $paymentService = app(\App\Services\PaymentTrackingService::class); @endphp
+                                        @php $paymentService = $paymentTrackingService; @endphp
                                         @foreach($paymentCharges as $charge)
                                             @php
                                                 $statusFormId = 'status_placanja_' . $charge->id;
                                                 $deleteFormId = 'obrisi_placanje_' . $charge->id;
-                                                $isPaid = $charge->status === \App\Services\PaymentTrackingService::STATUS_PAID;
+                                                $isPaid = $charge->status === $paymentService::STATUS_PAID;
                                                 $canDeleteCharge = true;
                                                 $variantOptions = $paymentService->availableVariantsForCharge($charge);
                                                 $selectedVariant = $paymentService->selectedVariantForCharge($charge, !$isPaid);
@@ -404,9 +407,9 @@
                                                     @endif
                                                 </td>
                                                 <td>
-                                                    @if($charge->source === \App\Services\PaymentTrackingService::SOURCE_AUTO)
+                                                    @if($charge->source === $paymentService::SOURCE_AUTO)
                                                         Članarina
-                                                    @elseif($charge->source === \App\Services\PaymentTrackingService::SOURCE_OPENING)
+                                                    @elseif($charge->source === $paymentService::SOURCE_OPENING)
                                                         Početni dug
                                                     @else
                                                         Dodatno
@@ -472,9 +475,11 @@
                 <div class="card-header bg-danger fw-bolder text-white">
                     Liječnički pregledi i dokumenti člana
                     <span id="skrivanje_admin_dokumenata" class="text-white" style="float: right; cursor: pointer; @if($otvoriDokumente) display: block; @else display: none; @endif"
-                          onclick="document.getElementById('admin_dokumenti_dropdown').style.display = 'none';document.getElementById('skrivanje_admin_dokumenata').style.display = 'none';document.getElementById('pokazivanje_admin_dokumenata').style.display = 'block';">_</span>
+                          data-admin-sekcija="dokumenti"
+                          data-admin-open="0">_</span>
                     <span id="pokazivanje_admin_dokumenata" class="text-white" style="float: right; cursor: pointer; @if($otvoriDokumente) display: none; @endif"
-                          onclick="document.getElementById('admin_dokumenti_dropdown').style.display = 'block';document.getElementById('skrivanje_admin_dokumenata').style.display = 'block';document.getElementById('pokazivanje_admin_dokumenata').style.display = 'none';">+</span>
+                          data-admin-sekcija="dokumenti"
+                          data-admin-open="1">+</span>
                 </div>
                 <div id="admin_dokumenti_dropdown" class="card-body bg-secondary-subtle shadow" style="@if($otvoriDokumente) display: block; @else display: none; @endif">
                     <div class="row">
@@ -527,7 +532,7 @@
                                                 </form>
                                                 <tr>
                                                     <td>
-                                                        <input type="date" class="form-control form-control-sm" name="vrijedi_do" form="spremi_lijecnicki_{{ $pregled->id }}" value="{{ optional($pregled->vrijedi_do)->format('Y-m-d') }}" required>
+                                                        <input type="date" class="form-control form-control-sm" name="vrijedi_do" form="spremi_lijecnicki_{{ $pregled->id }}" value="{{ $pregled->vrijedi_do?->format('Y-m-d') }}" required>
                                                     </td>
                                                     <td>
                                                         @if(empty($pregled->putanja))
@@ -625,7 +630,7 @@
                                                 </form>
                                                 <tr>
                                                     <td>{{ $dokument->naziv }}</td>
-                                                    <td>{{ optional($dokument->datum_dokumenta)->format('d.m.Y.') }}</td>
+                                                    <td>{{ $dokument->datum_dokumenta?->format('d.m.Y.') }}</td>
                                                     <td>{{ $dokument->napomena ?: '-' }}</td>
                                                     <td>
                                                         @if(!empty($dokument->putanja))
@@ -682,8 +687,49 @@
 
     <script>
         (function () {
-            const vrsta = document.getElementById('vrsta_novi_dokument');
-            const naziv = document.getElementById('naziv_novi_dokument');
+            const toggleAdminSekcija = (sekcija, shouldOpen) => {
+                let bodyId = '';
+                let hideId = '';
+                let showId = '';
+
+                if (sekcija === 'placanja') {
+                    bodyId = 'admin_placanja_dropdown';
+                    hideId = 'skrivanje_admin_placanja';
+                    showId = 'pokazivanje_admin_placanja';
+                } else if (sekcija === 'dokumenti') {
+                    bodyId = 'admin_dokumenti_dropdown';
+                    hideId = 'skrivanje_admin_dokumenata';
+                    showId = 'pokazivanje_admin_dokumenata';
+                } else {
+                    return;
+                }
+
+                const body = /** @type {HTMLElement|null} */ (document.getElementById(bodyId));
+                const hideIcon = /** @type {HTMLElement|null} */ (document.getElementById(hideId));
+                const showIcon = /** @type {HTMLElement|null} */ (document.getElementById(showId));
+                if (!body || !hideIcon || !showIcon) {
+                    return;
+                }
+
+                body.style.display = shouldOpen ? 'block' : 'none';
+                hideIcon.style.display = shouldOpen ? 'block' : 'none';
+                showIcon.style.display = shouldOpen ? 'none' : 'block';
+            };
+
+            document.querySelectorAll('[data-admin-sekcija][data-admin-open]').forEach((element) => {
+                element.addEventListener('click', () => {
+                    const sekcija = element.getAttribute('data-admin-sekcija');
+                    if (!sekcija) {
+                        return;
+                    }
+
+                    const shouldOpen = element.getAttribute('data-admin-open') === '1';
+                    toggleAdminSekcija(sekcija, shouldOpen);
+                });
+            });
+
+            const vrsta = /** @type {HTMLSelectElement|null} */ (document.getElementById('vrsta_novi_dokument'));
+            const naziv = /** @type {HTMLInputElement|null} */ (document.getElementById('naziv_novi_dokument'));
             if (!vrsta || !naziv) return;
 
             const syncNaziv = () => {
@@ -711,13 +757,14 @@
             vrsta.addEventListener('change', syncNaziv);
             syncNaziv();
 
-            document.querySelectorAll('.js-payment-variant-select').forEach((variantSelect) => {
+            document.querySelectorAll('.js-payment-variant-select').forEach((node) => {
+                const variantSelect = /** @type {HTMLSelectElement} */ (node);
                 const chargeId = variantSelect.getAttribute('data-charge-id');
                 if (!chargeId) {
                     return;
                 }
 
-                const amountInput = document.querySelector('.js-charge-amount-input[data-charge-id="' + chargeId + '"]');
+                const amountInput = /** @type {HTMLInputElement|null} */ (document.querySelector('.js-charge-amount-input[data-charge-id="' + chargeId + '"]'));
                 if (!amountInput) {
                     return;
                 }

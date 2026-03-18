@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -19,7 +18,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Turniri extends Model
 {
-    use HasFactory;
 
     protected $fillable = ['naziv', 'datum', 'lokacija', 'opis', 'opis2', 'tipovi_turnira_id', 'ima_timove'];
 
@@ -54,6 +52,7 @@ class Turniri extends Model
     /**
      * Vraća slike i video zapise povezane s ovim turnirom.
      */
+    /** @noinspection PhpUnused */
     public function mediji(): HasMany
     {
         return $this->hasMany(RezultatiSlike::class, 'turnir_id', 'id');

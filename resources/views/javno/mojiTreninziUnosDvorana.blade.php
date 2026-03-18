@@ -131,6 +131,7 @@
     </div>
 
     <style>
+        /*noinspection CssUnusedSymbol*/
         #dvorana-round-body .js-shot-cell,
         #dvorana-keypad .js-hit-key {
             -webkit-tap-highlight-color: transparent;
@@ -140,20 +141,26 @@
 
     <script>
         (function () {
-            const initialState = @json($inicijalniUnos);
-            const roundButtons = Array.from(document.querySelectorAll('.js-round-btn'));
-            const tableBody = document.getElementById('dvorana-round-body');
-            const keypad = document.getElementById('dvorana-keypad');
-            const hiddenInput = document.getElementById('unos_json');
-            const form = document.getElementById('spremi_dvoranski_trening');
+            // noinspection JSUnresolvedVariable,JSValidateTypes
+            const initialStateRaw = @json($inicijalniUnos);
+            const initialState = (initialStateRaw && typeof initialStateRaw === 'object') ? initialStateRaw : {};
+            const roundButtons = /** @type {HTMLButtonElement[]} */ (Array.from(document.querySelectorAll('.js-round-btn')));
+            const tableBody = /** @type {HTMLTableSectionElement|null} */ (document.getElementById('dvorana-round-body'));
+            const keypad = /** @type {HTMLElement|null} */ (document.getElementById('dvorana-keypad'));
+            const hiddenInput = /** @type {HTMLInputElement|null} */ (document.getElementById('unos_json'));
+            const form = /** @type {HTMLFormElement|null} */ (document.getElementById('spremi_dvoranski_trening'));
+
+            if (!tableBody || !keypad || !hiddenInput || !form) {
+                return;
+            }
 
             const state = {
                 activeRound: 0,
                 activeRow: 0,
                 activeCol: 0,
                 rounds: [
-                    normalizeRound(initialState.runda1),
-                    normalizeRound(initialState.runda2),
+                    normalizeRound(initialState['runda1']),
+                    normalizeRound(initialState['runda2']),
                 ],
             };
 
@@ -272,7 +279,7 @@
             }
 
             function calculateStats(roundOne, roundTwo) {
-                const allValues = [...roundOne.values, ...roundTwo.values];
+                const allValues = [...roundOne['values'], ...roundTwo['values']];
 
                 let average = null;
                 if (allValues.length > 0) {
@@ -299,12 +306,12 @@
                 }
 
                 const series = [];
-                [roundOne.rows, roundTwo.rows].forEach((roundRows, roundIndex) => {
+                [roundOne['rows'], roundTwo['rows']].forEach((roundRows, roundIndex) => {
                     roundRows.forEach((row, rowIndex) => {
-                        if (row.hasInput && row.sum !== null) {
+                        if (row['hasInput'] && row['sum'] !== null) {
                             series.push({
                                 label: `R${roundIndex + 1}/S${rowIndex + 1}`,
-                                sum: row.sum,
+                                sum: row['sum'],
                             });
                         }
                     });
@@ -313,15 +320,15 @@
                 let best = null;
                 let worst = null;
                 if (series.length > 0) {
-                    const maxSum = Math.max(...series.map((row) => row.sum));
-                    const minSum = Math.min(...series.map((row) => row.sum));
+                    const maxSum = Math.max(...series.map((row) => Number(row['sum'] ?? 0)));
+                    const minSum = Math.min(...series.map((row) => Number(row['sum'] ?? 0)));
 
                     best = {
-                        label: series.filter((row) => row.sum === maxSum).map((row) => row.label).join(', '),
+                        label: series.filter((row) => row['sum'] === maxSum).map((row) => row['label']).join(', '),
                         sum: maxSum,
                     };
                     worst = {
-                        label: series.filter((row) => row.sum === minSum).map((row) => row.label).join(', '),
+                        label: series.filter((row) => row['sum'] === minSum).map((row) => row['label']).join(', '),
                         sum: minSum,
                     };
                 }
@@ -352,12 +359,12 @@
             function renderTable(roundData) {
                 tableBody.innerHTML = '';
 
-                roundData.rows.forEach((row, rowIndex) => {
+                roundData['rows'].forEach((row, rowIndex) => {
                     const tr = document.createElement('tr');
 
                     const rowLabel = document.createElement('td');
                     rowLabel.className = 'fw-semibold';
-                    rowLabel.textContent = String(row.rowNumber);
+                    rowLabel.textContent = String(row['rowNumber']);
                     tr.appendChild(rowLabel);
 
                     for (let colIndex = 0; colIndex < 3; colIndex++) {
@@ -367,27 +374,27 @@
                         button.className = 'btn btn-sm w-100 js-shot-cell';
                         const isActiveCell = state.activeRow === rowIndex && state.activeCol === colIndex;
                         button.classList.add(isActiveCell ? 'btn-danger' : 'btn-outline-secondary');
-                        button.dataset.row = String(rowIndex);
-                        button.dataset.col = String(colIndex);
-                        button.textContent = row.shots[colIndex] ?? '-';
+                        button.setAttribute('data-row', String(rowIndex));
+                        button.setAttribute('data-col', String(colIndex));
+                        button.textContent = row['shots'][colIndex] ?? '-';
                         cell.appendChild(button);
                         tr.appendChild(cell);
                     }
 
                     const sumCell = document.createElement('td');
-                    sumCell.textContent = displayValue(row.sum);
+                    sumCell.textContent = displayValue(row['sum']);
                     tr.appendChild(sumCell);
 
                     const totalCell = document.createElement('td');
-                    totalCell.textContent = displayValue(row.total);
+                    totalCell.textContent = displayValue(row['total']);
                     tr.appendChild(totalCell);
 
                     const nineCell = document.createElement('td');
-                    nineCell.textContent = displayNineOrTen(row.nines);
+                    nineCell.textContent = displayNineOrTen(row['nines']);
                     tr.appendChild(nineCell);
 
                     const tenCell = document.createElement('td');
-                    tenCell.textContent = displayNineOrTen(row.tens);
+                    tenCell.textContent = displayNineOrTen(row['tens']);
                     tr.appendChild(tenCell);
 
                     tableBody.appendChild(tr);
@@ -397,32 +404,32 @@
             function renderSummary(roundOne, roundTwo, stats) {
                 const activeRound = state.activeRound === 0 ? roundOne : roundTwo;
 
-                document.getElementById('active-round-total').textContent = activeRound.hasInput ? activeRound.total : '-';
-                document.getElementById('active-round-total-2').textContent = activeRound.hasInput ? activeRound.total : '-';
-                document.getElementById('active-round-nine').textContent = activeRound.hasInput ? activeRound.nines : '-';
-                document.getElementById('active-round-ten').textContent = activeRound.hasInput ? activeRound.tens : '-';
+                document.getElementById('active-round-total').textContent = activeRound['hasInput'] ? activeRound['total'] : '-';
+                document.getElementById('active-round-total-2').textContent = activeRound['hasInput'] ? activeRound['total'] : '-';
+                document.getElementById('active-round-nine').textContent = activeRound['hasInput'] ? activeRound['nines'] : '-';
+                document.getElementById('active-round-ten').textContent = activeRound['hasInput'] ? activeRound['tens'] : '-';
 
-                document.getElementById('sum-r1-total').textContent = roundOne.hasInput ? roundOne.total : '-';
-                document.getElementById('sum-r1-nine').textContent = roundOne.hasInput ? roundOne.nines : '-';
-                document.getElementById('sum-r1-ten').textContent = roundOne.hasInput ? roundOne.tens : '-';
+                document.getElementById('sum-r1-total').textContent = roundOne['hasInput'] ? roundOne['total'] : '-';
+                document.getElementById('sum-r1-nine').textContent = roundOne['hasInput'] ? roundOne['nines'] : '-';
+                document.getElementById('sum-r1-ten').textContent = roundOne['hasInput'] ? roundOne['tens'] : '-';
 
-                document.getElementById('sum-r2-total').textContent = roundTwo.hasInput ? roundTwo.total : '-';
-                document.getElementById('sum-r2-nine').textContent = roundTwo.hasInput ? roundTwo.nines : '-';
-                document.getElementById('sum-r2-ten').textContent = roundTwo.hasInput ? roundTwo.tens : '-';
+                document.getElementById('sum-r2-total').textContent = roundTwo['hasInput'] ? roundTwo['total'] : '-';
+                document.getElementById('sum-r2-nine').textContent = roundTwo['hasInput'] ? roundTwo['nines'] : '-';
+                document.getElementById('sum-r2-ten').textContent = roundTwo['hasInput'] ? roundTwo['tens'] : '-';
 
-                const totalAll = roundOne.total + roundTwo.total;
-                const nineAll = roundOne.nines + roundTwo.nines;
-                const tenAll = roundOne.tens + roundTwo.tens;
-                const hasAll = roundOne.hasInput || roundTwo.hasInput;
+                const totalAll = roundOne['total'] + roundTwo['total'];
+                const nineAll = roundOne['nines'] + roundTwo['nines'];
+                const tenAll = roundOne['tens'] + roundTwo['tens'];
+                const hasAll = roundOne['hasInput'] || roundTwo['hasInput'];
 
                 document.getElementById('sum-all-total').textContent = hasAll ? totalAll : '-';
                 document.getElementById('sum-all-nine').textContent = hasAll ? nineAll : '-';
                 document.getElementById('sum-all-ten').textContent = hasAll ? tenAll : '-';
 
-                document.getElementById('stat-prosjek').textContent = stats.average === null ? '-' : stats.average.toFixed(2).replace('.', ',');
-                document.getElementById('stat-najcesci').textContent = stats.mostCommon === null ? '-' : `${stats.mostCommon.label} (${stats.mostCommon.count}x)`;
-                document.getElementById('stat-najbolja').textContent = stats.best === null ? '-' : `${stats.best.label} (${stats.best.sum})`;
-                document.getElementById('stat-najlosija').textContent = stats.worst === null ? '-' : `${stats.worst.label} (${stats.worst.sum})`;
+                document.getElementById('stat-prosjek').textContent = stats['average'] === null ? '-' : stats['average'].toFixed(2).replace('.', ',');
+                document.getElementById('stat-najcesci').textContent = stats['mostCommon'] === null ? '-' : `${stats['mostCommon']['label']} (${stats['mostCommon']['count']}x)`;
+                document.getElementById('stat-najbolja').textContent = stats['best'] === null ? '-' : `${stats['best']['label']} (${stats['best']['sum']})`;
+                document.getElementById('stat-najlosija').textContent = stats['worst'] === null ? '-' : `${stats['worst']['label']} (${stats['worst']['sum']})`;
             }
 
             function moveToNextCell() {
@@ -458,7 +465,7 @@
 
             roundButtons.forEach((button) => {
                 button.addEventListener('click', function () {
-                    state.activeRound = Number(this.dataset.round);
+                    state.activeRound = Number(button.getAttribute('data-round') || 0);
                     state.activeRow = 0;
                     state.activeCol = 0;
                     render();
@@ -466,26 +473,33 @@
             });
 
             tableBody.addEventListener('click', function (event) {
-                const button = event.target.closest('.js-shot-cell');
-                if (!button) {
+                const target = event.target;
+                if (!(target instanceof Element)) {
+                    return;
+                }
+                const button = target.closest('.js-shot-cell');
+                if (!(button instanceof HTMLButtonElement)) {
                     return;
                 }
 
-                state.activeRow = Number(button.dataset.row);
-                state.activeCol = Number(button.dataset.col);
+                state.activeRow = Number(button.getAttribute('data-row') || 0);
+                state.activeCol = Number(button.getAttribute('data-col') || 0);
                 button.blur();
                 render();
             });
 
             keypad.addEventListener('click', function (event) {
-                const button = event.target.closest('.js-hit-key');
-                if (!button) {
+                const target = event.target;
+                if (!(target instanceof Element)) {
+                    return;
+                }
+                const button = target.closest('.js-hit-key');
+                if (!(button instanceof HTMLButtonElement)) {
                     return;
                 }
 
-                const value = button.dataset.value;
-                const normalized = value === 'CLEAR' ? null : normalizeToken(value);
-                state.rounds[state.activeRound][state.activeRow][state.activeCol] = normalized;
+                const value = button.getAttribute('data-value') || '';
+                state.rounds[state.activeRound][state.activeRow][state.activeCol] = value === 'CLEAR' ? null : normalizeToken(value);
 
                 if (value !== 'CLEAR') {
                     moveToNextCell();

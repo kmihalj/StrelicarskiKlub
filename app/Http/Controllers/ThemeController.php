@@ -121,11 +121,15 @@ class ThemeController extends Controller
         }
 
         $selectedClone = $clonedThemes
-            ->first(fn (Theme $cloned) => $this->themeVariant($cloned) === 'light')
-            ?? $clonedThemes->first();
+            ->first(fn (Theme $cloned): bool => $this->themeVariant($cloned) === 'light');
+        if (!$selectedClone instanceof Theme) {
+            $selectedClone = $clonedThemes->first();
+        }
+
+        $selectedCloneId = $selectedClone instanceof Theme ? (int)$selectedClone->id : null;
 
         return redirect()
-            ->route('admin.teme.index', ['theme' => $selectedClone?->id])
+            ->route('admin.teme.index', ['theme' => $selectedCloneId])
             ->with('success', 'Tema je uspješno klonirana.');
     }
 
@@ -430,7 +434,7 @@ class ThemeController extends Controller
         $this->cleanupSiteAssetVariants('favicon');
         $storagePath = 'site-assets/favicon.png';
         Storage::disk('public')->put($storagePath, $pngBinary);
-        Storage::disk('public')->put('site-assets/favicon.ico', $this->wrapPngAsIco($pngBinary, 64));
+        Storage::disk('public')->put('site-assets/favicon.ico', $this->themeService->wrapPngAsIco($pngBinary));
         $this->syncPublicFaviconIco($pngBinary);
 
         return $storagePath;
@@ -445,34 +449,12 @@ class ThemeController extends Controller
     }
 
     /**
-     * Pretvara PNG favicon u valjani ICO sadržaj za `/favicon.ico` kompatibilnost.
-     */
-    private function wrapPngAsIco(string $pngBinary, int $size = 64): string
-    {
-        $sizeByte = ($size >= 256) ? 0 : max(min($size, 255), 1);
-        $iconDir = pack('vvv', 0, 1, 1);
-        $iconEntry = pack(
-            'CCCCvvVV',
-            $sizeByte,
-            $sizeByte,
-            0,
-            0,
-            1,
-            32,
-            strlen($pngBinary),
-            6 + 16
-        );
-
-        return $iconDir . $iconEntry . $pngBinary;
-    }
-
-    /**
      * Generira datoteku `public/favicon.ico` iz odabranog PNG favicona radi kompatibilnosti preglednika.
      */
     private function syncPublicFaviconIco(string $pngBinary): void
     {
         $icoPath = public_path('favicon.ico');
-        $icoBinary = $this->wrapPngAsIco($pngBinary, 64);
+        $icoBinary = $this->themeService->wrapPngAsIco($pngBinary);
         @file_put_contents($icoPath, $icoBinary, LOCK_EX);
     }
 
@@ -514,7 +496,7 @@ class ThemeController extends Controller
      */
     private function storeSiteAsset(UploadedFile $file, string $baseName): string
     {
-        $extension = strtolower((string)$file->extension());
+        $extension = strtolower($file->extension());
         if ($extension === '') {
             $extension = 'png';
         }
@@ -529,19 +511,17 @@ class ThemeController extends Controller
     /**
      * Briše stare varijante asseta (logo/favicon) koje više nisu aktivne.
      */
-    private function cleanupSiteAssetVariants(string $baseName, ?string $exceptPath = null): void
+    private function cleanupSiteAssetVariants(string $baseName): void
     {
         $disk = Storage::disk('public');
         $prefix = 'site-assets/' . $baseName . '.';
-        foreach ($disk->files('site-assets') as $existingPath) {
-            if (!str_starts_with($existingPath, $prefix)) {
-                continue;
-            }
 
-            if ($exceptPath !== null && $existingPath === $exceptPath) {
-                continue;
-            }
+        $pathsToDelete = array_filter(
+            $disk->files('site-assets'),
+            static fn (string $existingPath): bool => str_starts_with($existingPath, $prefix)
+        );
 
+        foreach ($pathsToDelete as $existingPath) {
             $disk->delete($existingPath);
         }
     }

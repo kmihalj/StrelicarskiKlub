@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -12,7 +11,6 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  */
 class MembershipPaymentOption extends Model
 {
-    use HasFactory;
 
     protected $fillable = [
         'key',
@@ -35,6 +33,7 @@ class MembershipPaymentOption extends Model
     /**
      * Vraća povijest cijena za ovaj model članarine.
      */
+    /** @noinspection PhpUnused */
     public function prices(): HasMany
     {
         return $this->hasMany(MembershipPaymentOptionPrice::class, 'membership_payment_option_id', 'id');
@@ -52,6 +51,7 @@ class MembershipPaymentOption extends Model
     /**
      * Vraća profile članova koji koriste ovaj model članarine.
      */
+    /** @noinspection PhpUnused */
     public function profiles(): HasMany
     {
         return $this->hasMany(ClanPaymentProfile::class, 'membership_payment_option_id', 'id');

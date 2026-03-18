@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,7 +11,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class ClanPaymentProfile extends Model
 {
-    use HasFactory;
 
     protected $fillable = [
         'clan_id',
@@ -70,6 +68,7 @@ class ClanPaymentProfile extends Model
     /**
      * Profil plaćanja članarine člana je povezan s jednim zapisom: korisnički račun.
      */
+    /** @noinspection PhpUnused */
     public function updater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by', 'id');

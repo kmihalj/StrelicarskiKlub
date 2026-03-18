@@ -13,7 +13,7 @@
         $schoolPaymentOpenCharges = $schoolPaymentSummary['openCharges'] ?? collect();
         $schoolPaymentPaidCharges = $schoolPaymentSummary['paidCharges'] ?? collect();
         $schoolAttendanceCount = (int)($schoolPaymentSummary['attendanceCount'] ?? 0);
-        $schoolPaymentService = app(\App\Services\SchoolPaymentService::class);
+        $schoolPaymentService = app('App\\Services\\SchoolPaymentService');
     @endphp
 
     <div class="container-xxl bg-white shadow">
@@ -70,7 +70,7 @@
                         <div class="col-lg-3 mb-2">
                             <label for="datum_rodjenja">Datum rođenja:</label>
                             <input type="date" class="form-control" name="datum_rodjenja" id="datum_rodjenja"
-                                   value="{{ empty($polaznik->datum_rodjenja) ? '' : optional($polaznik->datum_rodjenja)->format('Y-m-d') }}"
+                                   value="{{ empty($polaznik->datum_rodjenja) ? '' : $polaznik->datum_rodjenja?->format('Y-m-d') }}"
                                    @if($mozeUredjivati) form="uredjivanje_polaznika" @else disabled @endif>
                         </div>
                         <div class="col-lg-3 mb-2">
@@ -91,7 +91,7 @@
                         <div class="col-lg-3 mb-2">
                             <label for="datum_upisa">Datum upisa:</label>
                             <input type="date" class="form-control" name="datum_upisa" id="datum_upisa"
-                                   value="{{ empty($polaznik->datum_upisa) ? '' : optional($polaznik->datum_upisa)->format('Y-m-d') }}"
+                                   value="{{ empty($polaznik->datum_upisa) ? '' : $polaznik->datum_upisa?->format('Y-m-d') }}"
                                    @if($mozeUredjivati) form="uredjivanje_polaznika" @else disabled @endif>
                         </div>
                         <div class="col-lg-3 mb-2">
@@ -156,14 +156,20 @@
             <div class="row justify-content-center p-2 shadow bg-danger fw-bolder">
                 <div class="col-lg-12 text-white">
                     Školarina polaznika
-                    <span id="skrivanje_skola_placanja" class="text-white" style="float: right; cursor: pointer; @if($otvoriPlacanja) display: block; @else display: none; @endif"
-                          onclick="document.getElementById('skola_placanja_dropdown').style.display = 'none';document.getElementById('skrivanje_skola_placanja').style.display = 'none';document.getElementById('pokazivanje_skola_placanja').style.display = 'block';">_</span>
-                    <span id="pokazivanje_skola_placanja" class="text-white" style="float: right; cursor: pointer; @if($otvoriPlacanja) display: none; @endif"
-                          onclick="document.getElementById('skola_placanja_dropdown').style.display = 'block';document.getElementById('skrivanje_skola_placanja').style.display = 'block';document.getElementById('pokazivanje_skola_placanja').style.display = 'none';">+</span>
+                    <span id="skrivanje_skola_placanja"
+                          class="text-white js-skola-sekcija-toggle{{ $otvoriPlacanja ? '' : ' d-none' }}"
+                          style="float: right; cursor: pointer;"
+                          data-sekcija="placanja"
+                          data-open="0">_</span>
+                    <span id="pokazivanje_skola_placanja"
+                          class="text-white js-skola-sekcija-toggle{{ $otvoriPlacanja ? ' d-none' : '' }}"
+                          style="float: right; cursor: pointer;"
+                          data-sekcija="placanja"
+                          data-open="1">+</span>
                 </div>
             </div>
         </div>
-        <div id="skola_placanja_dropdown" class="container-xxl bg-secondary-subtle shadow" style="@if($otvoriPlacanja) display: block; @else display: none; @endif">
+        <div id="skola_placanja_dropdown" class="container-xxl bg-secondary-subtle shadow{{ $otvoriPlacanja ? '' : ' d-none' }}">
             <div class="row p-3">
                 <div class="col-12">
                     @if(!empty($schoolPaymentNotice))
@@ -183,16 +189,16 @@
                                         <div class="col-lg-4">
                                             <label for="payment_mode" class="form-label">Model plaćanja</label>
                                             @php
-                                                $selectedMode = old('payment_mode', $schoolPaymentProfile->payment_mode ?? \App\Services\SchoolPaymentService::MODE_FULL);
+                                                $selectedMode = old('payment_mode', $schoolPaymentProfile->payment_mode ?? $schoolPaymentService::MODE_FULL);
                                             @endphp
                                             <select class="form-select" id="payment_mode" name="payment_mode">
-                                                <option value="{{ \App\Services\SchoolPaymentService::MODE_FULL }}" @selected($selectedMode === \App\Services\SchoolPaymentService::MODE_FULL)>
+                                                <option value="{{ $schoolPaymentService::MODE_FULL }}" @selected($selectedMode === $schoolPaymentService::MODE_FULL)>
                                                     U cijelosti
                                                 </option>
-                                                <option value="{{ \App\Services\SchoolPaymentService::MODE_INSTALLMENTS }}" @selected($selectedMode === \App\Services\SchoolPaymentService::MODE_INSTALLMENTS)>
+                                                <option value="{{ $schoolPaymentService::MODE_INSTALLMENTS }}" @selected($selectedMode === $schoolPaymentService::MODE_INSTALLMENTS)>
                                                     U dvije rate
                                                 </option>
-                                                <option value="{{ \App\Services\SchoolPaymentService::MODE_EXEMPT }}" @selected($selectedMode === \App\Services\SchoolPaymentService::MODE_EXEMPT)>
+                                                <option value="{{ $schoolPaymentService::MODE_EXEMPT }}" @selected($selectedMode === $schoolPaymentService::MODE_EXEMPT)>
                                                     Oslobođen školarine
                                                 </option>
                                             </select>
@@ -240,7 +246,7 @@
                                         @foreach($schoolPaymentCharges as $charge)
                                             @php
                                                 $statusFormId = 'skolarina_status_' . $charge->id;
-                                                $isPaid = $charge->status === \App\Services\SchoolPaymentService::STATUS_PAID;
+                                                $isPaid = $charge->status === $schoolPaymentService::STATUS_PAID;
                                                 $dueTrainingCount = (int)($charge->due_training_count ?? 0);
                                                 $hasTrainingCondition = $dueTrainingCount > 0;
                                                 $conditionReached = $hasTrainingCondition && $schoolAttendanceCount >= $dueTrainingCount;
@@ -278,7 +284,7 @@
                                                 </td>
                                                 <td>
                                                     @if($charge->paid_at)
-                                                        {{ optional($charge->paid_at)->format('d.m.Y.') }}
+                                                        {{ $charge->paid_at->format('d.m.Y.') }}
                                                     @elseif($mozeUredjivati)
                                                         <input type="date" class="form-control form-control-sm"
                                                                name="paid_at"
@@ -297,7 +303,7 @@
                                                                         form="{{ $statusFormId }}">
                                                                     @foreach($settlementOptions as $settlementOption)
                                                                         <option value="{{ $settlementOption['value'] ?? '' }}"
-                                                                                @selected(($settlementOption['value'] ?? '') === \App\Services\SchoolPaymentService::SETTLEMENT_FULL)>
+                                                                                @selected(($settlementOption['value'] ?? '') === $schoolPaymentService::SETTLEMENT_FULL)>
                                                                             {{ $settlementOption['label'] ?? ($settlementOption['value'] ?? '') }}
                                                                         </option>
                                                                     @endforeach
@@ -360,7 +366,7 @@
                             @for($i = 1; $i <= 16; $i++)
                                 <tr>
                                     <td>{{ $i }}</td>
-                                    <td>{{ empty($dolasci[$i]) ? '-' : optional($dolasci[$i])->format('d.m.Y.') }}</td>
+                                    <td>{{ empty($dolasci[$i]) ? '-' : $dolasci[$i]->format('d.m.Y.') }}</td>
                                 </tr>
                             @endfor
                             </tbody>
@@ -376,14 +382,20 @@
             <div class="row justify-content-center p-2 shadow bg-danger fw-bolder">
                 <div class="col-lg-12 text-white">
                     Dokumenti polaznika škole
-                    <span id="skrivanje_skola_dokumenata" class="text-white" style="float: right; cursor: pointer; @if($otvoriDokumente) display: block; @else display: none; @endif"
-                          onclick="document.getElementById('skola_dokumenti_dropdown').style.display = 'none';document.getElementById('skrivanje_skola_dokumenata').style.display = 'none';document.getElementById('pokazivanje_skola_dokumenata').style.display = 'block';">_</span>
-                    <span id="pokazivanje_skola_dokumenata" class="text-white" style="float: right; cursor: pointer; @if($otvoriDokumente) display: none; @endif"
-                          onclick="document.getElementById('skola_dokumenti_dropdown').style.display = 'block';document.getElementById('skrivanje_skola_dokumenata').style.display = 'block';document.getElementById('pokazivanje_skola_dokumenata').style.display = 'none';">+</span>
+                    <span id="skrivanje_skola_dokumenata"
+                          class="text-white js-skola-sekcija-toggle{{ $otvoriDokumente ? '' : ' d-none' }}"
+                          style="float: right; cursor: pointer;"
+                          data-sekcija="dokumenti"
+                          data-open="0">_</span>
+                    <span id="pokazivanje_skola_dokumenata"
+                          class="text-white js-skola-sekcija-toggle{{ $otvoriDokumente ? ' d-none' : '' }}"
+                          style="float: right; cursor: pointer;"
+                          data-sekcija="dokumenti"
+                          data-open="1">+</span>
                 </div>
             </div>
         </div>
-        <div id="skola_dokumenti_dropdown" class="container-xxl bg-secondary-subtle shadow" style="@if($otvoriDokumente) display: block; @else display: none; @endif">
+        <div id="skola_dokumenti_dropdown" class="container-xxl bg-secondary-subtle shadow{{ $otvoriDokumente ? '' : ' d-none' }}">
             <div class="row p-3">
                 <div class="col-12">
                     @if($mozeUredjivatiDokumente ?? false)
@@ -456,7 +468,7 @@
                                             @endif
                                             <tr>
                                                 <td>{{ $dokument->naziv }}</td>
-                                                <td>{{ optional($dokument->datum_dokumenta)->format('d.m.Y.') }}</td>
+                                                <td>{{ $dokument->datum_dokumenta?->format('d.m.Y.') }}</td>
                                                 <td>{{ $dokument->napomena ?: '-' }}</td>
                                                 <td>
                                                     @if(!empty($dokument->putanja))
@@ -527,11 +539,52 @@
         </div>
     </div>
 
+    <script>
+        (function () {
+            const toggleSkolaSekcija = function (sekcija, shouldOpen) {
+                let bodyId = '';
+                let hideId = '';
+                let showId = '';
+
+                if (sekcija === 'placanja') {
+                    bodyId = 'skola_placanja_dropdown';
+                    hideId = 'skrivanje_skola_placanja';
+                    showId = 'pokazivanje_skola_placanja';
+                } else if (sekcija === 'dokumenti') {
+                    bodyId = 'skola_dokumenti_dropdown';
+                    hideId = 'skrivanje_skola_dokumenata';
+                    showId = 'pokazivanje_skola_dokumenata';
+                } else {
+                    return;
+                }
+
+                const body = /** @type {HTMLElement|null} */ (document.getElementById(bodyId));
+                const hideIcon = /** @type {HTMLElement|null} */ (document.getElementById(hideId));
+                const showIcon = /** @type {HTMLElement|null} */ (document.getElementById(showId));
+                if (!body || !hideIcon || !showIcon) {
+                    return;
+                }
+
+                body.classList.toggle('d-none', !shouldOpen);
+                hideIcon.classList.toggle('d-none', !shouldOpen);
+                showIcon.classList.toggle('d-none', shouldOpen);
+            };
+
+            document.querySelectorAll('.js-skola-sekcija-toggle').forEach(function (toggleElement) {
+                toggleElement.addEventListener('click', function () {
+                    const sekcija = toggleElement.getAttribute('data-sekcija') || '';
+                    const shouldOpen = toggleElement.getAttribute('data-open') === '1';
+                    toggleSkolaSekcija(sekcija, shouldOpen);
+                });
+            });
+        })();
+    </script>
+
     @if($mozeUredjivatiDokumente ?? false)
         <script>
             (function () {
-                const vrsta = document.getElementById('vrsta_novi_dokument');
-                const naziv = document.getElementById('naziv_novi_dokument');
+                const vrsta = /** @type {HTMLSelectElement|null} */ (document.getElementById('vrsta_novi_dokument'));
+                const naziv = /** @type {HTMLInputElement|null} */ (document.getElementById('naziv_novi_dokument'));
                 if (!vrsta || !naziv) {
                     return;
                 }

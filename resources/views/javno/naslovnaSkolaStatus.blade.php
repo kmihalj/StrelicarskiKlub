@@ -1,5 +1,5 @@
 {{-- Blok statusa školarine i dolazaka za prijavljenog polaznika škole. --}}
-@if(isset($statusSkolaKorisnika) && !is_null($statusSkolaKorisnika))
+@if(isset($statusSkolaKorisnika))
     @php
         $skolarinaNotice = $statusSkolaKorisnika['paymentNotice'] ?? null;
     @endphp
@@ -28,7 +28,7 @@
                         @if(empty($statusSkolaKorisnika['zadnjiDolazak']))
                             -
                         @else
-                            {{ optional($statusSkolaKorisnika['zadnjiDolazak'])->format('d.m.Y.') }}
+                            {{ $statusSkolaKorisnika['zadnjiDolazak']?->format('d.m.Y.') }}
                         @endif
                     </p>
                     <p class="mb-0 mt-2">

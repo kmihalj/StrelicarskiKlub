@@ -2,6 +2,9 @@
 @extends('layouts.app')
 @auth()
     @if(auth()->user()->rola <= 1)
+        @php
+            $isEditing = isset($clanak);
+        @endphp
         @section('content')
             <div class="container-xxl bg-white shadow mb-3">
                 <div class="row justify-content-center p-2 shadow bg-danger fw-bolder">
@@ -26,10 +29,10 @@
                         <label for="vrsta" class="fw-bolder">Vrsta:</label>
                         <select class="form-select" form="unosClanka" id="vrsta" name="vrsta" aria-label="Odabir vrste" required>
                             <option selected></option>
-                            <option value="Obavijest" @isset($clanak) @if($clanak->vrsta == "Obavijest") selected @endif @endisset >Obavijest</option>
-                            <option value="O nama" @isset($clanak) @if($clanak->vrsta == "O nama") selected @endif @endisset >O nama</option>
-                            <option value="Streličarstvo" @isset($clanak) @if($clanak->vrsta == "Streličarstvo") selected @endif @endisset >Streličarstvo</option>
-                            <option value="Naslovnica" @isset($clanak) @if($clanak->vrsta == "Naslovnica") selected @endif @endisset >Naslovnica</option>
+                            <option value="Obavijest" @selected($isEditing && $clanak->vrsta === 'Obavijest')>Obavijest</option>
+                            <option value="O nama" @selected($isEditing && $clanak->vrsta === 'O nama')>O nama</option>
+                            <option value="Streličarstvo" @selected($isEditing && $clanak->vrsta === 'Streličarstvo')>Streličarstvo</option>
+                            <option value="Naslovnica" @selected($isEditing && $clanak->vrsta === 'Naslovnica')>Naslovnica</option>
                         </select>
                     </div>
                     <div class="col-lg-8 mb-3">
@@ -41,7 +44,7 @@
                     <div class="col-lg-2 mb-2">
                         <label for="datum" class="fw-bolder">Datum:</label>
                         <input type="date" class="form-control" form="unosClanka" name="datum" id="datum"
-                               @isset($clanak) value="{{$clanak->datum}}" @else value="<?= date('Y-m-d') ?>" @endisset
+                               value="{{ isset($clanak) ? $clanak->datum : now()->format('Y-m-d') }}"
                                required>
                     </div>
                     <div class="col-lg-12 mb-3">
@@ -70,14 +73,14 @@
                     <div class="col-lg-2 mb-2 align-self-center">
                         <div class="form-check form-switch ">
                             <br>
-                            <input class="form-check-input" type="checkbox" form="unosClanka" id="menu" name="menu" aria-label="menu"
-                                   @isset($clanak)
-                                       @if($clanak->menu) value=true checked
-                                   @else value=true
-                                   @endif
-                                   @else  value=true
-                                @endisset
-                            >
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   form="unosClanka"
+                                   id="menu"
+                                   name="menu"
+                                   value="1"
+                                   aria-label="menu"
+                                   @checked($isEditing && !empty($clanak->menu))>
                             <label class="form-check-label" for="menu">Stavka u meniju</label>
 
 
@@ -87,9 +90,9 @@
 
                     <div class="row">
                         <div class="col-lg-10 col-md-10 col-10 mb-2">
-                            @if(!isset($clanak))
+                            @if(!$isEditing)
                                 <p class="fw-bold text-danger" style="text-align: justify; text-justify: inter-word;">Mediji (slike ili video zapisi) se mogu dodati samo na spremljeni članak. Spremite članak barem sa naslovom da bi mogli dodavati medije.</p>
-                                @else
+                            @else
                                 <p class="fw-bold text-danger" style="text-align: justify; text-justify: inter-word;">Mediji (slike ili video zapisi) koji su dodani mogu se sa klikom spremiti u clipboard, te se dodaju u source sadržaja (gumb: Source). <br>Prije dodavanje novog medija spremite sadržaj jer se dodavanjem medija gube promjene ukoliko nisu spremljene.</p>
                             @endif
                         </div>
@@ -103,7 +106,7 @@
             </div>
 
 
-            @if(isset($clanak))
+            @if($isEditing)
                 <div class="container-xxl bg-white shadow">
                     <div class="row justify-content-center p-2 shadow bg-danger fw-bolder">
                         <div class="col-lg-12 text-white d-flex justify-content-between align-items-center">
@@ -139,74 +142,64 @@
                             <div class="col-lg-12 mb-2 align-self-center">
                                 <form id="galerija{{ $clanak->id }}" action="{{ route('admin.clanci.galerija') }}" method="POST">
                                     @csrf
-                                    <input type="hidden" id="id_clanka" name="id_clanka" value="{{$clanak->id}}">
+                                    <input type="hidden" id="id_clanka_galerija" name="id_clanka" value="{{$clanak->id}}">
                                 </form>
                                 <div class="form-check form-switch ">
                                     <br>
-                                    <input class="form-check-input" onchange="galerija{{ $clanak->id }}.submit()" type="checkbox" form="galerija{{ $clanak->id }}" id="galerija" name="galerija" aria-label="galerija"
-                                           @isset($clanak)
-                                               @if($clanak->galerija) value=true checked
-                                           @else value=true
-                                           @endif
-                                           @else  value=true
-                                        @endisset
-                                    >
+                                    <input class="form-check-input"
+                                           onchange="galerija{{ $clanak->id }}.submit()"
+                                           type="checkbox"
+                                           form="galerija{{ $clanak->id }}"
+                                           id="galerija"
+                                           name="galerija"
+                                           value="1"
+                                           aria-label="galerija"
+                                           @checked(!empty($clanak->galerija))>
                                     <label class="form-check-label" for="menu">Galerija</label>
                                 </div>
                             </div>
                             @foreach($clanak->mediji as $medij)
                                 <div class="col-auto text-center p-2">
-                                    @if($medij->vrsta == "slika")
-                                        <img src="{{ asset('storage/clanci/' . $clanak->id . '/' . $medij->link) }}"
-                                             class="img-thumbnail"
-                                             style="max-width: 10rem; max-height: 10rem;"
-                                             alt="">
-                                    @elseif($medij->vrsta == "video")
-                                        <video controls="controls" style="max-width: 20rem; max-height: 20rem;">
-                                            <source src="{{ asset('storage/clanci/' . $clanak->id . '/' . $medij->link) }}"
-                                                    type="video/mp4"/>
-                                            Vaš browser ne podržava video.
-                                        </video>
-                                    @else
-                                        <a href="{{ asset('storage/clanci/' . $clanak->id . '/' . $medij->link) }}" target="_blank">{{$medij->link}}</a>
-                                    @endif
+                                    @switch($medij->vrsta)
+                                        @case('slika')
+                                            <img src="{{ asset('storage/clanci/' . $clanak->id . '/' . $medij->link) }}"
+                                                 class="img-thumbnail"
+                                                 style="max-width: 10rem; max-height: 10rem;"
+                                                 alt="">
+                                            @break
+                                        @case('video')
+                                            <video controls="controls" style="max-width: 20rem; max-height: 20rem;">
+                                                <source src="{{ asset('storage/clanci/' . $clanak->id . '/' . $medij->link) }}"
+                                                        type="video/mp4"/>
+                                                Vaš browser ne podržava video.
+                                            </video>
+                                            @break
+                                        @default
+                                            <a href="{{ asset('storage/clanci/' . $clanak->id . '/' . $medij->link) }}" target="_blank">{{$medij->link}}</a>
+                                    @endswitch
                                     <br>
                                     <form id="brisanjeMedija{{$medij->id}}" action="{{ route('admin.clanci.brisanjeMedija') }}" method="POST">
                                         @csrf
-                                        <input type="hidden" id="medijBrisanje" name="medijBrisanje" value="{{$medij->id}}">
+                                        <input type="hidden" id="medijBrisanje{{$medij->id}}" name="medijBrisanje" value="{{$medij->id}}">
                                     </form>
-                                    @if($medij->vrsta == "slika")
-                                        <button class="btn btn-outline-success" title="Kopiraj u Clipboard" onclick="copySlikaLink{{$medij->id}}()">
+                                    @php
+                                        $copyMarkup = null;
+                                        if ($medij->vrsta === 'slika') {
+                                            $copyMarkup = '<img src="' . asset('storage/clanci/' . $clanak->id . '/' . $medij->link) . '" alt="" style="width:35%">';
+                                        } elseif ($medij->vrsta === 'video') {
+                                            $copyMarkup = '<video controls="controls" style="max-width: 50%;"><source src="' . asset('storage/clanci/' . $clanak->id . '/' . $medij->link) . '" type="video/mp4"/> Vaš browser ne podržava video. </video>';
+                                        } elseif ($medij->vrsta === 'dokument') {
+                                            $copyMarkup = '<a href="' . asset('storage/clanci/' . $clanak->id . '/' . $medij->link) . '">' . e($medij->link) . '</a>';
+                                        }
+                                    @endphp
+                                    @if($copyMarkup !== null)
+                                        <button type="button"
+                                                class="btn btn-outline-success js-copy-media"
+                                                title="Kopiraj u Clipboard"
+                                                data-copy-html="{{ base64_encode($copyMarkup) }}">
                                             @include('admin.SVG.clipboard')
                                         </button>
-                                        <script>
-                                            function copySlikaLink{{$medij->id}}() {
-                                                navigator.clipboard.writeText
-                                                ('<img src="{{ asset('storage/clanci/' . $clanak->id . '/' . $medij->link) }}" alt="" style="width:35%">');
-                                            }
-                                        </script>
-                                        @elseif($medij->vrsta == "video")
-                                            <button class="btn btn-outline-success" title="Kopiraj u Clipboard" onclick="copyVideoLink{{$medij->id}}()">
-                                                @include('admin.SVG.clipboard')
-                                            </button>
-                                            <script>
-                                                function copyVideoLink{{$medij->id}}() {
-                                                    navigator.clipboard.writeText
-                                                    ('<video controls="controls" style="max-width: 50%;"><source src="{{ asset('storage/clanci/' . $clanak->id . '/' . $medij->link) }}" type="video/mp4"/> Vaš browser ne podržava video. </video>');
-                                                }
-                                            </script>
                                     @endif
-                                        @if($medij->vrsta == "dokument")
-                                            <button class="btn btn-outline-success" title="Kopiraj u Clipboard" onclick="copySlikaLink{{$medij->id}}()">
-                                                @include('admin.SVG.clipboard')
-                                            </button>
-                                            <script>
-                                                function copySlikaLink{{$medij->id}}() {
-                                                    navigator.clipboard.writeText
-                                                    ('<a href="{{ asset('storage/clanci/' . $clanak->id . '/' . $medij->link) }}">{{$medij->link}}</a>');
-                                                }
-                                            </script>
-                                        @endif
                                     <button type="submit" form="brisanjeMedija{{$medij->id}}" class="btn btn-outline-danger" title="Delete">
                                         @include('admin.SVG.obrisi')
                                     </button>
@@ -218,73 +211,96 @@
 
                 <script>
                     (() => {
-                        const form = document.getElementById('uploadMedija');
+                        const form = /** @type {HTMLFormElement|null} */ (document.getElementById('uploadMedija'));
                         if (!form) {
                             return;
                         }
 
-                        const input = form.querySelector('#medij');
-                        const submitButton = form.querySelector('button[type="submit"]');
-                        const parsedChunkSize = Number(form.dataset.maxFileUploads);
+                        const input = /** @type {HTMLInputElement|null} */ (form.querySelector('#medij'));
+                        const submitButton = /** @type {HTMLButtonElement|null} */ (form.querySelector('button[type="submit"]'));
+                        const tokenInput = /** @type {HTMLInputElement|null} */ (form.querySelector('input[name="_token"]'));
+                        const clanakIdInput = /** @type {HTMLInputElement|null} */ (form.querySelector('input[name="clanak_id"]'));
+                        if (!input || !submitButton || !tokenInput || !clanakIdInput) {
+                            return;
+                        }
+
+                        const parsedChunkSize = Number(form.dataset.maxFileUploads || '');
                         const chunkSize = Number.isFinite(parsedChunkSize) && parsedChunkSize > 0 ? parsedChunkSize : 20;
 
                         form.addEventListener('submit', async (event) => {
-                            const files = Array.from(input && input.files ? input.files : []);
+                            const files = Array.from(input.files || []);
                             if (files.length === 0) {
                                 return;
                             }
 
                             event.preventDefault();
 
-                            const originalButtonText = submitButton.textContent;
+                            const originalButtonText = submitButton.textContent || 'Upload';
                             submitButton.disabled = true;
                             input.disabled = true;
 
-                            try {
-                                let batchNumber = 1;
-                                const totalBatches = Math.ceil(files.length / chunkSize);
+                            let batchNumber = 1;
+                            const totalBatches = Math.ceil(files.length / chunkSize);
+                            let uploadErrorMessage = '';
 
-                                for (let start = 0; start < files.length; start += chunkSize) {
-                                    submitButton.textContent = `Upload ${batchNumber}/${totalBatches}`;
-                                    const formData = new FormData();
-                                    formData.append('_token', form.querySelector('input[name="_token"]').value);
-                                    formData.append('clanak_id', form.querySelector('input[name="clanak_id"]').value);
+                            for (let start = 0; start < files.length; start += chunkSize) {
+                                submitButton.textContent = `Upload ${batchNumber}/${totalBatches}`;
+                                const formData = new FormData();
+                                formData.append('_token', tokenInput.value);
+                                formData.append('clanak_id', clanakIdInput.value);
 
-                                    files.slice(start, start + chunkSize).forEach((file) => {
-                                        formData.append('medij[]', file);
-                                    });
+                                files.slice(start, start + chunkSize).forEach((file) => {
+                                    formData.append('medij[]', file);
+                                });
 
-                                    const response = await fetch(form.action, {
-                                        method: 'POST',
-                                        body: formData,
-                                        credentials: 'same-origin',
-                                        headers: {
-                                            'X-Requested-With': 'XMLHttpRequest',
-                                            'Accept': 'application/json'
-                                        }
-                                    });
-
-                                    if (!response.ok) {
-                                        let message = 'Greška pri uploadu datoteka.';
-                                        try {
-                                            const body = await response.json();
-                                            if (body && body.message) {
-                                                message = body.message;
-                                            }
-                                        } catch (_) {}
-                                        throw new Error(message);
+                                const response = await fetch(form.action, {
+                                    method: 'POST',
+                                    body: formData,
+                                    credentials: 'same-origin',
+                                    headers: {
+                                        'X-Requested-With': 'XMLHttpRequest',
+                                        'Accept': 'application/json'
                                     }
+                                });
 
-                                    batchNumber++;
+                                if (!response.ok) {
+                                    uploadErrorMessage = 'Greška pri uploadu datoteka.';
+                                    try {
+                                        const body = await response.json();
+                                        if (body && body.message) {
+                                            uploadErrorMessage = body.message;
+                                        }
+                                    } catch (_) {}
+                                    break;
                                 }
 
-                                window.location.reload();
-                            } catch (error) {
-                                alert(error && error.message ? error.message : 'Greška pri uploadu datoteka.');
+                                batchNumber++;
+                            }
+
+                            if (uploadErrorMessage !== '') {
+                                alert(uploadErrorMessage);
                                 submitButton.disabled = false;
                                 input.disabled = false;
                                 submitButton.textContent = originalButtonText;
+                                return;
                             }
+
+                            window.location.reload();
+                        });
+
+                        const copyButtons = /** @type {HTMLButtonElement[]} */ (Array.from(document.querySelectorAll('.js-copy-media')));
+                        copyButtons.forEach((button) => {
+                            button.addEventListener('click', () => {
+                                const encodedMarkup = button.dataset.copyHtml || '';
+                                if (encodedMarkup === '') {
+                                    return;
+                                }
+
+                                try {
+                                    const markup = atob(encodedMarkup);
+                                    navigator.clipboard.writeText(markup);
+                                } catch (_) {}
+                            });
                         });
                     })();
                 </script>
@@ -293,7 +309,14 @@
             <script src="{{ asset('assets/ckeditor5/ckeditor5.js') }}"></script>
             <script src="{{ asset('assets/ckeditor5/hr.js') }}"></script>
             <script>
-                CKEDITOR.ClassicEditor.create(document.getElementById("sadrzaj"), {
+                (() => {
+                    const editorNamespace = window['CKEDITOR'];
+                    const classicEditor = editorNamespace ? editorNamespace['ClassicEditor'] : null;
+                    if (!classicEditor || typeof classicEditor.create !== 'function') {
+                        return;
+                    }
+
+                    classicEditor.create(document.getElementById("sadrzaj"), {
                     toolbar: {
                         items: [
                             'heading', '|',
@@ -407,9 +430,11 @@
                         'PasteFromOfficeEnhanced',
                         'CaseChange'
                     ]
-                });
+                    });
+                })();
             </script>
             <style>
+                /*noinspection CssUnusedSymbol*/
                 .ck-content {
                     height: 30rem;
                 }

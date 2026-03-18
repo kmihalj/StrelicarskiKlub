@@ -19,7 +19,6 @@ class TipoviTurniraController extends Controller
     /**
      * Prikazuje administracijski pregled tipova turnira, kategorija, stilova i pripadajućih polja.
      * @noinspection PhpMissingReturnTypeInspection
-     * @noinspection PhpUndefinedMethodInspection
      */
     public function index()
     {
@@ -51,7 +50,6 @@ class TipoviTurniraController extends Controller
         }
     }
 
-    /** @noinspection PhpUndefinedMethodInspection */
     public function obrisi_tipoviTurnira(int $id): RedirectResponse
     {
         $tipTurnira = TipoviTurnira::findOrFail($id);
@@ -60,7 +58,6 @@ class TipoviTurniraController extends Controller
     }
 
     /** @noinspection PhpMissingReturnTypeInspection
-     * @noinspection PhpUndefinedMethodInspection
      */
     public function odabir_tipa_turnira(Request $request)
     {
@@ -72,7 +69,6 @@ class TipoviTurniraController extends Controller
     }
 
     /** @noinspection PhpMissingReturnTypeInspection
-     * @noinspection PhpUndefinedMethodInspection
      */
     public function spremi_poljeZatipTurnira(Request $request)
     {
@@ -99,7 +95,6 @@ class TipoviTurniraController extends Controller
     }
 
     /** @noinspection PhpMissingReturnTypeInspection
-     * @noinspection PhpUndefinedMethodInspection
      */
     public function obrisi_polje_za_tipTurnira(Request $request)
     {
@@ -138,7 +133,6 @@ class TipoviTurniraController extends Controller
         }
     }
 
-    /** @noinspection PhpUndefinedMethodInspection */
     public function obrisi_kategoriju(int $id): RedirectResponse
     {
         $kategorija = Kategorije::findOrFail($id);
@@ -168,7 +162,6 @@ class TipoviTurniraController extends Controller
         }
     }
 
-    /** @noinspection PhpUndefinedMethodInspection */
     public function obrisi_stil(int $id): RedirectResponse
     {
         $stilLuka = Stilovi::findOrFail($id);

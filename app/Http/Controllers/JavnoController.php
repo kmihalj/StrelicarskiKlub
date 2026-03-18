@@ -155,11 +155,7 @@ class JavnoController extends Controller
 
                 if ($paymentTrackingEnabled) {
                     $placanjeSummary = $paymentService->memberSummary($clanKorisnika);
-                    $placanjeProfil = $placanjeSummary['profile'] ?? null;
-                    $placanjeProfilPostavljen = $placanjeProfil !== null
-                        && data_get($placanjeProfil, 'paymentOption') !== null;
-                    $placanjeImaStavke = ($placanjeSummary['charges'] ?? collect())->count() > 0;
-                    $placanjeVidljivo = $placanjeProfilPostavljen || $placanjeImaStavke;
+                    $placanjeVidljivo = $this->jePlacanjeVidljivo($placanjeSummary);
 
                     if ($placanjeVidljivo) {
                         $placanjeNotice = $paymentService->noticeForClan($clanKorisnika);
@@ -204,11 +200,7 @@ class JavnoController extends Controller
                     $status = $this->pripremiStatusLijecnickogZaClana($clan);
                     if ($paymentTrackingEnabled) {
                         $placanjeSummary = $paymentService->memberSummary($clan);
-                        $placanjeProfil = $placanjeSummary['profile'] ?? null;
-                        $placanjeProfilPostavljen = $placanjeProfil !== null
-                            && data_get($placanjeProfil, 'paymentOption') !== null;
-                        $placanjeImaStavke = ($placanjeSummary['charges'] ?? collect())->count() > 0;
-                        if ($placanjeProfilPostavljen || $placanjeImaStavke) {
+                        if ($this->jePlacanjeVidljivo($placanjeSummary)) {
                             $status['paymentNotice'] = $paymentService->noticeForClan($clan);
                         }
                     }
@@ -237,14 +229,10 @@ class JavnoController extends Controller
                 $statusPlacanjaDjeca = $roditelj->djecaClanovi
                     ->map(function (Clanovi $clan) use ($paymentService): array {
                         $placanjeSummary = $paymentService->memberSummary($clan);
-                        $placanjeProfil = $placanjeSummary['profile'] ?? null;
-                        $placanjeProfilPostavljen = $placanjeProfil !== null
-                            && data_get($placanjeProfil, 'paymentOption') !== null;
-                        $placanjeImaStavke = ($placanjeSummary['charges'] ?? collect())->count() > 0;
 
                         return [
                             'clan' => $clan,
-                            'notice' => ($placanjeProfilPostavljen || $placanjeImaStavke)
+                            'notice' => $this->jePlacanjeVidljivo($placanjeSummary)
                                 ? $paymentService->noticeForClan($clan)
                                 : null,
                         ];
@@ -407,11 +395,7 @@ class JavnoController extends Controller
 
         if ($mozeVidjetiPlacanja) {
             $paymentSummary = $paymentService->memberSummary($clan);
-            $paymentProfile = $paymentSummary['profile'] ?? null;
-            $profilPostavljen = $paymentProfile !== null
-                && data_get($paymentProfile, 'paymentOption') !== null;
-            $imaStavkePlacanja = ($paymentSummary['charges'] ?? collect())->count() > 0;
-            $paymentProfileConfigured = $profilPostavljen || $imaStavkePlacanja;
+            $paymentProfileConfigured = $this->jePlacanjeVidljivo($paymentSummary);
             if ($paymentProfileConfigured) {
                 $paymentNotice = $paymentService->noticeForClan($clan);
             }
@@ -703,6 +687,21 @@ class JavnoController extends Controller
         $status['manjeOdDvadesetDana'] = $razlikaDana >= 0 && $razlikaDana < 20;
 
         return $status;
+    }
+
+    /**
+     * Određuje treba li status plaćanja biti prikazan korisniku.
+     *
+     * @param array<string, mixed> $placanjeSummary
+     */
+    private function jePlacanjeVidljivo(array $placanjeSummary): bool
+    {
+        $placanjeProfil = $placanjeSummary['profile'] ?? null;
+        $placanjeProfilPostavljen = $placanjeProfil !== null
+            && data_get($placanjeProfil, 'paymentOption') !== null;
+        $placanjeImaStavke = ($placanjeSummary['charges'] ?? collect())->count() > 0;
+
+        return $placanjeProfilPostavljen || $placanjeImaStavke;
     }
 
     /**

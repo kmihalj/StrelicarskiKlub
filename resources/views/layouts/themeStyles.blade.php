@@ -1,4 +1,5 @@
 {{-- Ubrizgavanje CSS varijabli aktivne teme (boje, linkovi, kontrasti). --}}
+<!--suppress CssUnresolvedCustomProperty,CssUnusedSymbol -->
 <style>
     :root {
         @foreach(($activeThemeCssVars ?? []) as $cssVar => $cssValue)

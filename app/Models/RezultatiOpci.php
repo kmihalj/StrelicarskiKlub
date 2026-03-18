@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -17,7 +16,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class RezultatiOpci extends Model
 {
-    use HasFactory;
 
     protected $fillable = ['turnir_id', 'clan_id', 'kategorija_id', 'stil_id', 'plasman', 'plasman_nakon_eliminacija' ];
 
@@ -56,6 +54,7 @@ class RezultatiOpci extends Model
     /**
      * Vraća timske stavke u kojima je ovaj pojedinačni rezultat uključen.
      */
+    /** @noinspection PhpUnused */
     public function timStavke(): HasMany
     {
         return $this->hasMany(RezultatiTimClan::class, 'rezultat_opci_id');

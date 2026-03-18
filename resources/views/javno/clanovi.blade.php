@@ -10,6 +10,7 @@
                 $brojStupaca = 3 + ($mozeNapredniPrikaz ? 2 : 0) + ($jeAdmin ? 1 : 0) + ($showPaymentColumn ? 1 : 0);
             @endphp
             <style>
+                /*noinspection CssUnusedSymbol*/
                 .clanovi-header-control {
                     appearance: none;
                     background: transparent;
@@ -32,6 +33,7 @@
                     font-weight: 700;
                 }
 
+                /*noinspection CssUnusedSymbol*/
                 .clanovi-sort-icon {
                     display: inline-flex;
                     width: 1rem;
@@ -42,6 +44,7 @@
                     vertical-align: middle;
                 }
 
+                /*noinspection CssUnusedSymbol*/
                 .clanovi-sort-icon .sort-icon-svg {
                     display: none;
                     width: 1rem;
@@ -49,16 +52,19 @@
                     fill: currentColor;
                 }
 
+                /*noinspection CssUnusedSymbol*/
                 .clanovi-sort-icon[data-sort-state='both'] {
                     color: #6c757d;
                 }
 
+                /*noinspection CssUnusedSymbol*/
                 .clanovi-sort-icon[data-sort-state='both'] .sort-icon-both,
                 .clanovi-sort-icon[data-sort-state='asc'] .sort-icon-asc,
                 .clanovi-sort-icon[data-sort-state='desc'] .sort-icon-desc {
                     display: block;
                 }
 
+                /*noinspection CssUnusedSymbol*/
                 .clanovi-sort-icon[data-sort-state='asc'],
                 .clanovi-sort-icon[data-sort-state='desc'] {
                     color: #212529;
@@ -182,15 +188,19 @@
                     <div class="row justify-content-center p-2 shadow bg-danger fw-bolder">
                         <div class="col-lg-12 text-white">
                             Neaktivni članovi
-                            <span id="skrivanje_podataka" class="text-white" style="float: right; cursor: pointer; display: none"
-                                  onclick="document.getElementById('popis-neaktivnih').style.display = 'none';document.getElementById('skrivanje_podataka').style.display = 'none';document.getElementById('pokazivanje_podataka').style.display = 'block';">_</span>
-                            <span id="pokazivanje_podataka" class="text-white" style="float: right; cursor: pointer;"
-                                  onclick="document.getElementById('popis-neaktivnih').style.display = 'block';document.getElementById('skrivanje_podataka').style.display = 'block';document.getElementById('pokazivanje_podataka').style.display = 'none';">+</span>
+                            <span id="skrivanje_podataka"
+                                  class="text-white d-none js-neaktivni-clanovi-toggle"
+                                  style="float: right; cursor: pointer;"
+                                  data-show-panel="0">_</span>
+                            <span id="pokazivanje_podataka"
+                                  class="text-white js-neaktivni-clanovi-toggle"
+                                  style="float: right; cursor: pointer;"
+                                  data-show-panel="1">+</span>
                         </div>
                     </div>
                 </div>
 
-                <div id="popis-neaktivnih" class="container-xxl bg-secondary-subtle shadow" style="display: none">
+                <div id="popis-neaktivnih" class="container-xxl bg-secondary-subtle shadow d-none">
                     <div class="row justify-content-center pt-3 shadow">
                         <div class="col-lg-12 justify-content-center m-3 js-clanovi-table-wrap">
                             <div class="row g-2 align-items-end mb-3 js-clanovi-controls">
@@ -274,6 +284,26 @@
 
             <script>
                 document.addEventListener('DOMContentLoaded', function () {
+                    const panel = /** @type {HTMLElement|null} */ (document.getElementById('popis-neaktivnih'));
+                    const hideIcon = /** @type {HTMLElement|null} */ (document.getElementById('skrivanje_podataka'));
+                    const showIcon = /** @type {HTMLElement|null} */ (document.getElementById('pokazivanje_podataka'));
+                    const toggleNeaktivniClanovi = function (shouldShow) {
+                        if (!panel || !hideIcon || !showIcon) {
+                            return;
+                        }
+
+                        panel.classList.toggle('d-none', !shouldShow);
+                        hideIcon.classList.toggle('d-none', !shouldShow);
+                        showIcon.classList.toggle('d-none', shouldShow);
+                    };
+
+                    document.querySelectorAll('.js-neaktivni-clanovi-toggle').forEach(function (toggleElement) {
+                        toggleElement.addEventListener('click', function () {
+                            const shouldShow = toggleElement.getAttribute('data-show-panel') === '1';
+                            toggleNeaktivniClanovi(shouldShow);
+                        });
+                    });
+
                     const tableWrappers = Array.from(document.querySelectorAll('.js-clanovi-table-wrap'));
 
                     const normalize = (value) => (value || '').toString().trim().toLocaleLowerCase('hr-HR');

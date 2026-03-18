@@ -1,6 +1,6 @@
 {{-- Mobilna navigacija glavnog izbornika aplikacije. --}}
 @include('layouts.nav2CSS')
-<nav class="navbar navbar-expand-xxl navbar-dark" style="background-color: var(--theme-nav-solid-bg, #000);">
+<nav class="navbar navbar-expand-xxl navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="{{ url('/') }}">
             <img src="{{ $activeThemeLogoUrl ?? asset('storage/slike/logo.png') }}" height="50" alt="Streličarski klub Dubrava"/>

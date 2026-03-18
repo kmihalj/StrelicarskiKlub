@@ -1,5 +1,5 @@
 {{-- Roditeljski blok: pregled liječničkog statusa djece članova. --}}
-@if(isset($statusLijecnickiDijete) && !is_null($statusLijecnickiDijete))
+@if(isset($statusLijecnickiDijete))
     @php
         $placanjeNotice = $statusLijecnickiDijete['paymentNotice'] ?? null;
     @endphp

@@ -14,7 +14,7 @@
                         Timska medalja - {{ $tipNaziv }}
                     </th>
                 </tr>
-                <tr style="--bs-table-bg:var(--bs-success);">
+                <tr style="background-color: #198754;">
                     <th class="text-white">Datum</th>
                     <th class="text-white">Turnir</th>
                     <th class="text-white">Član</th>
@@ -141,4 +141,3 @@
         </div>
     </div>
 </div>
-

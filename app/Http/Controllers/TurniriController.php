@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\FacebookContentBlockSupport;
 use App\Models\Clanovi;
 use App\Models\Kategorije;
 use App\Models\RezultatiOpci;
@@ -21,15 +22,16 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * Admin kontroler za upravljanje turnirima, rezultatima po članovima i timskim rezultatima.
  */
 class TurniriController extends Controller
 {
+    use FacebookContentBlockSupport;
+
     private const STANDARDNI_LUK_STIL_ID = 7;
-    private const AUTO_FACEBOOK_BLOK_START = '<!--AUTO_FACEBOOK_LINK_START-->';
-    private const AUTO_FACEBOOK_BLOK_END = '<!--AUTO_FACEBOOK_LINK_END-->';
 
     /** @noinspection PhpMissingReturnTypeInspection */
     public function index()
@@ -142,7 +144,7 @@ class TurniriController extends Controller
                 // bez otvaranja dodatnih ekrana (član + stil + kategorija + rezultat).
                 return [
                     'id' => (int)$rezultat->id,
-                    'clan' => trim((string)$rezultat->clan?->Prezime . ' ' . (string)$rezultat->clan?->Ime),
+                    'clan' => trim(($rezultat->clan?->Prezime ?? '') . ' ' . ($rezultat->clan?->Ime ?? '')),
                     'stil' => (string)$rezultat->stil?->naziv,
                     'kategorija' => (string)$rezultat->kategorija?->naziv,
                     'rezultat' => $this->rezultatZaRezultatOpci($rezultat, $ukupnoPoljeId),
@@ -273,24 +275,12 @@ class TurniriController extends Controller
             return redirect()->route('admin.rezultati.popisTurnira')->with('error', 'Turnir nije pronaden.');
         }
 
-        $clan = Clanovi::find($request->input('clan'));
-        $kategorija = Kategorije::find($request->input('kategorija'));
-        $stil = Stilovi::where('id', $request->input('stil'))
-            ->where('id', '!=', self::STANDARDNI_LUK_STIL_ID)
-            ->first();
-
-        if (!$clan || !$kategorija || !$stil) {
-            return redirect()->route('admin.rezultati.unosRezultata', $turnir->id)
-                ->with('error', 'Odabrani clan, stil ili kategorija nisu valjani.');
+        $odabir = $this->odaberiClanKategorijuIStil($request, $turnir);
+        if ($odabir instanceof RedirectResponse) {
+            return $odabir;
         }
 
-        $clanSpol = $this->normalizirajSpol($clan->spol);
-        $kategorijaSpol = $this->normalizirajSpol($kategorija->spol);
-
-        if ($clanSpol === '' || $kategorijaSpol === '' || $clanSpol !== $kategorijaSpol) {
-            return redirect()->route('admin.rezultati.unosRezultata', $turnir->id)
-                ->with('error', 'Odabrana kategorija ne odgovara spolu clana.');
-        }
+        [$clan, $kategorija, $stil] = $odabir;
 
         $polja_iz_forme = $request->input('polje');
         $i=0;
@@ -336,24 +326,12 @@ class TurniriController extends Controller
                 ->with('error', 'Neispravan zahtjev za uređivanje rezultata.');
         }
 
-        $clan = Clanovi::find($request->input('clan'));
-        $kategorija = Kategorije::find($request->input('kategorija'));
-        $stil = Stilovi::where('id', $request->input('stil'))
-            ->where('id', '!=', self::STANDARDNI_LUK_STIL_ID)
-            ->first();
-
-        if (!$clan || !$kategorija || !$stil) {
-            return redirect()->route('admin.rezultati.unosRezultata', $turnir->id)
-                ->with('error', 'Odabrani clan, stil ili kategorija nisu valjani.');
+        $odabir = $this->odaberiClanKategorijuIStil($request, $turnir);
+        if ($odabir instanceof RedirectResponse) {
+            return $odabir;
         }
 
-        $clanSpol = $this->normalizirajSpol($clan->spol);
-        $kategorijaSpol = $this->normalizirajSpol($kategorija->spol);
-
-        if ($clanSpol === '' || $kategorijaSpol === '' || $clanSpol !== $kategorijaSpol) {
-            return redirect()->route('admin.rezultati.unosRezultata', $turnir->id)
-                ->with('error', 'Odabrana kategorija ne odgovara spolu clana.');
-        }
+        [$clan, $kategorija, $stil] = $odabir;
 
         $turnir->loadMissing('tipTurnira.polja');
         $poljaDefinicije = $turnir->tipTurnira->polja->values();
@@ -367,85 +345,93 @@ class TurniriController extends Controller
                 ->with('error', 'Broj unesenih polja rezultata nije ispravan.');
         }
 
-        DB::transaction(function () use (
-            $request,
-            $rezultat,
-            $turnir,
-            $clan,
-            $kategorija,
-            $stil,
-            $poljaDefinicije,
-            $poljaIzForme,
-            $rezPoTipuIdsIzForme
-        ): void {
-            // Stari identitet rezultata koristimo da pronađemo točno one "po tipu" retke
-            // koji pripadaju upravo ovom zapisu prije uređivanja.
-            $stariClanId = (int)$rezultat->clan_id;
-            $staraKategorijaId = (int)$rezultat->kategorija_id;
-            $stariStilId = (int)$rezultat->stil_id;
+        try {
+            DB::transaction(function () use (
+                $request,
+                $rezultat,
+                $turnir,
+                $clan,
+                $kategorija,
+                $stil,
+                $poljaDefinicije,
+                $poljaIzForme,
+                $rezPoTipuIdsIzForme
+            ): void {
+                // Stari identitet rezultata koristimo da pronađemo točno one "po tipu" retke
+                // koji pripadaju upravo ovom zapisu prije uređivanja.
+                $stariClanId = (int)$rezultat->clan_id;
+                $staraKategorijaId = (int)$rezultat->kategorija_id;
+                $stariStilId = (int)$rezultat->stil_id;
 
-            $postojeciPoTipu = RezultatiPoTipuTurnira::query()
-                ->where('turnir_id', (int)$turnir->id)
-                ->where('clan_id', $stariClanId)
-                ->where('kategorija_id', $staraKategorijaId)
-                ->where('stil_id', $stariStilId)
-                ->whereIn('polje_za_tipove_turnira_id', $poljaDefinicije->pluck('id')->all())
-                ->get();
-
-            $postojeciPoId = $postojeciPoTipu->keyBy('id');
-            $postojeciPoPolju = $postojeciPoTipu
-                ->sortBy('id')
-                ->keyBy('polje_za_tipove_turnira_id');
-
-            $iskoristeniRedci = [];
-
-            foreach ($poljaDefinicije as $index => $poljeDefinicija) {
-                // Primarno pokušavamo pogoditi redak po skrivenom ID-u iz forme,
-                // a fallback je match po ID-u definicije polja tipa turnira.
-                $preferiraniId = $rezPoTipuIdsIzForme->get($index);
-                $rezPoTipu = $preferiraniId ? $postojeciPoId->get($preferiraniId) : null;
-
-                if ($rezPoTipu === null) {
-                    $rezPoTipu = $postojeciPoPolju->get((int)$poljeDefinicija->id);
-                }
-
-                if ($rezPoTipu === null || in_array((int)$rezPoTipu->id, $iskoristeniRedci, true)) {
-                    $rezPoTipu = new RezultatiPoTipuTurnira();
-                }
-
-                $rezPoTipu->turnir_id = (int)$turnir->id;
-                $rezPoTipu->clan_id = (int)$clan->id;
-                $rezPoTipu->kategorija_id = (int)$kategorija->id;
-                $rezPoTipu->stil_id = (int)$stil->id;
-                $rezPoTipu->polje_za_tipove_turnira_id = (int)$poljeDefinicija->id;
-                $rezPoTipu->rezultat = $poljaIzForme->get($index);
-                $rezPoTipu->save();
-
-                $iskoristeniRedci[] = (int)$rezPoTipu->id;
-            }
-
-            if (!empty($iskoristeniRedci)) {
-                // Uklanjamo eventualne "viškove" kako ne bi ostali stari redci
-                // nakon promjene stila/kategorije ili strukture polja.
-                RezultatiPoTipuTurnira::query()
+                $postojeciPoTipu = RezultatiPoTipuTurnira::query()
                     ->where('turnir_id', (int)$turnir->id)
                     ->where('clan_id', $stariClanId)
                     ->where('kategorija_id', $staraKategorijaId)
                     ->where('stil_id', $stariStilId)
                     ->whereIn('polje_za_tipove_turnira_id', $poljaDefinicije->pluck('id')->all())
-                    ->whereNotIn('id', $iskoristeniRedci)
-                    ->delete();
-            }
+                    ->get();
 
-            $rezultat->clan_id = (int)$clan->id;
-            $rezultat->kategorija_id = (int)$kategorija->id;
-            $rezultat->stil_id = (int)$stil->id;
-            $rezultat->plasman = $request->input('plasman');
-            $rezultat->plasman_nakon_eliminacija = $turnir->eliminacije
-                ? ($request->input('plasman_eliminacije') !== null ? $request->input('plasman_eliminacije') : null)
-                : null;
-            $rezultat->save();
-        });
+                $postojeciPoId = $postojeciPoTipu->keyBy('id');
+                $postojeciPoPolju = $postojeciPoTipu
+                    ->sortBy('id')
+                    ->keyBy('polje_za_tipove_turnira_id');
+
+                $iskoristeniRedci = [];
+
+                foreach ($poljaDefinicije as $index => $poljeDefinicija) {
+                    // Primarno pokušavamo pogoditi redak po skrivenom ID-u iz forme,
+                    // a fallback je match po ID-u definicije polja tipa turnira.
+                    $preferiraniId = $rezPoTipuIdsIzForme->get($index);
+                    $rezPoTipu = $preferiraniId ? $postojeciPoId->get($preferiraniId) : null;
+
+                    if (!$rezPoTipu instanceof RezultatiPoTipuTurnira) {
+                        $rezPoTipu = $postojeciPoPolju->get((int)$poljeDefinicija->id);
+                    }
+
+                    if (!$rezPoTipu instanceof RezultatiPoTipuTurnira
+                        || in_array((int)$rezPoTipu->id, $iskoristeniRedci, true)) {
+                        $rezPoTipu = new RezultatiPoTipuTurnira();
+                    }
+
+                    $rezPoTipu->turnir_id = (int)$turnir->id;
+                    $rezPoTipu->clan_id = (int)$clan->id;
+                    $rezPoTipu->kategorija_id = (int)$kategorija->id;
+                    $rezPoTipu->stil_id = (int)$stil->id;
+                    $rezPoTipu->polje_za_tipove_turnira_id = (int)$poljeDefinicija->id;
+                    $rezPoTipu->rezultat = $poljaIzForme->get($index);
+                    $rezPoTipu->save();
+
+                    $iskoristeniRedci[] = (int)$rezPoTipu->id;
+                }
+
+                if (!empty($iskoristeniRedci)) {
+                    // Uklanjamo eventualne "viškove" kako ne bi ostali stari redci
+                    // nakon promjene stila/kategorije ili strukture polja.
+                    RezultatiPoTipuTurnira::query()
+                        ->where('turnir_id', (int)$turnir->id)
+                        ->where('clan_id', $stariClanId)
+                        ->where('kategorija_id', $staraKategorijaId)
+                        ->where('stil_id', $stariStilId)
+                        ->whereIn('polje_za_tipove_turnira_id', $poljaDefinicije->pluck('id')->all())
+                        ->whereNotIn('id', $iskoristeniRedci)
+                        ->delete();
+                }
+
+                $rezultat->clan_id = (int)$clan->id;
+                $rezultat->kategorija_id = (int)$kategorija->id;
+                $rezultat->stil_id = (int)$stil->id;
+                $rezultat->plasman = $request->input('plasman');
+                $rezultat->plasman_nakon_eliminacija = $turnir->eliminacije
+                    ? ($request->input('plasman_eliminacije') !== null ? $request->input('plasman_eliminacije') : null)
+                    : null;
+                $rezultat->save();
+            });
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()->route('admin.rezultati.unosRezultata', $turnir->id)
+                ->with('error', 'Spremanje rezultata nije uspjelo.');
+        }
 
         if ($this->timskeTabliceDostupne()) {
             $this->osvjeziTimoveTurnira((int)$turnir->id);
@@ -465,7 +451,7 @@ class TurniriController extends Controller
                 ->with('error', 'Timski rezultati nisu dostupni dok se ne pokrenu migracije.');
         }
 
-        $turnir->ima_timove = (bool)$request->boolean('ima_timove');
+        $turnir->ima_timove = $request->boolean('ima_timove');
         $turnir->save();
 
         return redirect()->route('admin.rezultati.unosRezultata', $turnir->id);
@@ -522,35 +508,42 @@ class TurniriController extends Controller
                 ->with('error', 'Odabrani članovi nemaju rezultate na ovom turniru.');
         }
 
-        DB::transaction(function () use ($request, $turnir, $odabraniRezultatiIds, $odabraniRezultati): void {
-            $stilIds = $odabraniRezultati->pluck('stil_id')->unique()->values();
-            $kategorijaIds = $odabraniRezultati->pluck('kategorija_id')->unique()->values();
+        try {
+            DB::transaction(function () use ($request, $turnir, $odabraniRezultatiIds, $odabraniRezultati): void {
+                $stilIds = $odabraniRezultati->pluck('stil_id')->unique()->values();
+                $kategorijaIds = $odabraniRezultati->pluck('kategorija_id')->unique()->values();
 
-            $tim = new RezultatiTim();
-            $tim->turnir_id = $turnir->id;
-            $tim->plasman = (int)$request->input('plasman_tima');
-            $tim->stil_id = $stilIds->count() === 1 ? (int)$stilIds->first() : null;
-            $tim->kategorija_id = $kategorijaIds->count() === 1 ? (int)$kategorijaIds->first() : null;
-            $tim->rezultat = 0;
-            $tim->save();
+                $tim = new RezultatiTim();
+                $tim->turnir_id = $turnir->id;
+                $tim->plasman = (int)$request->input('plasman_tima');
+                $tim->stil_id = $stilIds->count() === 1 ? (int)$stilIds->first() : null;
+                $tim->kategorija_id = $kategorijaIds->count() === 1 ? (int)$kategorijaIds->first() : null;
+                $tim->rezultat = 0;
+                $tim->save();
 
-            $tim->clanoviStavke()->createMany(
-                $odabraniRezultatiIds
-                    ->values()
-                    ->map(static fn (int $rezultatOpciId, int $index): array => [
-                        'rezultat_opci_id' => $rezultatOpciId,
-                        'redni_broj' => $index + 1,
-                    ])
-                    ->all()
-            );
+                $tim->clanoviStavke()->createMany(
+                    $odabraniRezultatiIds
+                        ->values()
+                        ->map(static fn (int $rezultatOpciId, int $index): array => [
+                            'rezultat_opci_id' => $rezultatOpciId,
+                            'redni_broj' => $index + 1,
+                        ])
+                        ->all()
+                );
 
-            if (!$turnir->ima_timove) {
-                $turnir->ima_timove = true;
-                $turnir->save();
-            }
+                if (!$turnir->ima_timove) {
+                    $turnir->ima_timove = true;
+                    $turnir->save();
+                }
 
-            $this->osvjeziUkupniRezultatTima($tim->load('clanoviStavke.rezultatOpci'));
-        });
+                $this->osvjeziUkupniRezultatTima($tim->load('clanoviStavke.rezultatOpci'));
+            });
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()->route('admin.rezultati.unosRezultata', $turnir->id)
+                ->with('error', 'Spremanje timskog rezultata nije uspjelo.');
+        }
 
         return redirect()->route('admin.rezultati.unosRezultata', $turnir->id);
     }
@@ -739,17 +732,22 @@ class TurniriController extends Controller
             return null;
         }
 
-        if (!preg_match('#^https?://#i', $vrijednost)) {
-            $vrijednost = 'https://' . $vrijednost;
-        }
-
-        $validiranUrl = filter_var($vrijednost, FILTER_VALIDATE_URL);
-        if ($validiranUrl === false) {
+        $kandidatUrl = preg_match('#^https?://#i', $vrijednost) === 1
+            ? $vrijednost
+            : 'https://' . $vrijednost;
+        $validiranUrl = filter_var($kandidatUrl, FILTER_VALIDATE_URL);
+        if (!is_string($validiranUrl)) {
             return null;
         }
 
         $host = strtolower((string)parse_url($validiranUrl, PHP_URL_HOST));
-        if ($host === '' || (!str_contains($host, 'facebook.com') && !str_contains($host, 'fb.com'))) {
+        if ($host === '') {
+            return null;
+        }
+
+        $facebookHost = $host === 'facebook.com' || str_ends_with($host, '.facebook.com');
+        $fbHost = $host === 'fb.com' || str_ends_with($host, '.fb.com');
+        if (!$facebookHost && !$fbHost) {
             return null;
         }
 
@@ -761,23 +759,7 @@ class TurniriController extends Controller
      */
     private function izvuciFacebookLinkIzOpisa2(?string $opis2): ?string
     {
-        $sadrzaj = (string)$opis2;
-        if ($sadrzaj === '') {
-            return null;
-        }
-
-        $oznaceniBlokRegex = '/<!--\s*AUTO_FACEBOOK_LINK_START\s*-->(.*?)<!--\s*AUTO_FACEBOOK_LINK_END\s*-->/is';
-        if (preg_match($oznaceniBlokRegex, $sadrzaj, $blokPodudaranje) === 1
-            && preg_match('/href=(["\'])(.*?)\1/i', $blokPodudaranje[1], $linkPodudaranje) === 1) {
-            return html_entity_decode((string)$linkPodudaranje[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        }
-
-        $legacyRegex = '/<a[^>]*href=(["\'])(.*?)\1[^>]*>\s*(?:<svg[\s\S]*?<\/svg>\s*)?Facebook\s*<\/a>/iu';
-        if (preg_match($legacyRegex, $sadrzaj, $legacyPodudaranje) === 1) {
-            return html_entity_decode((string)$legacyPodudaranje[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        }
-
-        return null;
+        return $this->extractFacebookLinkFromHtml($opis2);
     }
 
     /**
@@ -785,18 +767,36 @@ class TurniriController extends Controller
      */
     private function ukloniFacebookBlokIzOpisa2(?string $opis2): string
     {
-        $sadrzaj = (string)$opis2;
-        if ($sadrzaj === '') {
-            return '';
+        return $this->stripFacebookBlockFromHtml($opis2);
+    }
+
+    /**
+     * Validira odabir člana, kategorije i stila za unos/izmjenu rezultata.
+     *
+     * @return array{0: Clanovi, 1: Kategorije, 2: Stilovi}|RedirectResponse
+     */
+    private function odaberiClanKategorijuIStil(Request $request, Turniri $turnir): array|RedirectResponse
+    {
+        $clan = Clanovi::find($request->input('clan'));
+        $kategorija = Kategorije::find($request->input('kategorija'));
+        $stil = Stilovi::where('id', $request->input('stil'))
+            ->where('id', '!=', self::STANDARDNI_LUK_STIL_ID)
+            ->first();
+
+        if (!$clan || !$kategorija || !$stil) {
+            return redirect()->route('admin.rezultati.unosRezultata', $turnir->id)
+                ->with('error', 'Odabrani clan, stil ili kategorija nisu valjani.');
         }
 
-        $oznaceniBlokRegex = '/<!--\s*AUTO_FACEBOOK_LINK_START\s*-->.*?<!--\s*AUTO_FACEBOOK_LINK_END\s*-->/is';
-        $sadrzaj = preg_replace($oznaceniBlokRegex, '', $sadrzaj) ?? $sadrzaj;
+        $clanSpol = $this->normalizirajSpol($clan->spol);
+        $kategorijaSpol = $this->normalizirajSpol($kategorija->spol);
 
-        $legacyRegex = '/<p[^>]*>\s*(?:<a[^>]*>\s*)?(?:<svg[\s\S]*?<\/svg>)\s*Facebook\s*(?:<\/a>)?\s*<\/p>/iu';
-        $sadrzaj = preg_replace($legacyRegex, '', $sadrzaj) ?? $sadrzaj;
+        if ($clanSpol === '' || $kategorijaSpol === '' || $clanSpol !== $kategorijaSpol) {
+            return redirect()->route('admin.rezultati.unosRezultata', $turnir->id)
+                ->with('error', 'Odabrana kategorija ne odgovara spolu clana.');
+        }
 
-        return trim($sadrzaj);
+        return [$clan, $kategorija, $stil];
     }
 
     /**
@@ -804,15 +804,6 @@ class TurniriController extends Controller
      */
     private function izradiFacebookBlokZaOpis2(string $facebookLink): string
     {
-        $siguranLink = htmlspecialchars($facebookLink, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-
-        return self::AUTO_FACEBOOK_BLOK_START
-            . '<p style="text-align:center;">'
-            . '<a href="' . $siguranLink . '" target="_blank" rel="noopener noreferrer">'
-            . '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24px" height="24px"><path fill="#3F51B5" d="M42,37c0,2.762-2.238,5-5,5H11c-2.761,0-5-2.238-5-5V11c0-2.762,2.239-5,5-5h26c2.762,0,5,2.238,5,5V37z"></path><path fill="#FFF" d="M34.368,25H31v13h-5V25h-3v-4h3v-2.41c0.002-3.508,1.459-5.59,5.592-5.59H35v4h-2.287C31.104,17,31,17.6,31,18.723V21h4L34.368,25z"></path></svg>'
-            . 'Facebook'
-            . '</a>'
-            . '</p>'
-            . self::AUTO_FACEBOOK_BLOK_END;
+        return $this->buildFacebookBlockHtml($facebookLink);
     }
 }

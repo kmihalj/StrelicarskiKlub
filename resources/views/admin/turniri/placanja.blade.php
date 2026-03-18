@@ -13,18 +13,16 @@
         <span>Praćenje plaćanja članarina</span>
         <span>
             <span id="pokazivanje_setup_placanja"
-                  class="text-white fw-bold"
+                  class="text-white fw-bold{{ $otvoriPlacanjaSetup ? ' d-none' : '' }}"
                   title="Otvori"
-                  style="cursor: pointer; @if($otvoriPlacanjaSetup) display: none; @endif"
-                  onclick="document.getElementById('setup_placanja_dropdown').style.display = 'block';document.getElementById('skrivanje_setup_placanja').style.display = 'inline';document.getElementById('pokazivanje_setup_placanja').style.display = 'none';">+</span>
+                  style="cursor: pointer;">+</span>
             <span id="skrivanje_setup_placanja"
-                  class="text-white fw-bold"
+                  class="text-white fw-bold{{ $otvoriPlacanjaSetup ? '' : ' d-none' }}"
                   title="Zatvori"
-                  style="cursor: pointer; @if($otvoriPlacanjaSetup) display: inline; @else display: none; @endif"
-                  onclick="document.getElementById('setup_placanja_dropdown').style.display = 'none';document.getElementById('skrivanje_setup_placanja').style.display = 'none';document.getElementById('pokazivanje_setup_placanja').style.display = 'inline';">&minus;</span>
+                  style="cursor: pointer;">&minus;</span>
         </span>
     </div>
-    <div id="setup_placanja_dropdown" class="card-body bg-secondary-subtle" style="@if($otvoriPlacanjaSetup) display: block; @else display: none; @endif">
+    <div id="setup_placanja_dropdown" class="card-body bg-secondary-subtle{{ $otvoriPlacanjaSetup ? '' : ' d-none' }}">
         <form action="{{ route('admin.placanja.setup.update') }}" method="POST">
             @csrf
             <div class="row g-2">
@@ -71,7 +69,7 @@
 
             <hr>
 
-            <div class="alert alert-secondary py-2 mb-3 small fw-semibold" style="color: var(--theme-body-color, #212529);">
+            <div class="alert alert-secondary py-2 mb-3 small fw-semibold" style="color: #212529;">
                 Ukupno modela u bazi: <strong>{{ $paymentOptions->count() + $paymentOptionsArchivedCount }}</strong>,
                 prikazano u ovoj formi: <strong>{{ $paymentOptions->count() }}</strong>,
                 arhivirano (skriveno): <strong>{{ $paymentOptionsArchivedCount }}</strong>.
@@ -271,14 +269,39 @@
                                    placeholder="Opis (opcionalno)">
                         </div>
                     </div>
-                </form>
-            </div>
-        </div>
+        </form>
+    </div>
+</div>
+
     </div>
 </div>
 
 <script>
     (function () {
+        const setupBody = document.getElementById('setup_placanja_dropdown');
+        const hideIcon = document.getElementById('skrivanje_setup_placanja');
+        const showIcon = document.getElementById('pokazivanje_setup_placanja');
+        const toggleSetupPlacanja = function (shouldOpen) {
+            if (!setupBody || !hideIcon || !showIcon) {
+                return;
+            }
+
+            setupBody.classList.toggle('d-none', !shouldOpen);
+            hideIcon.classList.toggle('d-none', !shouldOpen);
+            showIcon.classList.toggle('d-none', shouldOpen);
+        };
+
+        if (showIcon) {
+            showIcon.addEventListener('click', function () {
+                toggleSetupPlacanja(true);
+            });
+        }
+        if (hideIcon) {
+            hideIcon.addEventListener('click', function () {
+                toggleSetupPlacanja(false);
+            });
+        }
+
         const syncState = function (periodType, periodAnchor, amountInput) {
             if (!periodType || !periodAnchor || !amountInput) {
                 return;

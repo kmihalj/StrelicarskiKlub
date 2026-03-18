@@ -3,6 +3,7 @@
 
 @section('content')
     <style>
+        /*noinspection CssUnusedSymbol*/
         .clanovi-header-control {
             appearance: none;
             background: transparent;
@@ -25,6 +26,7 @@
             font-weight: 700;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .clanovi-sort-icon {
             display: inline-flex;
             width: 1rem;
@@ -35,6 +37,7 @@
             vertical-align: middle;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .clanovi-sort-icon .sort-icon-svg {
             display: none;
             width: 1rem;
@@ -42,16 +45,19 @@
             fill: currentColor;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .clanovi-sort-icon[data-sort-state='both'] {
             color: #6c757d;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .clanovi-sort-icon[data-sort-state='both'] .sort-icon-both,
         .clanovi-sort-icon[data-sort-state='asc'] .sort-icon-asc,
         .clanovi-sort-icon[data-sort-state='desc'] .sort-icon-desc {
             display: block;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .clanovi-sort-icon[data-sort-state='asc'],
         .clanovi-sort-icon[data-sort-state='desc'] {
             color: #212529;
@@ -155,7 +161,7 @@
                                 </td>
                                 <td>{{ !empty($korisnik->oib) ? $korisnik->oib : '-' }}</td>
                                 <td>{{ $rolaLabel }}</td>
-                                <td>@if((bool)$korisnik->je_roditelj) DA @else - @endif</td>
+                                <td>@if(!empty($korisnik->je_roditelj)) DA @else - @endif</td>
                             </tr>
                         @endforeach
                         </tbody>
@@ -169,7 +175,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const wrapper = document.querySelector('.js-korisnici-table-wrap');
-            const tableBody = document.querySelector('.js-korisnici-body');
+            const tableBody = /** @type {HTMLTableSectionElement|null} */ (document.querySelector('.js-korisnici-body'));
             const sortButtons = Array.from(document.querySelectorAll('.js-korisnici-sort-btn'));
             const nameOrderButton = document.querySelector('.js-korisnici-name-order-btn');
             const nameHeaderLabel = document.querySelector('.js-korisnici-name-header-label');
@@ -181,7 +187,7 @@
                 return;
             }
 
-            const allRows = Array.from(tableBody.querySelectorAll('.js-korisnik-row'));
+            const allRows = /** @type {HTMLTableRowElement[]} */ (Array.from(tableBody.querySelectorAll('.js-korisnik-row')));
             if (allRows.length === 0) {
                 if (controls) {
                     controls.classList.add('d-none');

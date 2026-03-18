@@ -1,5 +1,6 @@
 {{-- Stilovi za mobilni izbornik i animacije otvaranja/zatvaranja. --}}
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cinzel:wght@600&display=swap" rel="stylesheet">
+<!--suppress CssUnresolvedCustomProperty,CssUnusedSymbol -->
 <style>
     html, body, #app {
         margin: 0;
@@ -113,7 +114,7 @@
         }
     }
 
-    @media (min-width: 1400px) and (max-width: 1599.98px) {
+    @media (min-width: 1400px) and (max-width: 1599px) {
         .nav-item {
             font-size: 1.55em;
             padding-right: 1.05rem;
@@ -121,7 +122,7 @@
         }
     }
 
-    @media (max-width: 1399.98px) {
+    @media (max-width: 1399px) {
         .nav-item:hover > span > a,
         .nav-item:hover > a {
             color: var(--theme-nav-item-text, #fff) !important;

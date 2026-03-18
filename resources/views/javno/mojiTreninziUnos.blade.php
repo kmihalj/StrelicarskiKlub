@@ -203,6 +203,7 @@
     </div>
 
     <style>
+        /*noinspection CssUnresolvedCustomProperty,CssUnusedSymbol*/
         .shot-cell-btn {
             --bs-btn-color: #1a1a1a;
             --bs-btn-bg: #fff;
@@ -225,6 +226,7 @@
             touch-action: manipulation;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .shot-cell-empty {
             --bs-btn-color: #6c757d;
             --bs-btn-bg: #fff;
@@ -234,6 +236,7 @@
             border-color: #ced4da;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .shot-hit-gold {
             --bs-btn-color: #222;
             --bs-btn-bg: #ffd447;
@@ -243,6 +246,7 @@
             border-color: #c9a31b;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .shot-hit-red {
             --bs-btn-color: #fff;
             --bs-btn-bg: #e33b3b;
@@ -252,6 +256,7 @@
             border-color: #b11717;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .shot-hit-blue {
             --bs-btn-color: #fff;
             --bs-btn-bg: #1f65db;
@@ -261,6 +266,7 @@
             border-color: #13449b;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .shot-hit-black {
             --bs-btn-color: #fff;
             --bs-btn-bg: #20242a;
@@ -270,6 +276,7 @@
             border-color: #000;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .shot-hit-black,
         .shot-hit-black:hover,
         .shot-hit-black:focus,
@@ -278,6 +285,7 @@
             color: #fff !important;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .shot-hit-white {
             --bs-btn-color: #1a1a1a;
             --bs-btn-bg: #fff;
@@ -287,6 +295,7 @@
             border-color: #adb5bd;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .shot-hit-green {
             --bs-btn-color: #fff;
             --bs-btn-bg: #22b259;
@@ -296,6 +305,7 @@
             border-color: #12813d;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .shot-cell-active {
             border-color: #dc3545 !important;
             box-shadow: 0 0 0 .15rem rgba(220, 53, 69, .25);
@@ -313,6 +323,7 @@
             padding: .25rem .35rem;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .trening-unos-table-compact .shot-cell-btn {
             min-height: 2rem;
             padding-top: .15rem;
@@ -320,6 +331,7 @@
             font-size: .95rem;
         }
 
+        /*noinspection CssUnresolvedCustomProperty*/
         .hit-key-btn {
             --bs-btn-color: #1a1a1a;
             --bs-btn-bg: #fff;
@@ -339,6 +351,7 @@
             touch-action: manipulation;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .hit-key-gold {
             --bs-btn-color: #222;
             --bs-btn-bg: #ffd447;
@@ -348,6 +361,7 @@
             border-color: #c9a31b;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .hit-key-red {
             --bs-btn-color: #fff;
             --bs-btn-bg: #e33b3b;
@@ -357,6 +371,7 @@
             border-color: #b11717;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .hit-key-blue {
             --bs-btn-color: #fff;
             --bs-btn-bg: #1f65db;
@@ -366,6 +381,7 @@
             border-color: #13449b;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .hit-key-black {
             --bs-btn-color: #fff;
             --bs-btn-bg: #20242a;
@@ -375,6 +391,7 @@
             border-color: #000;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .hit-key-black,
         .hit-key-black:hover,
         .hit-key-black:focus,
@@ -383,6 +400,7 @@
             color: #fff !important;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .hit-key-white {
             --bs-btn-color: #1a1a1a;
             --bs-btn-bg: #fff;
@@ -392,6 +410,7 @@
             border-color: #adb5bd;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .hit-key-green {
             --bs-btn-color: #fff;
             --bs-btn-bg: #22b259;
@@ -410,6 +429,7 @@
             border-color: #495057;
         }
 
+        /*noinspection CssUnresolvedCustomProperty*/
         .hit-key-btn:hover,
         .hit-key-btn:focus,
         .hit-key-btn:focus-visible,
@@ -418,13 +438,15 @@
             color: var(--bs-btn-color);
         }
 
-        @media (max-width: 767.98px) {
+        @media (max-width: 768px) {
+            /*noinspection CssUnusedSymbol*/
             .hit-key-btn {
                 min-width: 3.35rem;
                 min-height: 3.35rem;
                 font-size: 1.2rem;
             }
 
+            /*noinspection CssUnusedSymbol*/
             .shot-cell-btn {
                 min-height: 3rem;
                 font-size: 1.15rem;
@@ -435,6 +457,7 @@
                 font-size: .9rem;
             }
 
+            /*noinspection CssUnusedSymbol*/
             .trening-unos-table-compact .shot-cell-btn {
                 min-height: 2.25rem;
                 font-size: .95rem;
@@ -450,38 +473,46 @@
 
     <script>
         (function () {
-            const initialState = @json($inicijalniUnos);
+            // noinspection JSUnresolvedVariable,JSValidateTypes
+
+            const initialStateRaw = @json($inicijalniUnos);
+            const initialState = (initialStateRaw && typeof initialStateRaw === 'object') ? initialStateRaw : {};
             const config = {
                 brojSerija: Number(@json((int)$konfig['broj_serija'])),
                 brojStrijelaUSeriji: Number(@json((int)$konfig['broj_strijela_u_seriji'])),
                 imaXKolonu: Boolean(@json((bool)$konfig['ima_x_kolonu'])),
             };
 
-            const roundButtons = Array.from(document.querySelectorAll('.js-round-btn'));
-            const tableBody = document.getElementById('trening-round-body');
-            const keypad = document.getElementById('trening-keypad');
-            const hiddenInput = document.getElementById('unos_json');
-            const form = document.getElementById('spremi_trening');
-            const formAlert = document.getElementById('trening-form-alert');
-            const dateInput = document.getElementById('datum_treninga');
-            const saveButton = document.getElementById('btn-spremi');
-            const closeButton = document.getElementById('btn-zatvori');
-            const closeAfterSaveInput = document.getElementById('zatvori_nakon_spremanja');
+            const roundButtons = /** @type {HTMLButtonElement[]} */ (Array.from(document.querySelectorAll('.js-round-btn')));
+            const tableBody = /** @type {HTMLTableSectionElement|null} */ (document.getElementById('trening-round-body'));
+            const keypad = /** @type {HTMLElement|null} */ (document.getElementById('trening-keypad'));
+            const hiddenInput = /** @type {HTMLInputElement|null} */ (document.getElementById('unos_json'));
+            const form = /** @type {HTMLFormElement|null} */ (document.getElementById('spremi_trening'));
+            const formAlert = /** @type {HTMLElement|null} */ (document.getElementById('trening-form-alert'));
+            const dateInput = /** @type {HTMLInputElement|null} */ (document.getElementById('datum_treninga'));
+            const saveButton = /** @type {HTMLButtonElement|null} */ (document.getElementById('btn-spremi'));
+            const closeButton = /** @type {HTMLButtonElement|null} */ (document.getElementById('btn-zatvori'));
+            const closeAfterSaveInput = /** @type {HTMLInputElement|null} */ (document.getElementById('zatvori_nakon_spremanja'));
             const closeRoute = @json($closeRoute);
-            const unsavedChangesModalEl = document.getElementById('unsavedChangesModal');
-            const closeWithoutSaveBtn = document.getElementById('btn-zatvori-bez-spremanja');
-            const saveAndCloseBtn = document.getElementById('btn-spremi-i-zatvori');
-            const savedToast = document.getElementById('trening-saved-toast');
-            const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
+            const unsavedChangesModalEl = /** @type {HTMLElement|null} */ (document.getElementById('unsavedChangesModal'));
+            const closeWithoutSaveBtn = /** @type {HTMLButtonElement|null} */ (document.getElementById('btn-zatvori-bez-spremanja'));
+            const saveAndCloseBtn = /** @type {HTMLButtonElement|null} */ (document.getElementById('btn-spremi-i-zatvori'));
+            const savedToast = /** @type {HTMLElement|null} */ (document.getElementById('trening-saved-toast'));
+            const csrfTokenMeta = /** @type {HTMLMetaElement|null} */ (document.querySelector('meta[name="csrf-token"]'));
             const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute('content') : '';
             const bootstrapModalCtor = window.bootstrap && window.bootstrap.Modal ? window.bootstrap.Modal : null;
             const unsavedChangesModal = (bootstrapModalCtor && unsavedChangesModalEl)
                 ? new bootstrapModalCtor(unsavedChangesModalEl)
                 : null;
+            /** @type {HTMLElement|null} */
             let modalBackdropEl = null;
             let isSubmitting = false;
             let ignoreBeforeUnload = false;
             let initialSnapshot = '';
+
+            if (!tableBody || !keypad || !hiddenInput || !form || !dateInput) {
+                return;
+            }
 
             const hitOrder = new Map([
                 ['X', 0],
@@ -502,8 +533,8 @@
                 activeRow: 0,
                 activeCol: 0,
                 rounds: [
-                    normalizeRound(initialState.runda1),
-                    normalizeRound(initialState.runda2),
+                    normalizeRound(initialState['runda1']),
+                    normalizeRound(initialState['runda2']),
                 ],
             };
 
@@ -583,7 +614,7 @@
                     return;
                 }
 
-                unsavedChangesModalEl.style.display = 'block';
+                unsavedChangesModalEl.classList.remove('d-none');
                 unsavedChangesModalEl.classList.add('show');
                 unsavedChangesModalEl.removeAttribute('aria-hidden');
                 unsavedChangesModalEl.setAttribute('aria-modal', 'true');
@@ -605,7 +636,7 @@
                 }
 
                 unsavedChangesModalEl.classList.remove('show');
-                unsavedChangesModalEl.style.display = 'none';
+                unsavedChangesModalEl.classList.add('d-none');
                 unsavedChangesModalEl.setAttribute('aria-hidden', 'true');
                 unsavedChangesModalEl.removeAttribute('aria-modal');
                 document.body.classList.remove('modal-open');
@@ -779,7 +810,7 @@
                 const values = [];
 
                 for (let rowIndex = 0; rowIndex < config.brojSerija; rowIndex++) {
-                    const row = roundData[rowIndex];
+                    const row = roundData[rowIndex] || [];
                     const scores = row.map(tokenToScore);
                     const enteredScores = scores.filter((score) => score !== null);
                     const hasInput = enteredScores.length > 0;
@@ -829,7 +860,7 @@
             }
 
             function calculateStats(roundOne, roundTwo) {
-                const allValues = [...roundOne.values, ...roundTwo.values];
+                const allValues = [...roundOne['values'], ...roundTwo['values']];
 
                 let average = null;
                 if (allValues.length > 0) {
@@ -848,10 +879,11 @@
                 }
 
                 const series = [];
-                [roundOne.rows, roundTwo.rows].forEach((roundRows, roundIndex) => {
+                const roundRowsCollection = [roundOne['rows'], roundTwo['rows']];
+                roundRowsCollection.forEach((roundRows, roundIndex) => {
                     roundRows.forEach((row, rowIndex) => {
-                        if (row.hasInput && row.sum !== null) {
-                            const enteredShots = row.shots.filter((shot) => shot !== null);
+                        if (row['hasInput'] && row['sum'] !== null) {
+                            const enteredShots = row['shots'].filter((shot) => shot !== null);
                             const xCount = enteredShots.filter((shot) => shot === 'X').length;
                             const signature = enteredShots
                                 .filter((shot) => shot !== 'X' && shot !== '10')
@@ -861,7 +893,7 @@
 
                             series.push({
                                 label: `R${roundIndex + 1}/S${rowIndex + 1}`,
-                                sum: row.sum,
+                                sum: row['sum'],
                                 xCount,
                                 signature,
                             });
@@ -872,12 +904,13 @@
                 let best = null;
                 let worst = null;
                 if (series.length > 0) {
-                    const max = Math.max(...series.map((row) => row.sum));
-                    const min = Math.min(...series.map((row) => row.sum));
+                    const max = Math.max(...series.map((row) => Number(row['sum'] ?? 0)));
+                    const min = Math.min(...series.map((row) => Number(row['sum'] ?? 0)));
 
                     const pickBySignatureAndX = (candidates, mode) => {
+                        /** @type {Record<string, Array<{label: string, sum: number, xCount: number, signature: string}>>} */
                         const grouped = candidates.reduce((acc, row) => {
-                            const key = row.signature;
+                            const key = row['signature'];
                             if (!acc[key]) {
                                 acc[key] = [];
                             }
@@ -888,11 +921,11 @@
                         const picked = [];
                         Object.values(grouped).forEach((group) => {
                             const targetX = mode === 'max'
-                                ? Math.max(...group.map((row) => row.xCount))
-                                : Math.min(...group.map((row) => row.xCount));
+                                ? Math.max(...group.map((row) => row['xCount']))
+                                : Math.min(...group.map((row) => row['xCount']));
 
                             group.forEach((row) => {
-                                if (row.xCount === targetX) {
+                                if (row['xCount'] === targetX) {
                                     picked.push(row);
                                 }
                             });
@@ -901,16 +934,16 @@
                         return picked;
                     };
 
-                    const bestCandidates = series.filter((row) => row.sum === max);
-                    const worstCandidates = series.filter((row) => row.sum === min);
+                    const bestCandidates = series.filter((row) => row['sum'] === max);
+                    const worstCandidates = series.filter((row) => row['sum'] === min);
                     const bestPicked = pickBySignatureAndX(bestCandidates, 'max');
                     const worstPicked = pickBySignatureAndX(worstCandidates, 'min');
 
-                    best = { label: bestPicked.map((row) => row.label).join(', '), sum: max };
-                    worst = { label: worstPicked.map((row) => row.label).join(', '), sum: min };
+                    best = { label: bestPicked.map((row) => row['label']).join(', '), sum: max };
+                    worst = { label: worstPicked.map((row) => row['label']).join(', '), sum: min };
                 }
 
-                return { average, mostCommon, best, worst };
+                return {average: average, mostCommon: mostCommon, best: best, worst: worst};
             }
 
             function displayCell(value, showZeroAsDash = false) {
@@ -935,12 +968,12 @@
             function renderTable(roundData) {
                 tableBody.innerHTML = '';
 
-                roundData.rows.forEach((row, rowIndex) => {
+                roundData['rows'].forEach((row, rowIndex) => {
                     const tr = document.createElement('tr');
 
                     const rowLabel = document.createElement('td');
                     rowLabel.className = 'fw-semibold';
-                    rowLabel.textContent = String(row.rowNumber);
+                    rowLabel.textContent = String(row['rowNumber']);
                     tr.appendChild(rowLabel);
 
                     for (let colIndex = 0; colIndex < config.brojStrijelaUSeriji; colIndex++) {
@@ -948,38 +981,38 @@
                         const button = document.createElement('button');
                         button.type = 'button';
                         button.className = 'btn w-100 js-shot-cell shot-cell-btn';
-                        const token = row.shots[colIndex];
+                        const token = row['shots'][colIndex];
                         const isActiveCell = state.activeRow === rowIndex && state.activeCol === colIndex;
                         button.classList.add(tokenToCellClass(token));
                         if (isActiveCell) {
                             button.classList.add('shot-cell-active');
                         }
-                        button.dataset.row = String(rowIndex);
-                        button.dataset.col = String(colIndex);
+                        button.setAttribute('data-row', String(rowIndex));
+                        button.setAttribute('data-col', String(colIndex));
                         button.textContent = token ?? '-';
                         cell.appendChild(button);
                         tr.appendChild(cell);
                     }
 
                     const sumCell = document.createElement('td');
-                    sumCell.textContent = displayCell(row.sum);
+                    sumCell.textContent = displayCell(row['sum']);
                     tr.appendChild(sumCell);
 
                     const totalCell = document.createElement('td');
-                    totalCell.textContent = displayCell(row.total);
+                    totalCell.textContent = displayCell(row['total']);
                     tr.appendChild(totalCell);
 
                     const nineCell = document.createElement('td');
-                    nineCell.textContent = displayCell(row.nines, true);
+                    nineCell.textContent = displayCell(row['nines'], true);
                     tr.appendChild(nineCell);
 
                     const tenCell = document.createElement('td');
-                    tenCell.textContent = displayCell(row.tens, true);
+                    tenCell.textContent = displayCell(row['tens'], true);
                     tr.appendChild(tenCell);
 
                     if (config.imaXKolonu) {
                         const xCell = document.createElement('td');
-                        xCell.textContent = displayCell(row.x, true);
+                        xCell.textContent = displayCell(row['x'], true);
                         tr.appendChild(xCell);
                     }
 
@@ -990,39 +1023,39 @@
             function renderSummary(roundOne, roundTwo, stats) {
                 const activeRound = state.activeRound === 0 ? roundOne : roundTwo;
 
-                document.getElementById('active-round-total').textContent = activeRound.hasInput ? activeRound.total : '-';
-                document.getElementById('active-round-nine').textContent = activeRound.hasInput ? activeRound.nines : '-';
-                document.getElementById('active-round-ten').textContent = activeRound.hasInput ? activeRound.tens : '-';
+                document.getElementById('active-round-total').textContent = activeRound['hasInput'] ? activeRound['total'] : '-';
+                document.getElementById('active-round-nine').textContent = activeRound['hasInput'] ? activeRound['nines'] : '-';
+                document.getElementById('active-round-ten').textContent = activeRound['hasInput'] ? activeRound['tens'] : '-';
                 if (config.imaXKolonu) {
-                    document.getElementById('active-round-x').textContent = activeRound.hasInput ? activeRound.x : '-';
+                    document.getElementById('active-round-x').textContent = activeRound['hasInput'] ? activeRound['x'] : '-';
                 }
 
-                document.getElementById('sum-r1-total').textContent = roundOne.hasInput ? roundOne.total : '-';
-                document.getElementById('sum-r1-nine').textContent = roundOne.hasInput ? roundOne.nines : '-';
-                document.getElementById('sum-r1-ten').textContent = roundOne.hasInput ? roundOne.tens : '-';
+                document.getElementById('sum-r1-total').textContent = roundOne['hasInput'] ? roundOne['total'] : '-';
+                document.getElementById('sum-r1-nine').textContent = roundOne['hasInput'] ? roundOne['nines'] : '-';
+                document.getElementById('sum-r1-ten').textContent = roundOne['hasInput'] ? roundOne['tens'] : '-';
                 if (config.imaXKolonu) {
-                    document.getElementById('sum-r1-x').textContent = roundOne.hasInput ? roundOne.x : '-';
+                    document.getElementById('sum-r1-x').textContent = roundOne['hasInput'] ? roundOne['x'] : '-';
                 }
 
-                document.getElementById('sum-r2-total').textContent = roundTwo.hasInput ? roundTwo.total : '-';
-                document.getElementById('sum-r2-nine').textContent = roundTwo.hasInput ? roundTwo.nines : '-';
-                document.getElementById('sum-r2-ten').textContent = roundTwo.hasInput ? roundTwo.tens : '-';
+                document.getElementById('sum-r2-total').textContent = roundTwo['hasInput'] ? roundTwo['total'] : '-';
+                document.getElementById('sum-r2-nine').textContent = roundTwo['hasInput'] ? roundTwo['nines'] : '-';
+                document.getElementById('sum-r2-ten').textContent = roundTwo['hasInput'] ? roundTwo['tens'] : '-';
                 if (config.imaXKolonu) {
-                    document.getElementById('sum-r2-x').textContent = roundTwo.hasInput ? roundTwo.x : '-';
+                    document.getElementById('sum-r2-x').textContent = roundTwo['hasInput'] ? roundTwo['x'] : '-';
                 }
 
-                const hasAll = roundOne.hasInput || roundTwo.hasInput;
-                document.getElementById('sum-all-total').textContent = hasAll ? (roundOne.total + roundTwo.total) : '-';
-                document.getElementById('sum-all-nine').textContent = hasAll ? (roundOne.nines + roundTwo.nines) : '-';
-                document.getElementById('sum-all-ten').textContent = hasAll ? (roundOne.tens + roundTwo.tens) : '-';
+                const hasAll = roundOne['hasInput'] || roundTwo['hasInput'];
+                document.getElementById('sum-all-total').textContent = hasAll ? (roundOne['total'] + roundTwo['total']) : '-';
+                document.getElementById('sum-all-nine').textContent = hasAll ? (roundOne['nines'] + roundTwo['nines']) : '-';
+                document.getElementById('sum-all-ten').textContent = hasAll ? (roundOne['tens'] + roundTwo['tens']) : '-';
                 if (config.imaXKolonu) {
-                    document.getElementById('sum-all-x').textContent = hasAll ? (roundOne.x + roundTwo.x) : '-';
+                    document.getElementById('sum-all-x').textContent = hasAll ? (roundOne['x'] + roundTwo['x']) : '-';
                 }
 
-                document.getElementById('stat-prosjek').textContent = stats.average === null ? '-' : stats.average.toFixed(2).replace('.', ',');
-                document.getElementById('stat-najcesci').textContent = stats.mostCommon === null ? '-' : `${stats.mostCommon.label} (${stats.mostCommon.count}x)`;
-                document.getElementById('stat-najbolja').textContent = stats.best === null ? '-' : `${stats.best.label} (${stats.best.sum})`;
-                document.getElementById('stat-najlosija').textContent = stats.worst === null ? '-' : `${stats.worst.label} (${stats.worst.sum})`;
+                document.getElementById('stat-prosjek').textContent = stats['average'] === null ? '-' : stats['average'].toFixed(2).replace('.', ',');
+                document.getElementById('stat-najcesci').textContent = stats['mostCommon'] === null ? '-' : `${stats['mostCommon']['label']} (${stats['mostCommon']['count']}x)`;
+                document.getElementById('stat-najbolja').textContent = stats['best'] === null ? '-' : `${stats['best']['label']} (${stats['best']['sum']})`;
+                document.getElementById('stat-najlosija').textContent = stats['worst'] === null ? '-' : `${stats['worst']['label']} (${stats['worst']['sum']})`;
             }
 
             function moveToNextEntryPosition(currentRow) {
@@ -1066,7 +1099,7 @@
 
             roundButtons.forEach((button) => {
                 button.addEventListener('click', function () {
-                    state.activeRound = Number(this.dataset.round);
+                    state.activeRound = Number(button.getAttribute('data-round') || 0);
                     state.activeRow = 0;
                     state.activeCol = 0;
                     render();
@@ -1074,24 +1107,32 @@
             });
 
             tableBody.addEventListener('click', function (event) {
-                const button = event.target.closest('.js-shot-cell');
-                if (!button) {
+                const target = event.target;
+                if (!(target instanceof Element)) {
+                    return;
+                }
+                const button = target.closest('.js-shot-cell');
+                if (!(button instanceof HTMLButtonElement)) {
                     return;
                 }
 
-                state.activeRow = Number(button.dataset.row);
-                state.activeCol = Number(button.dataset.col);
+                state.activeRow = Number(button.getAttribute('data-row') || 0);
+                state.activeCol = Number(button.getAttribute('data-col') || 0);
                 button.blur();
                 render();
             });
 
             keypad.addEventListener('click', function (event) {
-                const button = event.target.closest('.js-hit-key');
-                if (!button) {
+                const target = event.target;
+                if (!(target instanceof Element)) {
+                    return;
+                }
+                const button = target.closest('.js-hit-key');
+                if (!(button instanceof HTMLButtonElement)) {
                     return;
                 }
 
-                const value = button.dataset.value;
+                const value = button.getAttribute('data-value') || '';
                 const normalized = value === 'CLEAR' ? null : normalizeToken(value);
                 const editedRow = state.activeRow;
                 state.rounds[state.activeRound][state.activeRow][state.activeCol] = normalized;
@@ -1154,7 +1195,6 @@
                     return;
                 }
                 event.preventDefault();
-                event.returnValue = '';
             });
 
             render();

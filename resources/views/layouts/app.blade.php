@@ -133,13 +133,18 @@
                     }
 
                     const parsed = JSON.parse(raw);
-                    if (!parsed || parsed.mode !== mode) {
+                    if (!parsed || typeof parsed !== 'object') {
                         return false;
                     }
 
-                    const ts = Number(parsed.ts || 0);
+                    const parsedMode = parsed['mode'] ?? null;
+                    if (parsedMode !== mode) {
+                        return false;
+                    }
 
-                    return Number.isFinite(ts) && (Date.now() - ts) < reloadGuardTtlMs;
+                    const reloadTimestamp = Number(parsed['ts'] ?? 0);
+
+                    return Number.isFinite(reloadTimestamp) && (Date.now() - reloadTimestamp) < reloadGuardTtlMs;
                 } catch (error) {
                     return false;
                 }
@@ -187,8 +192,8 @@
 
             if (typeof mediaQuery.addEventListener === 'function') {
                 mediaQuery.addEventListener('change', handleModeChange);
-            } else if (typeof mediaQuery.addListener === 'function') {
-                mediaQuery.addListener(handleModeChange);
+            } else {
+                mediaQuery.onchange = handleModeChange;
             }
         })();
     </script>

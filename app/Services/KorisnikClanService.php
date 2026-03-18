@@ -27,19 +27,15 @@ class KorisnikClanService
             return null;
         }
 
-        if ($this->normalizirajEmail($clan->email) !== $this->normalizirajEmail($email)) {
-            return null;
-        }
-
-        if ($this->normalizirajImePrezime($clan->Ime . ' ' . $clan->Prezime) !== $this->normalizirajImePrezime($imePrezime)) {
-            return null;
-        }
-
-        if ($this->normalizirajTelefon($clan->br_telefona) !== $this->normalizirajTelefon($telefon)) {
-            return null;
-        }
-
-        return $clan;
+        return $this->identitetSePodudara(
+            $imePrezime,
+            $email,
+            $telefon,
+            $clan->Ime,
+            $clan->Prezime,
+            $clan->email,
+            $clan->br_telefona
+        ) ? $clan : null;
     }
 
     /**
@@ -61,24 +57,21 @@ class KorisnikClanService
             return null;
         }
 
-        if ($this->normalizirajEmail($polaznik->email) !== $this->normalizirajEmail($email)) {
-            return null;
-        }
-
-        if ($this->normalizirajImePrezime($polaznik->Ime . ' ' . $polaznik->Prezime) !== $this->normalizirajImePrezime($imePrezime)) {
-            return null;
-        }
-
-        if ($this->normalizirajTelefon($polaznik->br_telefona) !== $this->normalizirajTelefon($telefon)) {
-            return null;
-        }
-
-        return $polaznik;
+        return $this->identitetSePodudara(
+            $imePrezime,
+            $email,
+            $telefon,
+            $polaznik->Ime,
+            $polaznik->Prezime,
+            $polaznik->email,
+            $polaznik->br_telefona
+        ) ? $polaznik : null;
     }
 
     /**
      * Traži najvjerojatnijeg člana za već postojeći korisnički račun (strogo, pa fallback po e-mailu/imenu).
      */
+    /** @noinspection PhpUnused */
     public function pronadiClanaZaPostojecegKorisnika(User $user): ?Clanovi
     {
         if (!empty($user->oib) && !empty($user->br_telefona)) {
@@ -145,15 +138,7 @@ class KorisnikClanService
             $promijenjeno = true;
         }
 
-        $oib = (string)$clan->oib;
-        if ($user->oib !== $oib) {
-            $user->oib = $oib;
-            $promijenjeno = true;
-        }
-
-        $telefon = $this->normalizirajTelefonZaPohranu($clan->br_telefona);
-        if ($telefon !== null && $user->br_telefona !== $telefon) {
-            $user->br_telefona = $telefon;
+        if ($this->sinkronizirajKorisnickeIdentifikatore($user, $clan->oib, $clan->br_telefona)) {
             $promijenjeno = true;
         }
 
@@ -186,15 +171,7 @@ class KorisnikClanService
             $promijenjeno = true;
         }
 
-        $oib = (string)$polaznik->oib;
-        if ($user->oib !== $oib) {
-            $user->oib = $oib;
-            $promijenjeno = true;
-        }
-
-        $telefon = $this->normalizirajTelefonZaPohranu($polaznik->br_telefona);
-        if ($telefon !== null && $user->br_telefona !== $telefon) {
-            $user->br_telefona = $telefon;
+        if ($this->sinkronizirajKorisnickeIdentifikatore($user, $polaznik->oib, $polaznik->br_telefona)) {
             $promijenjeno = true;
         }
 
@@ -275,7 +252,13 @@ class KorisnikClanService
             ->filter(fn (Clanovi $clan) => $this->normalizirajEmail($clan->email) === $normaliziraniEmail)
             ->values();
 
-        return $kandidati->count() === 1 ? $kandidati->first() : null;
+        if ($kandidati->count() !== 1) {
+            return null;
+        }
+
+        $kandidat = $kandidati->first();
+
+        return $kandidat instanceof Clanovi ? $kandidat : null;
     }
 
     /**
@@ -295,7 +278,59 @@ class KorisnikClanService
             )
             ->values();
 
-        return $kandidati->count() === 1 ? $kandidati->first() : null;
+        if ($kandidati->count() !== 1) {
+            return null;
+        }
+
+        $kandidat = $kandidati->first();
+
+        return $kandidat instanceof Clanovi ? $kandidat : null;
+    }
+
+    /**
+     * Uspoređuje identitet korisnika i zapisa člana/polaznika kroz normalizirane vrijednosti.
+     */
+    private function identitetSePodudara(
+        string $imePrezime,
+        string $email,
+        string $telefon,
+        ?string $zapisIme,
+        ?string $zapisPrezime,
+        ?string $zapisEmail,
+        ?string $zapisTelefon
+    ): bool {
+        if ($this->normalizirajEmail($zapisEmail) !== $this->normalizirajEmail($email)) {
+            return false;
+        }
+
+        $zapisImePrezime = trim(($zapisIme ?? '') . ' ' . ($zapisPrezime ?? ''));
+        if ($this->normalizirajImePrezime($zapisImePrezime) !== $this->normalizirajImePrezime($imePrezime)) {
+            return false;
+        }
+
+        return $this->normalizirajTelefon($zapisTelefon) === $this->normalizirajTelefon($telefon);
+    }
+
+    /**
+     * Sinkronizira OIB i broj telefona korisnika iz povezanog zapisa člana/polaznika.
+     */
+    private function sinkronizirajKorisnickeIdentifikatore(User $user, ?string $oib, ?string $telefon): bool
+    {
+        $promijenjeno = false;
+
+        $oibVrijednost = (string)$oib;
+        if ($user->oib !== $oibVrijednost) {
+            $user->oib = $oibVrijednost;
+            $promijenjeno = true;
+        }
+
+        $telefonZaPohranu = $this->normalizirajTelefonZaPohranu($telefon);
+        if ($telefonZaPohranu !== null && $user->br_telefona !== $telefonZaPohranu) {
+            $user->br_telefona = $telefonZaPohranu;
+            $promijenjeno = true;
+        }
+
+        return $promijenjeno;
     }
 
     /**

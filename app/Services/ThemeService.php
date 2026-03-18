@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Throwable;
 use Symfony\Component\HttpFoundation\Cookie;
 
 /**
@@ -45,6 +46,7 @@ class ThemeService
     /**
      * Provjerava je li admin prisilno zaključao prikaz na svijetlu ili tamnu varijantu teme.
      */
+    /** @noinspection PhpUnused */
     public function isThemeModeForced(): bool
     {
         return in_array($this->siteThemeModePolicy(), [self::MODE_LIGHT, self::MODE_DARK], true);
@@ -87,6 +89,7 @@ class ThemeService
     /**
      * Zadana paleta boja za dark varijantu.
      */
+    /** @noinspection PhpUnused */
     public function getDarkColors(): array
     {
         return [
@@ -121,6 +124,7 @@ class ThemeService
     /**
      * Vraća sve podržane ključeve boja koje tema može sadržavati.
      */
+    /** @noinspection PhpUnused */
     public function getColorKeys(): array
     {
         return array_keys($this->getDefaultColors());
@@ -223,7 +227,7 @@ class ThemeService
             return $normalizedPreference;
         }
 
-        return $this->normalizeResolvedMode($this->readCookie(self::MODE_COOKIE_RESOLVED));
+        return $this->normalizeResolvedMode($this->readResolvedModeCookie());
     }
 
     /**
@@ -252,7 +256,7 @@ class ThemeService
             $secure = $secureSetting;
         } elseif ($secureSetting === null && app()->bound('request')) {
             $request = app('request');
-            $secure = method_exists($request, 'isSecure') ? (bool)$request->isSecure() : false;
+            $secure = method_exists($request, 'isSecure') && $request->isSecure();
         } else {
             $secure = false;
         }
@@ -620,12 +624,12 @@ class ThemeService
         $normalizedPath = $this->sanitizeAssetPath($path);
         if ($normalizedPath !== null && !str_starts_with($normalizedPath, 'http')) {
             if (Storage::disk('public')->exists($normalizedPath)) {
-                return (int)Storage::disk('public')->lastModified($normalizedPath);
+                return Storage::disk('public')->lastModified($normalizedPath);
             }
         }
 
         if (Storage::disk('public')->exists('site-assets/favicon.png')) {
-            return (int)Storage::disk('public')->lastModified('site-assets/favicon.png');
+            return Storage::disk('public')->lastModified('site-assets/favicon.png');
         }
 
         if (is_file(public_path('favicon.png'))) {
@@ -657,13 +661,13 @@ class ThemeService
                 return;
             }
 
-            $icoBinary = $this->wrapPngAsIco($source['bytes'], 64);
+            $icoBinary = $this->wrapPngAsIco($source['bytes']);
             @file_put_contents($icoPath, $icoBinary, LOCK_EX);
 
             if ($sourceModified > 0 && is_file($icoPath)) {
                 @touch($icoPath, $sourceModified);
             }
-        } catch (\Throwable) {
+        } catch (Throwable) {
             // Best effort: favicon.ico sync must not break page rendering.
         }
     }
@@ -681,21 +685,21 @@ class ThemeService
             && str_ends_with(strtolower($normalizedPath), '.png')
             && $storage->exists($normalizedPath)
         ) {
-            $bytes = (string)$storage->get($normalizedPath);
+            $bytes = $storage->get($normalizedPath);
             if ($this->isPngBinary($bytes)) {
                 return [
                     'bytes' => $bytes,
-                    'modified' => (int)$storage->lastModified($normalizedPath),
+                    'modified' => $storage->lastModified($normalizedPath),
                 ];
             }
         }
 
         if ($storage->exists('site-assets/favicon.png')) {
-            $bytes = (string)$storage->get('site-assets/favicon.png');
+            $bytes = $storage->get('site-assets/favicon.png');
             if ($this->isPngBinary($bytes)) {
                 return [
                     'bytes' => $bytes,
-                    'modified' => (int)$storage->lastModified('site-assets/favicon.png'),
+                    'modified' => $storage->lastModified('site-assets/favicon.png'),
                 ];
             }
         }
@@ -725,9 +729,10 @@ class ThemeService
     /**
      * Pakira PNG sadržaj u ICO format kako bi preglednici koji traže `.ico` dobili ispravan favicon.
      */
-    private function wrapPngAsIco(string $pngBinary, int $size = 64): string
+    public function wrapPngAsIco(string $pngBinary): string
     {
-        $sizeByte = ($size >= 256) ? 0 : max(min($size, 255), 1);
+        $size = 64;
+        $sizeByte = max(min($size, 255), 1);
         $iconDir = pack('vvv', 0, 1, 1);
         $iconEntry = pack(
             'CCCCvvVV',
@@ -809,27 +814,28 @@ class ThemeService
     /**
      * Sigurno čita vrijednost cookie-ja za temu uz fallback na globalni `$_COOKIE`.
      */
-    private function readCookie(string $name): ?string
+    private function readResolvedModeCookie(): ?string
     {
+        $cookieName = self::MODE_COOKIE_RESOLVED;
         if (!app()->bound('request')) {
-            $cookieValue = $_COOKIE[$name] ?? null;
+            $cookieValue = $_COOKIE[$cookieName] ?? null;
 
             return is_string($cookieValue) ? $cookieValue : null;
         }
 
         $request = app('request');
         if (!method_exists($request, 'cookie')) {
-            $cookieValue = $_COOKIE[$name] ?? null;
+            $cookieValue = $_COOKIE[$cookieName] ?? null;
 
             return is_string($cookieValue) ? $cookieValue : null;
         }
 
-        $value = $request->cookie($name);
+        $value = $request->cookie($cookieName);
         if (is_string($value)) {
             return $value;
         }
 
-        $cookieValue = $_COOKIE[$name] ?? null;
+        $cookieValue = $_COOKIE[$cookieName] ?? null;
 
         return is_string($cookieValue) ? $cookieValue : null;
     }

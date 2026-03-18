@@ -388,7 +388,7 @@
             max-height: 85vh;
             object-fit: contain;
         }
-        @media (max-width: 767.98px) {
+        @media (max-width: 767px) {
             .justified-gallery-item {
                 height: 120px;
             }
@@ -400,7 +400,7 @@
                 min-height: 62vh;
             }
         }
-        @media (min-width: 768px) and (max-width: 991.98px) {
+        @media (min-width: 768px) and (max-width: 991px) {
             .justified-gallery-item {
                 height: 135px;
             }
@@ -409,7 +409,7 @@
                 max-width: calc(50% - 4px);
             }
         }
-        @media (min-width: 992px) and (max-width: 1199.98px) {
+        @media (min-width: 992px) and (max-width: 1199px) {
             .justified-gallery-item {
                 height: 150px;
             }
@@ -417,10 +417,12 @@
     </style>
     <script>
         (function () {
-            if (window.__skdGalleryInit) {
+            const galleryWindow = /** @type {Window & { __skdGalleryInit?: boolean }} */ (window);
+
+            if (galleryWindow.__skdGalleryInit) {
                 return;
             }
-            window.__skdGalleryInit = true;
+            galleryWindow.__skdGalleryInit = true;
 
             const postaviPocetnuSliku = (carouselElement, index) => {
                 if (!carouselElement) {

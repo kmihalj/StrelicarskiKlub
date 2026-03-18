@@ -30,8 +30,17 @@
 
 <script src="{{ asset('assets/ckeditor5/ckeditor5.js') }}"></script>
 <script src="{{ asset('assets/ckeditor5/hr.js') }}"></script>
-<script>
-    CKEDITOR.ClassicEditor.create(document.getElementById("opis_turnira2"), {
+    <script>
+    (() => {
+        const editorNamespace = window['CKEDITOR'];
+        const classicEditor = editorNamespace ? editorNamespace['ClassicEditor'] : null;
+        const opisTurniraElement = document.getElementById('opis_turnira2');
+
+        if (!classicEditor || !opisTurniraElement) {
+            return;
+        }
+
+        classicEditor.create(opisTurniraElement, {
         toolbar: {
             items: [
                 'heading', '|',
@@ -145,7 +154,8 @@
             'PasteFromOfficeEnhanced',
             'CaseChange'
         ]
-    });
+        });
+    })();
 </script>
 <style>
     .ck-content {

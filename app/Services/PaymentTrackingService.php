@@ -10,9 +10,13 @@ use App\Models\MembershipPaymentOption;
 use App\Models\MembershipPaymentOptionPrice;
 use App\Models\SiteSetting;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
+use RuntimeException;
+use Throwable;
 
 /**
  * Servis zadužen za kompletan životni ciklus članarina:
@@ -114,7 +118,7 @@ class PaymentTrackingService
 
         $archivedCount = 0;
         if ($this->supportsArchivedOptions()) {
-            $archivedCount = (int)MembershipPaymentOption::query()
+            $archivedCount = MembershipPaymentOption::query()
                 ->where('is_archived', true)
                 ->count();
         }
@@ -126,8 +130,8 @@ class PaymentTrackingService
             'paymentInfoClanakId' => $this->paymentInfoArticleId(),
             'paymentOptions' => $options,
             'paymentOptionsArchivedCount' => $archivedCount,
-            'schoolTuitionAdultAmount' => (float)($this->normalizeAmount($siteSettings->school_tuition_adult_amount ?? null) ?? 100.00),
-            'schoolTuitionMinorAmount' => (float)($this->normalizeAmount($siteSettings->school_tuition_minor_amount ?? null) ?? 70.00),
+            'schoolTuitionAdultAmount' => $this->normalizeAmount($siteSettings->school_tuition_adult_amount ?? null) ?? 100.00,
+            'schoolTuitionMinorAmount' => $this->normalizeAmount($siteSettings->school_tuition_minor_amount ?? null) ?? 70.00,
         ];
     }
 
@@ -293,12 +297,12 @@ class PaymentTrackingService
     public function createOption(array $data, int $adminUserId): MembershipPaymentOption
     {
         if (!$this->supportsPaymentTracking()) {
-            throw new \RuntimeException('Praćenje plaćanja nije dostupno.');
+            throw new RuntimeException('Praćenje plaćanja nije dostupno.');
         }
 
         $name = $this->normalizeText($data['name'] ?? null);
         if ($name === null) {
-            throw new \InvalidArgumentException('Naziv vrste plaćanja je obavezan.');
+            throw new InvalidArgumentException('Naziv vrste plaćanja je obavezan.');
         }
 
         ['period_type' => $periodType, 'period_anchor' => $periodAnchor] = $this->normalizePeriodSettings(
@@ -359,11 +363,11 @@ class PaymentTrackingService
     public function archiveOption(int $optionId): void
     {
         if (!$this->supportsPaymentTracking()) {
-            throw new \RuntimeException('Praćenje plaćanja nije dostupno.');
+            throw new RuntimeException('Praćenje plaćanja nije dostupno.');
         }
 
         if (!$this->supportsArchivedOptions()) {
-            throw new \RuntimeException('Arhiviranje modela plaćanja nije dostupno dok se ne pokrene migracija baze.');
+            throw new RuntimeException('Arhiviranje modela plaćanja nije dostupno dok se ne pokrene migracija baze.');
         }
 
         $option = MembershipPaymentOption::query()->findOrFail($optionId);
@@ -384,7 +388,7 @@ class PaymentTrackingService
     public function assignProfileToClan(Clanovi $clan, array $data, int $adminUserId): ClanPaymentProfile
     {
         if (!$this->supportsPaymentTracking()) {
-            throw new \RuntimeException('Praćenje plaćanja nije dostupno.');
+            throw new RuntimeException('Praćenje plaćanja nije dostupno.');
         }
 
         $this->normalizeSeasonalOptionsCatalog();
@@ -428,12 +432,12 @@ class PaymentTrackingService
     {
         $amount = $this->normalizeAmount($data['amount'] ?? null);
         if ($amount === null || $amount <= 0) {
-            throw new \InvalidArgumentException('Iznos mora biti veći od 0.');
+            throw new InvalidArgumentException('Iznos mora biti veći od 0.');
         }
 
         $title = $this->normalizeText($data['title'] ?? null);
         if ($title === null) {
-            throw new \InvalidArgumentException('Naziv dodatnog plaćanja je obavezan.');
+            throw new InvalidArgumentException('Naziv dodatnog plaćanja je obavezan.');
         }
 
         $description = $this->normalizeText($data['description'] ?? null);
@@ -490,7 +494,7 @@ class PaymentTrackingService
                     ?? ($metadata['payment_variant'] ?? null)
             );
 
-            $effectiveAmount = $this->calculateVariantAmount($charge, $baseAmount, $resolvedVariant);
+            $effectiveAmount = $this->calculateVariantAmount($baseAmount, $resolvedVariant);
             $manualAmount = $this->normalizeAmount($amount);
             if ($manualAmount !== null && $manualAmount > 0) {
                 $effectiveAmount = $manualAmount;
@@ -557,7 +561,7 @@ class PaymentTrackingService
             return;
         }
 
-        throw new \InvalidArgumentException('Stavku plaćanja nije moguće obrisati.');
+        throw new InvalidArgumentException('Stavku plaćanja nije moguće obrisati.');
     }
 
     /**
@@ -660,7 +664,7 @@ class PaymentTrackingService
     public function resolvedChargeAmount(ClanPaymentCharge $charge, bool $preferPreferred = false): float
     {
         $variant = $this->selectedVariantForCharge($charge, $preferPreferred);
-        return $this->calculateVariantAmount($charge, $this->baseAmountForCharge($charge), $variant);
+        return $this->calculateVariantAmount($this->baseAmountForCharge($charge), $variant);
     }
 
     /**
@@ -727,6 +731,7 @@ class PaymentTrackingService
     /**
      * Vraća sažeti status članarine člana za prikaz u listama članova (plaćeno ili iznos duga).
      */
+    /** @noinspection PhpUnused */
     public function listStatusForClan(Clanovi $clan): ?array
     {
         $summary = $this->memberSummaryReadOnly($clan);
@@ -787,8 +792,10 @@ class PaymentTrackingService
 
         $statuses = [];
         foreach ($ids as $clanId) {
-            $profile = $profilesByClan->get($clanId);
-            $charges = $chargesByClan->get($clanId, collect());
+            $profileByClan = $profilesByClan->get($clanId);
+            $profile = $profileByClan instanceof ClanPaymentProfile ? $profileByClan : null;
+            $chargesByClanId = $chargesByClan->get($clanId);
+            $charges = $chargesByClanId instanceof Collection ? $chargesByClanId : collect();
             $profileConfigured = $profile !== null && $profile->paymentOption !== null;
             if (!$profileConfigured && $charges->isEmpty()) {
                 $statuses[$clanId] = null;
@@ -1008,11 +1015,11 @@ class PaymentTrackingService
                     return false;
                 }
 
-                $variant = $this->selectedVariantForCharge($charge, false);
+                $variant = $this->selectedVariantForCharge($charge);
                 return $this->isSupportingVariant($variant);
             })
             ->map(function (ClanPaymentCharge $charge): string {
-                $variant = $this->selectedVariantForCharge($charge, false);
+                $variant = $this->selectedVariantForCharge($charge);
                 return $this->restrictionNoteForCharge($charge, $variant) ?? 'Napomena: plaćeno je kao podupirući član.';
             })
             ->filter(static fn (?string $note): bool => !empty($note))
@@ -1072,7 +1079,7 @@ class PaymentTrackingService
         $descriptionFull = $this->buildHubDescription($clan, $charge, $selectedVariant);
         $description = $this->sanitizeHubPayloadText($descriptionFull);
 
-        // Keep amount format identical to parepristizu.com generator (e.g. 90.00).
+        // Keep amount format identical to parepristizu.com generator (for example, 90.00).
         $amountValue = number_format($amount, 2, '.', '');
 
         $model = '00';
@@ -1387,7 +1394,7 @@ class PaymentTrackingService
     private function generatePeriods(MembershipPaymentOption $option, Carbon $startDate, Carbon $horizonEnd): array
     {
         return match ($option->period_type) {
-            'monthly' => $this->generateMonthlyPeriods($option, $startDate, $horizonEnd),
+            'monthly' => $this->generateMonthlyPeriods($startDate, $horizonEnd),
             'seasonal' => $this->generateSeasonalPeriods($option, $startDate, $horizonEnd),
             'annual' => $this->generateAnnualPeriods($option, $startDate, $horizonEnd),
             default => [],
@@ -1397,9 +1404,9 @@ class PaymentTrackingService
     /**
      * Određuje krajnji datum do kojeg unaprijed generiramo automatske stavke članarine.
      */
-    private function resolveAutoChargeHorizonEnd(MembershipPaymentOption $option, Carbon $referenceDate): Carbon
+    private function resolveAutoChargeHorizonEnd(MembershipPaymentOption $option, CarbonInterface $referenceDate): Carbon
     {
-        $today = $referenceDate->copy()->startOfDay();
+        $today = Carbon::instance($referenceDate)->startOfDay();
         $year = (int)$today->format('Y');
         $month = (int)$today->format('n');
 
@@ -1435,7 +1442,7 @@ class PaymentTrackingService
     /**
      * Generira skup podataka prema poslovnim pravilima.
      */
-    private function generateMonthlyPeriods(MembershipPaymentOption $option, Carbon $startDate, Carbon $horizonEnd): array
+    private function generateMonthlyPeriods(Carbon $startDate, Carbon $horizonEnd): array
     {
         $periods = [];
         $cursor = $startDate->copy()->firstOfMonth();
@@ -1470,15 +1477,15 @@ class PaymentTrackingService
     private function generateSeasonalPeriods(MembershipPaymentOption $option, Carbon $startDate, Carbon $horizonEnd): array
     {
         $periods = [];
-        $startYear = (int)$startDate->copy()->subYears(1)->format('Y');
-        $endYear = (int)$horizonEnd->copy()->addYears(1)->format('Y');
+        $startYear = (int)$startDate->copy()->subYear()->format('Y');
+        $endYear = (int)$horizonEnd->copy()->addYear()->format('Y');
 
         for ($year = $startYear; $year <= $endYear; $year++) {
             $seasonDefinitions = [];
 
             if ($option->period_anchor === 'oct' || $option->period_anchor === 'both') {
                 $seasonDefinitions[] = [
-                    'period_start' => Carbon::create($year, 10, 1)->startOfDay(),
+                    'period_start' => Carbon::create($year, 10)->startOfDay(),
                     'period_end' => Carbon::create($year + 1, 3, 31)->endOfDay(),
                     'period_key' => 'season-oct-' . $year,
                     'title' => 'Dvoranska sezona ' . $year . '/' . ($year + 1),
@@ -1487,7 +1494,7 @@ class PaymentTrackingService
 
             if ($option->period_anchor === 'apr' || $option->period_anchor === 'both') {
                 $seasonDefinitions[] = [
-                    'period_start' => Carbon::create($year, 4, 1)->startOfDay(),
+                    'period_start' => Carbon::create($year, 4)->startOfDay(),
                     'period_end' => Carbon::create($year, 9, 30)->endOfDay(),
                     'period_key' => 'season-apr-' . $year,
                     'title' => 'Vanjska sezona ' . $year,
@@ -1534,11 +1541,11 @@ class PaymentTrackingService
         $outdoorOption = $this->resolveSeasonalOptionForAnchor($selectedOption, 'apr');
 
         $periods = [];
-        $startYear = (int)$startDate->copy()->subYears(1)->format('Y');
-        $endYear = (int)$horizonEnd->copy()->addYears(1)->format('Y');
+        $startYear = (int)$startDate->copy()->subYear()->format('Y');
+        $endYear = (int)$horizonEnd->copy()->addYear()->format('Y');
 
         for ($year = $startYear; $year <= $endYear; $year++) {
-            $indoorStart = Carbon::create($year, 10, 1)->startOfDay();
+            $indoorStart = Carbon::create($year, 10)->startOfDay();
             $indoorEnd = Carbon::create($year + 1, 3, 31)->endOfDay();
             if (!$indoorEnd->lt($startDate) && !$indoorStart->gt($horizonEnd)) {
                 $periods[] = [
@@ -1552,7 +1559,7 @@ class PaymentTrackingService
                 ];
             }
 
-            $outdoorStart = Carbon::create($year, 4, 1)->startOfDay();
+            $outdoorStart = Carbon::create($year, 4)->startOfDay();
             $outdoorEnd = Carbon::create($year, 9, 30)->endOfDay();
             if (!$outdoorEnd->lt($startDate) && !$outdoorStart->gt($horizonEnd)) {
                 $periods[] = [
@@ -1627,17 +1634,17 @@ class PaymentTrackingService
     private function generateAnnualPeriods(MembershipPaymentOption $option, Carbon $startDate, Carbon $horizonEnd): array
     {
         $periods = [];
-        $startYear = (int)$startDate->copy()->subYears(1)->format('Y');
-        $endYear = (int)$horizonEnd->copy()->addYears(1)->format('Y');
+        $startYear = (int)$startDate->copy()->subYear()->format('Y');
+        $endYear = (int)$horizonEnd->copy()->addYear()->format('Y');
 
         for ($year = $startYear; $year <= $endYear; $year++) {
             if ($option->period_anchor === 'oct') {
-                $periodStart = Carbon::create($year, 10, 1)->startOfDay();
+                $periodStart = Carbon::create($year, 10)->startOfDay();
                 $periodEnd = Carbon::create($year + 1, 9, 30)->endOfDay();
                 $periodKey = 'annual-oct-' . $year;
                 $title = 'Godišnja članarina ' . $year . '/' . ($year + 1) . ' (01.10.-30.09.)';
             } else {
-                $periodStart = Carbon::create($year, 4, 1)->startOfDay();
+                $periodStart = Carbon::create($year, 4)->startOfDay();
                 $periodEnd = Carbon::create($year + 1, 3, 31)->endOfDay();
                 $periodKey = 'annual-apr-' . $year;
                 $title = 'Godišnja članarina ' . $year . '/' . ($year + 1) . ' (01.04.-31.03.)';
@@ -1716,17 +1723,17 @@ class PaymentTrackingService
     /**
      * Izračunava vrijednosti prema definiranim formulama i pravilima.
      */
-    private function calculateVariantAmount(ClanPaymentCharge $charge, float $baseAmount, ?string $variant): float
+    private function calculateVariantAmount(float $baseAmount, ?string $variant): float
     {
         if ($variant === null) {
             return round($baseAmount, 2);
         }
 
         return match ($variant) {
-            self::VARIANT_SUPPORTING => round($baseAmount * 0.5, 2),
+            self::VARIANT_SUPPORTING,
+            self::VARIANT_ANNUAL_SUPPORTING_BOTH => round($baseAmount * 0.5, 2),
             self::VARIANT_ANNUAL_SUPPORTING_INDOOR,
             self::VARIANT_ANNUAL_SUPPORTING_OUTDOOR => round($baseAmount * 0.75, 2),
-            self::VARIANT_ANNUAL_SUPPORTING_BOTH => round($baseAmount * 0.5, 2),
             default => round($baseAmount, 2),
         };
     }
@@ -1818,7 +1825,7 @@ class PaymentTrackingService
     {
         $normalizedPeriodType = trim($periodType);
         if (!in_array($normalizedPeriodType, ['monthly', 'seasonal', 'annual', 'exempt'], true)) {
-            throw new \InvalidArgumentException('Tip razdoblja nije ispravan.');
+            throw new InvalidArgumentException('Tip razdoblja nije ispravan.');
         }
 
         $normalizedPeriodAnchor = null;
@@ -1885,7 +1892,7 @@ class PaymentTrackingService
 
         try {
             return Carbon::parse($normalized)->toDateString();
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return null;
         }
     }
@@ -1915,7 +1922,7 @@ class PaymentTrackingService
      */
     private function buildHubDescription(Clanovi $clan, ClanPaymentCharge $charge, ?string $variant): string
     {
-        $payer = trim((string)$clan->Ime . ' ' . (string)$clan->Prezime);
+        $payer = trim(($clan->Ime ?? '') . ' ' . ($clan->Prezime ?? ''));
         $description = 'Plaćanje za: ' . $payer . ' za: ' . $this->resolveHubPeriodLabel($charge);
 
         if ($this->isSupportingVariant($variant)) {
@@ -1945,8 +1952,7 @@ class PaymentTrackingService
             return 'Godišnja članarina za godinu ' . $year . '/' . ($year + 1) . '.';
         }
 
-        $title = $this->normalizeText($charge->title) ?? 'članarina';
-        return $title;
+        return $this->normalizeText($charge->title) ?? 'članarina';
     }
 
     /**
@@ -2001,7 +2007,7 @@ class PaymentTrackingService
     /**
      * Čisti tekst HUB payload-a od nedopuštenih znakova i predugih vrijednosti.
      */
-    private function sanitizeHubPayloadText(string $value, ?int $maxLength = null): string
+    private function sanitizeHubPayloadText(string $value): string
     {
         $normalized = str_replace(["\r\n", "\r", "\n"], ' ', $value);
         $normalized = trim((string)(preg_replace('/\s+/u', ' ', $normalized) ?? $normalized));
@@ -2009,11 +2015,6 @@ class PaymentTrackingService
             return '';
         }
 
-        $normalized = preg_replace('/[\x00-\x1F\x7F]/u', '', $normalized) ?? $normalized;
-        if ($maxLength === null || mb_strlen($normalized) <= $maxLength) {
-            return $normalized;
-        }
-
-        return mb_substr($normalized, 0, $maxLength);
+        return preg_replace('/[\x00-\x1F\x7F]/u', '', $normalized) ?? $normalized;
     }
 }

@@ -32,17 +32,8 @@ class ClanoviController extends Controller
         try {
             $datumPocetkaClanstva = $request->input('datum_pocetka_clanstva');
             $clan = new Clanovi();
-            $clan->Prezime = $request->input('Prezime');
-            $clan->Ime = $request->input('Ime');
-            $clan->datum_rodjenja = $request->input('datum_rodjenja');
-            $clan->oib = $request->input('oib');
-            $clan->br_telefona = $request->input('br_telefona');
-            $clan->email = $request->input('email');
-            $clan->datum_pocetka_clanstva = $datumPocetkaClanstva;
-            $clan->clan_od = empty($datumPocetkaClanstva) ? null : (int)date('Y', strtotime((string)$datumPocetkaClanstva));
-            $clan->broj_licence = (isset($request->broj_licence)) ? $request->broj_licence : 'nema licencu';
-            $clan->spol = $request->input('spol');
-            $clan->aktivan = (bool)$request->input('aktivan');
+            $this->postaviOsnovnePodatkeClana($clan, $request, $datumPocetkaClanstva);
+            $clan->clan_od = empty($datumPocetkaClanstva) ? null : $this->izracunajGodinuClanstva((string)$datumPocetkaClanstva);
             $clan->save();
             return redirect()->route('javno.clanovi');
         } catch (Throwable $e) {
@@ -78,19 +69,10 @@ class ClanoviController extends Controller
     {
         $clan = Clanovi::where('id', $request->input('clan_id'))->firstOrFail();
         $datumPocetkaClanstva = $request->input('datum_pocetka_clanstva');
-        $clan->Prezime = $request->input('Prezime');
-        $clan->Ime = $request->input('Ime');
-        $clan->datum_rodjenja = $request->input('datum_rodjenja');
-        $clan->oib = $request->input('oib');
-        $clan->br_telefona = $request->input('br_telefona');
-        $clan->email = $request->input('email');
-        $clan->datum_pocetka_clanstva = $datumPocetkaClanstva;
+        $this->postaviOsnovnePodatkeClana($clan, $request, $datumPocetkaClanstva);
         if (!empty($datumPocetkaClanstva)) {
-            $clan->clan_od = (int)date('Y', strtotime((string)$datumPocetkaClanstva));
+            $clan->clan_od = $this->izracunajGodinuClanstva((string)$datumPocetkaClanstva);
         }
-        $clan->broj_licence = (isset($request->broj_licence)) ? $request->broj_licence : 'nema licencu';
-        $clan->spol = $request->input('spol');
-        $clan->aktivan = (bool)$request->input('aktivan');
         $clan->save();
         return redirect()->route('admin.clanovi.prikaz_clana', $clan)->with('success', 'Spremanje podataka OK');
     }
@@ -427,5 +409,30 @@ class ClanoviController extends Controller
         }
 
         return trim($naziv);
+    }
+
+    /**
+     * Postavlja zajednička osnovna polja člana iz requesta.
+     */
+    private function postaviOsnovnePodatkeClana(Clanovi $clan, Request $request, ?string $datumPocetkaClanstva): void
+    {
+        $clan->Prezime = $request->input('Prezime');
+        $clan->Ime = $request->input('Ime');
+        $clan->datum_rodjenja = $request->input('datum_rodjenja');
+        $clan->oib = $request->input('oib');
+        $clan->br_telefona = $request->input('br_telefona');
+        $clan->email = $request->input('email');
+        $clan->datum_pocetka_clanstva = $datumPocetkaClanstva;
+        $clan->broj_licence = $request->input('broj_licence') ?? 'nema licencu';
+        $clan->spol = $request->input('spol');
+        $clan->aktivan = (bool)$request->input('aktivan');
+    }
+
+    /**
+     * Izvlači godinu početka članstva iz datuma.
+     */
+    private function izracunajGodinuClanstva(string $datumPocetkaClanstva): int
+    {
+        return (int)date('Y', strtotime($datumPocetkaClanstva));
     }
 }

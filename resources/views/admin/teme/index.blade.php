@@ -110,7 +110,7 @@
                                                     @endif
                                                 </td>
                                                 <td>
-                                                    @if((bool)$theme->is_active)
+                                                    @if($theme->is_active)
                                                         <span class="badge text-bg-success">Aktivna u bazi</span>
                                                     @else
                                                         <span class="badge text-bg-secondary">Neaktivna u bazi</span>
@@ -375,24 +375,31 @@
                 return;
             }
 
-            const colorInputs = Array.from(document.querySelectorAll('.js-theme-color'));
-            const colorPickers = Array.from(document.querySelectorAll('.js-theme-color-picker'));
+            const colorInputs = /** @type {HTMLInputElement[]} */ (Array.from(document.querySelectorAll('.js-theme-color')));
+            const colorPickers = /** @type {HTMLInputElement[]} */ (Array.from(document.querySelectorAll('.js-theme-color-picker')));
 
             const preview = {
-                root: document.getElementById('themePreview'),
-                nav: document.getElementById('themePreviewNav'),
-                navText: document.getElementById('themePreviewNavText'),
-                navBadge: document.getElementById('themePreviewNavBadge'),
-                body: document.getElementById('themePreviewBody'),
-                dropdown: document.getElementById('themePreviewDropdown'),
-                link: document.getElementById('themePreviewLink'),
+                root: /** @type {HTMLElement|null} */ (document.getElementById('themePreview')),
+                nav: /** @type {HTMLElement|null} */ (document.getElementById('themePreviewNav')),
+                navText: /** @type {HTMLElement|null} */ (document.getElementById('themePreviewNavText')),
+                navBadge: /** @type {HTMLElement|null} */ (document.getElementById('themePreviewNavBadge')),
+                body: /** @type {HTMLElement|null} */ (document.getElementById('themePreviewBody')),
+                dropdown: /** @type {HTMLElement|null} */ (document.getElementById('themePreviewDropdown')),
+                link: /** @type {HTMLAnchorElement|null} */ (document.getElementById('themePreviewLink')),
                 buttons: {
-                    primary: document.getElementById('previewPrimary'),
-                    danger: document.getElementById('previewDanger'),
-                    success: document.getElementById('previewSuccess'),
-                    warning: document.getElementById('previewWarning'),
+                    primary: /** @type {HTMLButtonElement|null} */ (document.getElementById('previewPrimary')),
+                    danger: /** @type {HTMLButtonElement|null} */ (document.getElementById('previewDanger')),
+                    success: /** @type {HTMLButtonElement|null} */ (document.getElementById('previewSuccess')),
+                    warning: /** @type {HTMLButtonElement|null} */ (document.getElementById('previewWarning')),
                 }
             };
+
+            if (
+                !preview.root || !preview.nav || !preview.navText || !preview.navBadge || !preview.body || !preview.dropdown || !preview.link
+                || !preview.buttons.primary || !preview.buttons.danger || !preview.buttons.success || !preview.buttons.warning
+            ) {
+                return;
+            }
 
             function isValidHex(hex) {
                 return /^#[0-9A-Fa-f]{6}$/.test((hex || '').trim());
@@ -424,7 +431,7 @@
             }
 
             function value(id, fallback) {
-                const el = document.getElementById(id);
+                const el = /** @type {HTMLInputElement|null} */ (document.getElementById(id));
                 return normalizeHex(el ? el.value : fallback, fallback);
             }
 
@@ -501,7 +508,11 @@
             colorPickers.forEach((picker) => {
                 picker.addEventListener('input', () => {
                     const targetId = picker.getAttribute('data-target');
-                    const input = document.getElementById(targetId);
+                    if (!targetId) {
+                        return;
+                    }
+
+                    const input = /** @type {HTMLInputElement|null} */ (document.getElementById(targetId));
                     if (input) {
                         input.value = picker.value;
                         applyPreview();
@@ -511,7 +522,7 @@
 
             colorInputs.forEach((input) => {
                 input.addEventListener('input', () => {
-                    const picker = document.getElementById(input.id + '_picker');
+                    const picker = /** @type {HTMLInputElement|null} */ (document.getElementById(input.id + '_picker'));
                     if (picker && isValidHex(input.value)) {
                         picker.value = input.value;
                     }

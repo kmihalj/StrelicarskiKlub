@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -14,7 +13,6 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  */
 class PolaznikSkole extends Model
 {
-    use HasFactory;
 
     protected $table = 'polaznici_skole';
 
@@ -58,6 +56,7 @@ class PolaznikSkole extends Model
     /**
      * Ako je polaznik prešao u članstvo, vraća povezani zapis člana.
      */
+    /** @noinspection PhpUnused */
     public function prebacenClan(): BelongsTo
     {
         return $this->belongsTo(Clanovi::class, 'prebacen_u_clana_id');
@@ -82,6 +81,7 @@ class PolaznikSkole extends Model
     /**
      * Vraća profil praćenja školarine za ovog polaznika.
      */
+    /** @noinspection PhpUnused */
     public function paymentProfile(): HasOne
     {
         return $this->hasOne(PolaznikPaymentProfile::class, 'polaznik_skole_id', 'id');
@@ -90,6 +90,7 @@ class PolaznikSkole extends Model
     /**
      * Vraća sve stavke zaduženja i uplata školarine polaznika.
      */
+    /** @noinspection PhpUnused */
     public function paymentCharges(): HasMany
     {
         return $this->hasMany(PolaznikPaymentCharge::class, 'polaznik_skole_id', 'id');

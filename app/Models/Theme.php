@@ -30,6 +30,7 @@ class Theme extends Model
     /**
      * Scope koji vraća samo aktivne teme kako bi se izbjeglo ručno ponavljanje uvjeta `is_active = true`.
      */
+    /** @noinspection PhpUnused */
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);

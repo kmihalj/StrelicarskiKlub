@@ -1,5 +1,5 @@
 {{-- SVG ikona koja se koristi u administratorskom sučelju (akcije, statusi i oznake medalja). --}}
-<svg height="30px" width="30px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300.439 300.439" xml:space="preserve">
+<svg height="30px" width="30px" id="Layer_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300.439 300.439" xml:space="preserve">
     <g>
         <path style="fill:#BF392C;" d="M276.967,0h-84.498L70.415,178.385h84.498L276.967,0z"/>
         <path style="fill:#E2574C;" d="M23.472,0h84.498l122.053,178.385h-84.498L23.472,0z"/>

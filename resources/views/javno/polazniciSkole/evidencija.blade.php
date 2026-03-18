@@ -1,8 +1,13 @@
 {{-- Evidencija dolazaka polaznika škole po datumima treninga. --}}
 @extends('layouts.app')
 
+@php
+    use App\Models\PolaznikSkole;
+@endphp
+
 @section('content')
     <style>
+        /*noinspection CssUnknownPseudoSelector,CssUnusedSymbol*/
         .skola-dolazak-input {
             height: 2rem !important;
             text-align: center !important;
@@ -10,11 +15,6 @@
             font-size: .7rem;
             padding: .18rem .12rem !important;
             line-height: 1.15 !important;
-        }
-
-        .skola-dolazak-input::-webkit-datetime-edit {
-            padding: 0;
-            line-height: 1.15;
         }
 
         .skola-dolazak-input::-webkit-date-and-time-value {
@@ -36,7 +36,6 @@
                 line-height: 1.2 !important;
             }
 
-            .skola-dolazak-input::-webkit-datetime-edit,
             .skola-dolazak-input::-webkit-date-and-time-value {
                 line-height: 1.2;
             }
@@ -67,6 +66,7 @@
 
                 @forelse($polaznici as $polaznik)
                     @php
+                        /** @var PolaznikSkole $polaznik */
                         $dolasciPoRednom = $polaznik->dolasci->keyBy('redni_broj');
                     @endphp
                     <div class="card mb-3" data-polaznik-row="{{ $polaznik->id }}">
@@ -85,7 +85,7 @@
                                                    class="form-control form-control-sm js-dolazak-input skola-dolazak-input"
                                                    id="dolazak_{{ $polaznik->id }}_{{ $i }}"
                                                    name="dolasci[{{ $polaznik->id }}][{{ $i }}]"
-                                                   value="{{ empty($dolasciPoRednom[$i]?->datum) ? '' : optional($dolasciPoRednom[$i]->datum)->format('Y-m-d') }}"
+                                                   value="{{ empty($dolasciPoRednom[$i]?->datum) ? '' : $dolasciPoRednom[$i]->datum?->format('Y-m-d') }}"
                                                    form="spremi_evidenciju_dolazaka">
                                         </div>
                                     @endfor
@@ -103,7 +103,7 @@
                                     @for($i = 1; $i <= 16; $i++)
                                         <div class="col-3">
                                             <div class="border rounded p-1 h-100 small">
-                                                <div>{{ empty($dolasciPoRednom[$i]?->datum) ? '-' : optional($dolasciPoRednom[$i]->datum)->format('d.m.Y.') }}</div>
+                                                <div>{{ empty($dolasciPoRednom[$i]?->datum) ? '-' : $dolasciPoRednom[$i]->datum?->format('d.m.Y.') }}</div>
                                             </div>
                                         </div>
                                     @endfor
@@ -130,12 +130,14 @@
             document.querySelectorAll('.js-popuni-zadnje').forEach(function (button) {
                 button.addEventListener('click', function () {
                     const rowId = button.getAttribute('data-row-id');
-                    const row = rowId ? document.querySelector('[data-polaznik-row="' + rowId + '"]') : null;
+                    const row = rowId
+                        ? /** @type {HTMLElement|null} */ (document.querySelector('[data-polaznik-row="' + rowId + '"]'))
+                        : null;
                     if (!row) {
                         return;
                     }
 
-                    const inputs = Array.from(row.querySelectorAll('.js-dolazak-input'));
+                    const inputs = /** @type {HTMLInputElement[]} */ (Array.from(row.querySelectorAll('.js-dolazak-input')));
                     if (inputs.length === 0) {
                         return;
                     }

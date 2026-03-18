@@ -5,17 +5,19 @@
     @php
         $clanoviOpcije = $clanovi->map(fn ($clan) => [
             'id' => (int)$clan->id,
-            'label' => trim((string)$clan->Ime) . ' ' . trim((string)$clan->Prezime) . ' (' . (string)$clan->oib . ')',
+            'label' => trim($clan->Ime ?? '') . ' ' . trim($clan->Prezime ?? '') . ' (' . ($clan->oib ?? '') . ')',
         ])->values();
 
         $polazniciOpcije = $polaznici->map(fn ($polaznik) => [
             'id' => (int)$polaznik->id,
-            'label' => trim((string)$polaznik->Ime) . ' ' . trim((string)$polaznik->Prezime) . ' (' . (string)$polaznik->oib . ')',
+            'label' => trim($polaznik->Ime ?? '') . ' ' . trim($polaznik->Prezime ?? '') . ' (' . ($polaznik->oib ?? '') . ')',
             'prebacen' => !empty($polaznik->prebacen_u_clana_id),
         ])->values();
 
         $odabraniRoditeljClanovi = $user->djecaClanovi->pluck('id')->map(fn ($id) => (int)$id)->all();
         $odabraniRoditeljPolaznici = $user->djecaPolaznici->pluck('id')->map(fn ($id) => (int)$id)->all();
+        $stariRoditeljClanovi = collect(old('roditelj_clanovi', $odabraniRoditeljClanovi))->map(fn ($id) => (int)$id)->all();
+        $stariRoditeljPolaznici = collect(old('roditelj_polaznici', $odabraniRoditeljPolaznici))->map(fn ($id) => (int)$id)->all();
         $staraRola = (int)old('rola', $user->rola);
         $stariPovezaniId = old('povezani_id');
         $inicijalniPovezaniClanId = null;
@@ -25,6 +27,10 @@
                 $inicijalniPovezaniClanId = null;
             }
         }
+        $inicijalnaPoveznicaKlasa = $inicijalniPovezaniClanId === null ? ' d-none' : '';
+        $inicijalnaPoveznicaHref = $inicijalniPovezaniClanId !== null
+            ? route('javno.clanovi.prikaz_clana', $inicijalniPovezaniClanId)
+            : '#';
     @endphp
 
     <div class="container-xxl">
@@ -87,8 +93,8 @@
                         </div>
                         <div class="col-lg-3 d-flex align-items-end">
                             <a id="povezani_clan_link"
-                               class="btn btn-sm btn-outline-danger @if(empty($inicijalniPovezaniClanId)) d-none @endif"
-                               href="@if(!empty($inicijalniPovezaniClanId)){{ route('javno.clanovi.prikaz_clana', $inicijalniPovezaniClanId) }}@else#@endif"
+                               class="btn btn-sm btn-outline-danger{{ $inicijalnaPoveznicaKlasa }}"
+                               href="{{ $inicijalnaPoveznicaHref }}"
                                target="_blank">
                                 Profil povezanog člana
                             </a>
@@ -100,7 +106,7 @@
                                        id="je_roditelj"
                                        name="je_roditelj"
                                        value="1"
-                                       @if((bool)old('je_roditelj', $user->je_roditelj)) checked @endif>
+                                       @checked((int)old('je_roditelj', $user->je_roditelj) === 1)>
                                 <label class="form-check-label" for="je_roditelj">Roditelj</label>
                             </div>
                         </div>
@@ -108,28 +114,22 @@
                         <div class="col-lg-6">
                             <label for="roditelj_clanovi" class="form-label mb-1">Djeca (članovi, maloljetni)</label>
                             <select class="form-select js-roditelj-clanovi" id="roditelj_clanovi" name="roditelj_clanovi[]" multiple size="6">
-                                @foreach($maloljetniClanovi as $clan)
-                                    @php
-                                        $selected = collect(old('roditelj_clanovi', $odabraniRoditeljClanovi))->map(fn ($id) => (int)$id)->contains((int)$clan->id);
-                                    @endphp
-                                    <option value="{{ (int)$clan->id }}" @if($selected) selected @endif>
-                                        {{ trim((string)$clan->Ime) }} {{ trim((string)$clan->Prezime) }} ({{ (string)$clan->oib }})
+                                @php foreach ($maloljetniClanovi as $clan): @endphp
+                                    <option value="{{ (int)$clan->id }}" {{ in_array((int)$clan->id, $stariRoditeljClanovi, true) ? 'selected' : '' }}>
+                                        {{ trim($clan->Ime ?? '') }} {{ trim($clan->Prezime ?? '') }} ({{ $clan->oib ?? '' }})
                                     </option>
-                                @endforeach
+                                @php endforeach; @endphp
                             </select>
                         </div>
 
                         <div class="col-lg-6">
                             <label for="roditelj_polaznici" class="form-label mb-1">Djeca (polaznici škole, maloljetni)</label>
                             <select class="form-select js-roditelj-polaznici" id="roditelj_polaznici" name="roditelj_polaznici[]" multiple size="6">
-                                @foreach($maloljetniPolaznici as $polaznik)
-                                    @php
-                                        $selected = collect(old('roditelj_polaznici', $odabraniRoditeljPolaznici))->map(fn ($id) => (int)$id)->contains((int)$polaznik->id);
-                                    @endphp
-                                    <option value="{{ (int)$polaznik->id }}" @if($selected) selected @endif>
-                                        {{ trim((string)$polaznik->Ime) }} {{ trim((string)$polaznik->Prezime) }} ({{ (string)$polaznik->oib }})
+                                @php foreach ($maloljetniPolaznici as $polaznik): @endphp
+                                    <option value="{{ (int)$polaznik->id }}" {{ in_array((int)$polaznik->id, $stariRoditeljPolaznici, true) ? 'selected' : '' }}>
+                                        {{ trim($polaznik->Ime ?? '') }} {{ trim($polaznik->Prezime ?? '') }} ({{ $polaznik->oib ?? '' }})
                                     </option>
-                                @endforeach
+                                @php endforeach; @endphp
                             </select>
                             <p class="small text-muted mt-1 mb-0">Maksimalno 3 djece po roditelju, 2 roditelja po djetetu.</p>
                         </div>
@@ -166,8 +166,20 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const clanovi = @json($clanoviOpcije);
-            const polaznici = @json($polazniciOpcije);
+            const clanoviRaw = @json($clanoviOpcije);
+            const polazniciRaw = @json($polazniciOpcije);
+            const clanovi = (Array.isArray(clanoviRaw) ? clanoviRaw : []).map((item) => ({
+                id: Number(item && item.id ? item.id : 0),
+                label: String(item && item.label ? item.label : ''),
+            }));
+            const polaznici = (Array.isArray(polazniciRaw) ? polazniciRaw : []).map((item) => {
+                const source = item && typeof item === 'object' ? item : {};
+                const id = Number(source.id || 0);
+                const label = String(source.label || '');
+                const prebacen = Boolean(source['prebacen']);
+
+                return {id, label, prebacen};
+            });
             const zauzetiClanovi = @json($zauzetiClanovi);
             const zauzetiPolaznici = @json($zauzetiPolaznici);
 

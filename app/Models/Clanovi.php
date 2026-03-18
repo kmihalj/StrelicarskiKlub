@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -25,7 +24,6 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  */
 class Clanovi extends Model
 {
-    use HasFactory;
 
     protected $fillable = ['Ime', 'Prezime', 'slika_link', 'datum_rodjenja', 'br_telefona', 'email', 'clan_od', 'datum_pocetka_clanstva', 'aktivan', 'spol', 'oib', 'broj_licence', 'lijecnicki_do', 'lijecnicki_dokument'];
 
@@ -36,6 +34,7 @@ class Clanovi extends Model
     /**
      * Vraća sve pojedinačne rezultate koje je član ostvario na turnirima.
      */
+    /** @noinspection PhpUnused */
     public function rezultatiOpci(): HasMany
     {
         return $this->hasMany(RezultatiOpci::class, 'clan_id', 'id');
@@ -52,6 +51,7 @@ class Clanovi extends Model
     /**
      * Vraća funkcije koje član obavlja u klubu (npr. trener, tajnik).
      */
+    /** @noinspection PhpUnused */
     public function funkcijeUklubu(): HasMany
     {
         return $this->hasMany(clanoviFunkcije::class, 'clan_id', 'id');
@@ -68,6 +68,7 @@ class Clanovi extends Model
     /**
      * Vraća zadnji važeći liječnički pregled člana (po datumu `vrijedi_do`).
      */
+    /** @noinspection PhpUnused */
     public function zadnjiLijecnickiPregled(): HasOne
     {
         return $this->hasOne(ClanLijecnickiPregled::class, 'clan_id', 'id')->latestOfMany('vrijedi_do');
@@ -100,6 +101,7 @@ class Clanovi extends Model
     /**
      * Vraća zapise škole streličarstva koji su kasnije prebačeni na ovog člana.
      */
+    /** @noinspection PhpUnused */
     public function evidencijeSkole(): HasMany
     {
         return $this->hasMany(PolaznikSkole::class, 'prebacen_u_clana_id', 'id');
@@ -108,6 +110,7 @@ class Clanovi extends Model
     /**
      * Vraća sve dvoranske treninge evidentirane za člana.
      */
+    /** @noinspection PhpUnused */
     public function treninziDvorana(): HasMany
     {
         return $this->hasMany(TreninziDvorana::class, 'clan_id', 'id');
@@ -116,6 +119,7 @@ class Clanovi extends Model
     /**
      * Vraća sve vanjske treninge evidentirane za člana.
      */
+    /** @noinspection PhpUnused */
     public function treninziVanjski(): HasMany
     {
         return $this->hasMany(TreninziVanjski::class, 'clan_id', 'id');
@@ -124,6 +128,7 @@ class Clanovi extends Model
     /**
      * Vraća aktivni profil praćenja članarine za člana.
      */
+    /** @noinspection PhpUnused */
     public function paymentProfile(): HasOne
     {
         return $this->hasOne(ClanPaymentProfile::class, 'clan_id', 'id');
@@ -132,6 +137,7 @@ class Clanovi extends Model
     /**
      * Vraća sve stavke zaduženja i uplata članarine ovog člana.
      */
+    /** @noinspection PhpUnused */
     public function paymentCharges(): HasMany
     {
         return $this->hasMany(ClanPaymentCharge::class, 'clan_id', 'id');

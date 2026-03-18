@@ -214,7 +214,7 @@
                                                 <option value={{ $clan->id }}>{{ $clan->Prezime }} {{ $clan->Ime }}</option>
                                             @endforeach
                                         </select>
-                                        <button class="btn btn-outline-danger" type="submit" form="SpremanjeTrenera" d="button-addon2">Spremi</button>
+                                        <button class="btn btn-outline-danger" type="submit" form="SpremanjeTrenera" id="button-addon2">Spremi</button>
                                     </div>
                                 </div>
                                 <div class="col-lg-4 mb-3 align-self-center">
@@ -270,15 +270,23 @@
                                         <div class="row pt-3">
                                             <div class="col-auto mb-2 align-self-center">
                                                 <div class="form-check form-switch ">
-                                                    <input class="form-check-input" form="spremi{{ $dokument->id }}" type="checkbox" id="javno" name="javno" @if($dokument->javno) value=true checked @else value=false @endif onchange="spremi{{ $dokument->id }}.submit()">
-                                                    <label class="form-check-label" for="javno">Javno dostupno</label>
+                                                    <input type="hidden" form="spremi{{ $dokument->id }}" name="javno" value="0">
+                                                    <input class="form-check-input"
+                                                           form="spremi{{ $dokument->id }}"
+                                                           type="checkbox"
+                                                           id="javno_{{ $dokument->id }}"
+                                                           name="javno"
+                                                           value="1"
+                                                           @checked($dokument->javno)
+                                                           onchange="if (this.form) { this.form.submit(); }">
+                                                    <label class="form-check-label" for="javno_{{ $dokument->id }}">Javno dostupno</label>
                                                 </div>
                                             </div>
                                             <div class="col-auto mb-2 align-self-center">
-                                                <label for="opis">Opis:</label>
+                                                <label for="opis_{{ $dokument->id }}">Opis:</label>
                                             </div>
                                             <div class="col-6 mb-2 align-self-center">
-                                                <input type="text" form="spremi{{ $dokument->id }}" class="form-control" name="opis" id="opis" value="{{$dokument->opis}}">
+                                                <input type="text" form="spremi{{ $dokument->id }}" class="form-control" name="opis" id="opis_{{ $dokument->id }}" value="{{$dokument->opis}}">
                                             </div>
                                             <div class="col-auto mb-2 align-self-center">
                                                 <a href="{{ asset('storage/klub/' . $dokument->link_text) }}" target="_blank">{{$dokument->link_text}}</a>
@@ -357,6 +365,4 @@
         @include('layouts.neovlasteno')
     @endsection
 @endguest
-
-
 

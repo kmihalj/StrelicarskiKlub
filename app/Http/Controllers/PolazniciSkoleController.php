@@ -9,16 +9,18 @@ use App\Models\PolaznikSkole;
 use App\Models\PolaznikSkoleDolazak;
 use App\Models\PolaznikSkoleDokument;
 use App\Services\SchoolPaymentService;
+use Carbon\CarbonInterface;
+use InvalidArgumentException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Throwable;
 
 /**
  * Admin i korisnički kontroler za evidenciju polaznika škole, dolazaka, dokumenata i školarine.
@@ -55,6 +57,10 @@ class PolazniciSkoleController extends Controller
 
         if ($paymentTrackingEnabled) {
             foreach ($aktivniPolaznici as $polaznik) {
+                if (!$polaznik instanceof PolaznikSkole) {
+                    continue;
+                }
+
                 if ($showPaymentColumn) {
                     $paymentStatusByPolaznik[(int)$polaznik->id] = $this->schoolPaymentService->listStatusForPolaznik($polaznik);
                 } else {
@@ -73,6 +79,10 @@ class PolazniciSkoleController extends Controller
 
             if ($showPaymentColumn) {
                 foreach ($neaktivniPolaznici as $polaznik) {
+                    if (!$polaznik instanceof PolaznikSkole) {
+                        continue;
+                    }
+
                     $paymentStatusByPolaznik[(int)$polaznik->id] = $this->schoolPaymentService->listStatusForPolaznik($polaznik);
                 }
             }
@@ -133,16 +143,24 @@ class PolazniciSkoleController extends Controller
             ->get(['id'])
             ->keyBy('id');
 
-        DB::transaction(function () use ($request, $aktivniPolaznici): void {
-            foreach ((array)$request->input('dolasci', []) as $polaznikId => $dolasci) {
-                $polaznik = $aktivniPolaznici->get((int)$polaznikId);
-                if ($polaznik === null) {
-                    continue;
-                }
+        try {
+            DB::transaction(function () use ($request, $aktivniPolaznici): void {
+                foreach ((array)$request->input('dolasci', []) as $polaznikId => $dolasci) {
+                    $polaznik = $aktivniPolaznici->get((int)$polaznikId);
+                    if (!$polaznik instanceof PolaznikSkole) {
+                        continue;
+                    }
 
-                $this->syncDolasci($polaznik, is_array($dolasci) ? $dolasci : []);
-            }
-        });
+                    $this->syncDolasci($polaznik, is_array($dolasci) ? $dolasci : []);
+                }
+            });
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()
+                ->route('javno.skola.evidencija.index')
+                ->with('error', 'Spremanje evidencije dolazaka nije uspjelo.');
+        }
 
         return redirect()
             ->route('javno.skola.evidencija.index')
@@ -206,16 +224,25 @@ class PolazniciSkoleController extends Controller
         $this->potvrdiAdmina();
         $validated = $this->validirajPolaznika($request);
 
-        $polaznik = DB::transaction(function () use ($validated): PolaznikSkole {
-            $polaznik = new PolaznikSkole();
-            $this->mapirajPodatkePolaznika($polaznik, $validated);
-            $polaznik->u_skoli = true;
-            $polaznik->save();
+        try {
+            $polaznik = DB::transaction(function () use ($validated): PolaznikSkole {
+                $polaznik = new PolaznikSkole();
+                $this->mapirajPodatkePolaznika($polaznik, $validated);
+                $polaznik->u_skoli = true;
+                $polaznik->save();
 
-            $this->syncDolasci($polaznik, $validated['dolasci'] ?? []);
+                $this->syncDolasci($polaznik, $validated['dolasci'] ?? []);
 
-            return $polaznik;
-        });
+                return $polaznik;
+            });
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()
+                ->route('javno.skola.polaznici.index')
+                ->withInput()
+                ->with('error', 'Spremanje polaznika nije uspjelo.');
+        }
 
         $this->schoolPaymentService->ensureProfile($polaznik, (int)auth()->id());
         $this->schoolPaymentService->summary($polaznik);
@@ -234,13 +261,21 @@ class PolazniciSkoleController extends Controller
         $validated = $this->validirajPolaznika($request, $polaznik);
         $uSkoli = $request->boolean('u_skoli');
 
-        DB::transaction(function () use ($polaznik, $validated, $uSkoli): void {
-            $this->mapirajPodatkePolaznika($polaznik, $validated);
-            $polaznik->u_skoli = $uSkoli;
-            $polaznik->save();
+        try {
+            DB::transaction(function () use ($polaznik, $validated, $uSkoli): void {
+                $this->mapirajPodatkePolaznika($polaznik, $validated);
+                $polaznik->u_skoli = $uSkoli;
+                $polaznik->save();
 
-            $this->syncDolasci($polaznik, $validated['dolasci'] ?? []);
-        });
+                $this->syncDolasci($polaznik, $validated['dolasci'] ?? []);
+            });
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()
+                ->route('javno.skola.polaznici.show', ['polaznik' => $polaznik, 'open_documents' => request()->boolean('open_documents') ? 1 : 0])
+                ->with('error', 'Spremanje podataka polaznika nije uspjelo.');
+        }
 
         $this->schoolPaymentService->ensureProfile($polaznik, (int)auth()->id());
         $this->schoolPaymentService->summary($polaznik);
@@ -310,7 +345,7 @@ class PolazniciSkoleController extends Controller
                 is_string($validated['settlement_type'] ?? null) ? $validated['settlement_type'] : null,
                 (int)auth()->id()
             );
-        } catch (\InvalidArgumentException $exception) {
+        } catch (InvalidArgumentException $exception) {
             return redirect()
                 ->route('javno.skola.polaznici.show', ['polaznik' => $polaznik, 'open_payments' => 1])
                 ->with('error', $exception->getMessage());
@@ -328,25 +363,33 @@ class PolazniciSkoleController extends Controller
     {
         $this->potvrdiAdmina();
 
-        DB::transaction(function () use ($polaznik): void {
-            $polaznik->load(['dokumenti', 'povezaniKorisnik']);
+        try {
+            DB::transaction(function () use ($polaznik): void {
+                $polaznik->load(['dokumenti', 'povezaniKorisnik']);
 
-            foreach ($polaznik->dokumenti as $dokument) {
-                $this->obrisiDatotekuAkoPostoji($dokument->putanja);
-            }
-            Storage::disk('local')->deleteDirectory('private/polaznici_skole/' . $polaznik->id);
-
-            $korisnik = $polaznik->povezaniKorisnik;
-            if ($korisnik !== null) {
-                $korisnik->polaznik_id = null;
-                if ((int)$korisnik->rola === 4) {
-                    $korisnik->rola = 3;
+                foreach ($polaznik->dokumenti as $dokument) {
+                    $this->obrisiDatotekuAkoPostoji($dokument->putanja);
                 }
-                $korisnik->save();
-            }
+                Storage::disk('local')->deleteDirectory('private/polaznici_skole/' . $polaznik->id);
 
-            $polaznik->delete();
-        });
+                $korisnik = $polaznik->povezaniKorisnik;
+                if ($korisnik !== null) {
+                    $korisnik->polaznik_id = null;
+                    if ((int)$korisnik->rola === 4) {
+                        $korisnik->rola = 3;
+                    }
+                    $korisnik->save();
+                }
+
+                $polaznik->delete();
+            });
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()
+                ->route('javno.skola.polaznici.index')
+                ->with('error', 'Brisanje polaznika nije uspjelo.');
+        }
 
         return redirect()
             ->route('javno.skola.polaznici.index')
@@ -380,19 +423,19 @@ class PolazniciSkoleController extends Controller
                 ->with('error', $validator->errors()->first());
         }
 
-        $pohrana = $this->spremiDatoteku('dokument', 'private/polaznici_skole/' . $polaznik->id . '/dokumenti');
+        $pohrana = $this->spremiDatoteku('private/polaznici_skole/' . $polaznik->id . '/dokumenti');
 
         $vrsta = (string)$request->input('vrsta');
-        $dokument = new PolaznikSkoleDokument();
-        $dokument->polaznik_skole_id = $polaznik->id;
-        $dokument->vrsta = $vrsta;
-        $dokument->naziv = $this->odrediNazivDokumenta($vrsta, (string)$request->input('naziv'));
-        $dokument->datum_dokumenta = $request->input('datum_dokumenta');
-        $dokument->napomena = $request->input('napomena');
-        $dokument->putanja = $pohrana['putanja'];
-        $dokument->originalni_naziv = $pohrana['originalni_naziv'];
-        $dokument->created_by = auth()->id();
-        $dokument->save();
+        PolaznikSkoleDokument::query()->create([
+            'polaznik_skole_id' => $polaznik->id,
+            'vrsta' => $vrsta,
+            'naziv' => $this->odrediNazivDokumenta($vrsta, (string)$request->input('naziv')),
+            'datum_dokumenta' => $request->input('datum_dokumenta'),
+            'napomena' => $request->input('napomena'),
+            'putanja' => $pohrana['putanja'],
+            'originalni_naziv' => $pohrana['originalni_naziv'],
+            'created_by' => auth()->id(),
+        ]);
 
         return redirect()
             ->route('javno.skola.polaznici.show', ['polaznik' => $polaznik, 'open_documents' => 1])
@@ -437,7 +480,7 @@ class PolazniciSkoleController extends Controller
     {
         $this->potvrdiAdmina();
 
-        if (!(bool)$polaznik->u_skoli && !empty($polaznik->prebacen_u_clana_id)) {
+        if (!$polaznik->u_skoli && !empty($polaznik->prebacen_u_clana_id)) {
             return redirect()
                 ->route('javno.clanovi.prikaz_clana', $polaznik->prebacen_u_clana_id)
                 ->with('success', 'Polaznik je već prebačen u članove kluba.');
@@ -449,74 +492,82 @@ class PolazniciSkoleController extends Controller
                 ->with('error', 'Za prebacivanje u članove obavezni su ime, prezime i OIB.');
         }
 
-        $clan = DB::transaction(function () use ($polaznik): Clanovi {
-            $polaznik->load(['dokumenti', 'povezaniKorisnik', 'roditelji']);
+        try {
+            $clan = DB::transaction(function () use ($polaznik): Clanovi {
+                $polaznik->load(['dokumenti', 'povezaniKorisnik', 'roditelji']);
 
-            $clan = Clanovi::query()->where('oib', $polaznik->oib)->first();
+                $clan = Clanovi::query()->where('oib', $polaznik->oib)->first();
 
-            if ($clan === null) {
-                $clan = new Clanovi();
-                $clan->oib = $polaznik->oib;
-            }
-
-            $clan->Prezime = $polaznik->Prezime;
-            $clan->Ime = $polaznik->Ime;
-            $clan->datum_rodjenja = $polaznik->datum_rodjenja ?? $clan->datum_rodjenja;
-            $clan->br_telefona = $polaznik->br_telefona ?? $clan->br_telefona;
-            $clan->email = $polaznik->email ?? $clan->email;
-            $clan->spol = $polaznik->spol ?? ($clan->spol ?: 'M');
-            $clan->clan_od = (int)date('Y');
-            if (empty($clan->datum_pocetka_clanstva)) {
-                $clan->datum_pocetka_clanstva = now()->toDateString();
-            }
-            $clan->aktivan = true;
-            $clan->broj_licence = $clan->broj_licence ?: 'nema licencu';
-            $clan->save();
-
-            foreach ($polaznik->dokumenti as $dokumentPolaznika) {
-                $novaPutanja = $this->kopirajDokumentZaClana($dokumentPolaznika, (int)$clan->id);
-
-                ClanDokument::create([
-                    'clan_id' => $clan->id,
-                    'vrsta' => $dokumentPolaznika->vrsta,
-                    'naziv' => $dokumentPolaznika->naziv,
-                    'datum_dokumenta' => $dokumentPolaznika->datum_dokumenta,
-                    'putanja' => $novaPutanja,
-                    'originalni_naziv' => $dokumentPolaznika->originalni_naziv,
-                    'napomena' => $dokumentPolaznika->napomena,
-                    'created_by' => auth()->id(),
-                ]);
-            }
-
-            $polaznik->u_skoli = false;
-            $polaznik->prebacen_u_clana_id = $clan->id;
-            $polaznik->prebacen_at = now();
-            $polaznik->save();
-
-            $postojeciRoditeljiClana = $clan->roditelji()->pluck('users.id')->all();
-            $roditeljiPolaznika = $polaznik->roditelji->pluck('id')->all();
-            $slobodnaMjestaRoditelja = max(2 - count($postojeciRoditeljiClana), 0);
-            if ($slobodnaMjestaRoditelja > 0) {
-                $kandidati = array_values(array_diff($roditeljiPolaznika, $postojeciRoditeljiClana));
-                $zaPrebaciti = array_slice($kandidati, 0, $slobodnaMjestaRoditelja);
-                if (!empty($zaPrebaciti)) {
-                    $clan->roditelji()->attach($zaPrebaciti);
+                if ($clan === null) {
+                    $clan = new Clanovi();
+                    $clan->oib = $polaznik->oib;
                 }
-            }
-            $polaznik->roditelji()->detach();
 
-            $korisnik = $polaznik->povezaniKorisnik;
-            if ($korisnik !== null) {
-                $korisnik->clan_id = $clan->id;
-                $korisnik->polaznik_id = null;
-                if ((int)$korisnik->rola !== 1) {
-                    $korisnik->rola = 2;
+                $clan->Prezime = $polaznik->Prezime;
+                $clan->Ime = $polaznik->Ime;
+                $clan->datum_rodjenja = $polaznik->datum_rodjenja ?? $clan->datum_rodjenja;
+                $clan->br_telefona = $polaznik->br_telefona ?? $clan->br_telefona;
+                $clan->email = $polaznik->email ?? $clan->email;
+                $clan->spol = $polaznik->spol ?? ($clan->spol ?: 'M');
+                $clan->clan_od = (int)date('Y');
+                if (empty($clan->datum_pocetka_clanstva)) {
+                    $clan->datum_pocetka_clanstva = now()->toDateString();
                 }
-                $korisnik->save();
-            }
+                $clan->aktivan = true;
+                $clan->broj_licence = $clan->broj_licence ?: 'nema licencu';
+                $clan->save();
 
-            return $clan;
-        });
+                foreach ($polaznik->dokumenti as $dokumentPolaznika) {
+                    $novaPutanja = $this->kopirajDokumentZaClana($dokumentPolaznika, (int)$clan->id);
+
+                    ClanDokument::create([
+                        'clan_id' => $clan->id,
+                        'vrsta' => $dokumentPolaznika->vrsta,
+                        'naziv' => $dokumentPolaznika->naziv,
+                        'datum_dokumenta' => $dokumentPolaznika->datum_dokumenta,
+                        'putanja' => $novaPutanja,
+                        'originalni_naziv' => $dokumentPolaznika->originalni_naziv,
+                        'napomena' => $dokumentPolaznika->napomena,
+                        'created_by' => auth()->id(),
+                    ]);
+                }
+
+                $polaznik->u_skoli = false;
+                $polaznik->prebacen_u_clana_id = $clan->id;
+                $polaznik->prebacen_at = now();
+                $polaznik->save();
+
+                $postojeciRoditeljiClana = $clan->roditelji()->pluck('users.id')->all();
+                $roditeljiPolaznika = $polaznik->roditelji->pluck('id')->all();
+                $slobodnaMjestaRoditelja = max(2 - count($postojeciRoditeljiClana), 0);
+                if ($slobodnaMjestaRoditelja > 0) {
+                    $kandidati = array_values(array_diff($roditeljiPolaznika, $postojeciRoditeljiClana));
+                    $zaPrebaciti = array_slice($kandidati, 0, $slobodnaMjestaRoditelja);
+                    if (!empty($zaPrebaciti)) {
+                        $clan->roditelji()->attach($zaPrebaciti);
+                    }
+                }
+                $polaznik->roditelji()->detach();
+
+                $korisnik = $polaznik->povezaniKorisnik;
+                if ($korisnik !== null) {
+                    $korisnik->clan_id = $clan->id;
+                    $korisnik->polaznik_id = null;
+                    if ((int)$korisnik->rola !== 1) {
+                        $korisnik->rola = 2;
+                    }
+                    $korisnik->save();
+                }
+
+                return $clan;
+            });
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()
+                ->route('javno.skola.polaznici.show', $polaznik)
+                ->with('error', 'Prebacivanje polaznika u članstvo nije uspjelo.');
+        }
 
         return redirect()
             ->route('admin.clanovi.prikaz_clana', $clan)
@@ -605,13 +656,17 @@ class PolazniciSkoleController extends Controller
     /**
      * Pohranjuje uploadanu datoteku polaznika u privatni direktorij i vraća putanju/naziv.
      */
-    private function spremiDatoteku(string $inputName, string $direktorij): array
+    private function spremiDatoteku(string $direktorij): array
     {
         if (!Storage::disk('local')->exists($direktorij)) {
             Storage::disk('local')->makeDirectory($direktorij);
         }
 
-        $uploadedFile = request()->file($inputName);
+        $uploadedFile = request()->file('dokument');
+        if ($uploadedFile === null) {
+            abort(422, 'Nije odabrana datoteka.');
+        }
+
         $ekstenzija = $uploadedFile->extension();
         $imeDatoteke = now()->format('Ymd_His') . '_' . Str::lower(Str::random(10)) . '.' . $ekstenzija;
         $uploadedFile->storeAs($direktorij, $imeDatoteke, 'local');
@@ -662,10 +717,10 @@ class PolazniciSkoleController extends Controller
     /**
      * Briše datoteku polaznika s diska ako putanja postoji.
      */
-    private function obrisiDatotekuAkoPostoji(?string $putanja, string $disk = 'local'): void
+    private function obrisiDatotekuAkoPostoji(?string $putanja): void
     {
-        if (!empty($putanja) && Storage::disk($disk)->exists($putanja)) {
-            Storage::disk($disk)->delete($putanja);
+        if (!empty($putanja) && Storage::disk('local')->exists($putanja)) {
+            Storage::disk('local')->delete($putanja);
         }
     }
 
@@ -833,7 +888,7 @@ class PolazniciSkoleController extends Controller
     /**
      * Računa datumsku granicu nakon koje se polaznik smatra neaktivnim.
      */
-    private function granicaAktivnostiSkole(): Carbon
+    private function granicaAktivnostiSkole(): CarbonInterface
     {
         return now()->startOfDay()->subMonthsNoOverflow(4);
     }

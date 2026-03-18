@@ -7,9 +7,19 @@ import 'bootstrap';
  */
 
 import axios from 'axios';
-window.axios = axios;
+/** @type {import('axios').AxiosStatic} */
+const axiosClient = axios;
 
-window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+window.axios = axiosClient;
+
+const requestInterceptor = axiosClient['interceptors']?.['request'];
+if (requestInterceptor && typeof requestInterceptor.use === 'function') {
+    requestInterceptor.use((config) => {
+        config.headers = config.headers ?? {};
+        config.headers['X-Requested-With'] = 'XMLHttpRequest';
+        return config;
+    });
+}
 
 /**
  * Echo exposes an expressive API for subscribing to channels and listening

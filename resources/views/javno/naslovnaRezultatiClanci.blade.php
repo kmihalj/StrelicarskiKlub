@@ -1,16 +1,21 @@
 {{-- Kombinirani prikaz najnovijih rezultata turnira i članaka na naslovnici. --}}
+@php
+    use App\Models\Clanci;
+    use Illuminate\Support\Facades\Storage;
+@endphp
+
 @foreach($stavkeRezultataIClanaka as $stavka)
     @if($stavka['tip'] === 'turnir')
         @include('admin.rezultati.prikazRezultata', ['turniri' => collect([$stavka['model']])])
     @else
         @php
-            /** @var \App\Models\Clanci $clanak */
+            /** @var Clanci $clanak */
             $clanak = $stavka['model'];
             $medijiPreview = $clanak->mediji
                 ->sortBy('id')
                 ->filter(fn ($medij) =>
                     in_array($medij->vrsta, ['slika', 'video'], true)
-                    && \Illuminate\Support\Facades\Storage::disk('public')->exists('clanci/' . $clanak->id . '/' . $medij->link)
+                    && Storage::disk('public')->exists('clanci/' . $clanak->id . '/' . $medij->link)
                 )
                 ->values();
             $slikePreview = $medijiPreview->where('vrsta', 'slika')->take(12)->values();
@@ -123,11 +128,13 @@
         }
 
         .homepage-clanak-title-link {
+            /*noinspection CssUnresolvedCustomProperty*/
             color: var(--bs-body-color);
             text-decoration-color: rgba(0, 0, 0, .18);
         }
 
         .theme-dark .homepage-clanak-title-link {
+            /*noinspection CssUnresolvedCustomProperty*/
             color: var(--bs-body-color);
             text-decoration-color: rgba(233, 236, 239, .45);
         }
@@ -137,7 +144,7 @@
                 to bottom,
                 rgba(31, 37, 44, 0) 0%,
                 rgba(31, 37, 44, 0.82) 62%,
-                var(--bs-dark-bg-subtle) 100%
+                #2b3035 100%
             );
         }
 
@@ -148,7 +155,7 @@
             font-style: italic;
         }
 
-        @media (max-width: 767.98px) {
+        @media (max-width: 768px) {
             .homepage-clanak-media-grid {
                 grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
                 gap: .35rem;

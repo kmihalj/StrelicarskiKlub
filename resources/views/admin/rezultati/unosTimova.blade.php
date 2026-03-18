@@ -4,7 +4,7 @@
     $mozeUredivatiTimove = auth()->check() && (int)auth()->user()->rola === 1;
     $timovi = $turnir->relationLoaded('rezultatiTimovi') ? $turnir->rezultatiTimovi : collect();
     // Blok držimo otvorenim ako je turnir označen da ima timove ili već postoje spremljeni timovi.
-    $prikazTimova = (bool)$turnir->ima_timove || ($timovi->count() > 0);
+    $prikazTimova = $turnir->ima_timove || ($timovi->count() > 0);
 @endphp
 
 <div class="row g-3">
@@ -50,7 +50,7 @@
                                 $naziviClanova = $tim->clanoviStavke
                                     ->filter(fn ($stavka) => $stavka->rezultatOpci !== null && $stavka->rezultatOpci->clan !== null)
                                     ->map(function ($stavka) {
-                                        return trim((string)$stavka->rezultatOpci->clan->Prezime . ' ' . (string)$stavka->rezultatOpci->clan->Ime);
+                                        return trim(($stavka->rezultatOpci->clan->Prezime ?? '') . ' ' . ($stavka->rezultatOpci->clan->Ime ?? ''));
                                     })
                                     ->implode(', ');
                             @endphp

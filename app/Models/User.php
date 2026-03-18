@@ -99,6 +99,7 @@ class User extends Authenticatable
     /**
      * Vraća dvoranske treninge koje je korisnik unosio.
      */
+    /** @noinspection PhpUnused */
     public function treninziDvorana(): HasMany
     {
         return $this->hasMany(TreninziDvorana::class, 'user_id', 'id');
@@ -107,6 +108,7 @@ class User extends Authenticatable
     /**
      * Vraća vanjske treninge koje je korisnik unosio.
      */
+    /** @noinspection PhpUnused */
     public function treninziVanjski(): HasMany
     {
         return $this->hasMany(TreninziVanjski::class, 'user_id', 'id');
@@ -211,6 +213,7 @@ class User extends Authenticatable
     /**
      * Provjerava smije li trenutni korisnik pregledavati profil zadanog polaznika škole.
      */
+    /** @noinspection PhpUnused */
     public function mozePregledavatiPolaznika(int $polaznikId): bool
     {
         if ((int)$this->rola <= 2) {

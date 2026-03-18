@@ -1,6 +1,7 @@
 {{-- Tablica rezultata runde treninga (serije, strijele i zbroj). --}}
 @once
     <style>
+        /*noinspection CssUnusedSymbol*/
         .trening-hit-chip {
             display: inline-flex;
             align-items: center;
@@ -14,42 +15,49 @@
             line-height: 1;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .trening-hit-empty {
             background: #fff;
             color: #6c757d;
             border-color: #d7dce2;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .trening-hit-gold {
             background: #ffd447;
             color: #222;
             border-color: #c9a31b;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .trening-hit-red {
             background: #e33b3b;
             color: #fff;
             border-color: #b11717;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .trening-hit-blue {
             background: #1f65db;
             color: #fff;
             border-color: #13449b;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .trening-hit-black {
             background: #20242a;
             color: #fff;
             border-color: #000;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .trening-hit-white {
             background: #fff;
             color: #1a1a1a;
             border-color: #adb5bd;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .trening-hit-green {
             background: #22b259;
             color: #fff;

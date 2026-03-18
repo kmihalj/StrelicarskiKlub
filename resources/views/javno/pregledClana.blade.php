@@ -72,9 +72,9 @@
             <div class="col-md-2 mb-2">
                 <p>
                     <span>Datum početka članstva:</span>
-                    <span class="fw-bold">
+                        <span class="fw-bold">
                         @if(!empty($clan->datum_pocetka_clanstva))
-                            {{ optional($clan->datum_pocetka_clanstva)->format('d.m.Y.') }}
+                            {{ $clan->datum_pocetka_clanstva?->format('d.m.Y.') }}
                         @elseif(!empty($clan->clan_od))
                             {{ $clan->clan_od }}
                         @else
@@ -90,28 +90,18 @@
                 @isset($clan->lijecnicki_do)
                     <p class="fw-normal mb-1">
                         @php
-                            $from=date_create(date('Y-m-d'));
-                            $to=date_create($clan->lijecnicki_do);
-                            $diff=date_diff($from, $to);
-                            if ($diff->format('%R') == "-") {
-                                @endphp
-                                <span class="fw-bolder text-danger">Liječnički istekao:</span><br><span
-                                      class="fw-bold text-danger">{{ date('d.m.Y.', strtotime($clan->lijecnicki_do)) }}</span><br>
-                                @php                                
-                            }
-                            else {
-                                @endphp
-                                    <span class="fw-bolder text-danger">Liječnički traje do:</span><br><span
-                                          class="fw-bold">{{ date('d.m.Y.', strtotime($clan->lijecnicki_do)) }}</span><br>
-                                @php
-                                if ($diff->format('%a') < 30) {
-                                    echo '<p class="text-danger fw-bold">' . $diff->format('%a dana') . '</p>';
-                                }
-                                else {
-                                    echo '<p class="fw-bold">' . $diff->format('%a dana')  . '</p>';
-                                }
-                            }
+                            $from = date_create(date('Y-m-d'));
+                            $to = date_create($clan->lijecnicki_do);
+                            $diff = date_diff($from, $to);
+                            $jeIstekao = $diff->format('%R') === '-';
+                            $datumLijecnickog = date('d.m.Y.', strtotime((string)$clan->lijecnicki_do));
+                            $preostaloDana = (int)$diff->format('%a');
                         @endphp
+                        <span class="fw-bolder text-danger">{{ $jeIstekao ? 'Liječnički istekao:' : 'Liječnički traje do:' }}</span><br>
+                        <span @class(['fw-bold', 'text-danger' => $jeIstekao])>{{ $datumLijecnickog }}</span><br>
+                        @if(!$jeIstekao)
+                            <span @class(['fw-bold', 'text-danger' => $preostaloDana < 30])>{{ $preostaloDana }} dana</span>
+                        @endif
                     </p>
                 @endisset
             </div>
@@ -228,14 +218,22 @@
                     <div class="row justify-content-center p-2 shadow bg-danger fw-bolder">
                         <div class="col-lg-12 text-white">
                             Pregled dokumenata
-                            <span id="skrivanje_admin_pregled_clana" class="text-white" style="float: right; cursor: pointer; display: none"
-                                  onclick="document.getElementById('admin_pregled_clana_dropdown').style.display = 'none';document.getElementById('skrivanje_admin_pregled_clana').style.display = 'none';document.getElementById('pokazivanje_admin_pregled_clana').style.display = 'block';">_</span>
-                            <span id="pokazivanje_admin_pregled_clana" class="text-white" style="float: right; cursor: pointer;"
-                                  onclick="document.getElementById('admin_pregled_clana_dropdown').style.display = 'block';document.getElementById('skrivanje_admin_pregled_clana').style.display = 'block';document.getElementById('pokazivanje_admin_pregled_clana').style.display = 'none';">+</span>
+                            <span id="skrivanje_admin_pregled_clana" class="text-white float-end d-none" style="cursor: pointer;"
+                                  data-toggle-panel
+                                  data-panel-id="admin_pregled_clana_dropdown"
+                                  data-show-id="pokazivanje_admin_pregled_clana"
+                                  data-hide-id="skrivanje_admin_pregled_clana"
+                                  data-expand="0">_</span>
+                            <span id="pokazivanje_admin_pregled_clana" class="text-white float-end" style="cursor: pointer;"
+                                  data-toggle-panel
+                                  data-panel-id="admin_pregled_clana_dropdown"
+                                  data-show-id="pokazivanje_admin_pregled_clana"
+                                  data-hide-id="skrivanje_admin_pregled_clana"
+                                  data-expand="1">+</span>
                         </div>
                     </div>
                 </div>
-                <div id="admin_pregled_clana_dropdown" class="container-xxl bg-white shadow" style="display: none">
+                <div id="admin_pregled_clana_dropdown" class="container-xxl bg-white shadow d-none">
                     <div class="row p-3">
                         @if($adminPregled ?? false)
                             <div class="col-lg-12 mb-3">
@@ -276,7 +274,7 @@
                                         <div class="col-lg-3">
                                             <label class="form-label mb-1">Datum početka članstva</label>
                                             <input type="text" class="form-control form-control-sm"
-                                                   value="@if(!empty($clan->datum_pocetka_clanstva)){{ optional($clan->datum_pocetka_clanstva)->format('d.m.Y.') }}@elseif(!empty($clan->clan_od)){{ $clan->clan_od }}@endif"
+                                                   value="@if(!empty($clan->datum_pocetka_clanstva)){{ $clan->datum_pocetka_clanstva?->format('d.m.Y.') }}@elseif(!empty($clan->clan_od)){{ $clan->clan_od }}@endif"
                                                    disabled>
                                         </div>
                                         <div class="col-lg-3">
@@ -310,7 +308,7 @@
                                         <tbody>
                                         @foreach($clan->lijecnickiPregledi as $pregled)
                                             <tr>
-                                                <td>{{ optional($pregled->vrijedi_do)->format('d.m.Y.') }}</td>
+                                                <td>{{ $pregled->vrijedi_do?->format('d.m.Y.') ?? '-' }}</td>
                                                 <td>
                                                     @if(!empty($pregled->putanja))
                                                         <a class="link-success" href="{{ route('javno.clanovi.preuzmi_lijecnicki', [$clan, $pregled]) }}" target="_blank">Pregled</a>
@@ -369,14 +367,22 @@
                     <div class="row justify-content-center p-2 shadow bg-danger fw-bolder">
                         <div class="col-lg-12 text-white">
                             Evidencija dolazaka - škola
-                            <span id="skrivanje_skola_dolazaka" class="text-white" style="float: right; cursor: pointer; display: none"
-                                  onclick="document.getElementById('skola_dolasci_dropdown').style.display = 'none';document.getElementById('skrivanje_skola_dolazaka').style.display = 'none';document.getElementById('pokazivanje_skola_dolazaka').style.display = 'block';">_</span>
-                            <span id="pokazivanje_skola_dolazaka" class="text-white" style="float: right; cursor: pointer;"
-                                  onclick="document.getElementById('skola_dolasci_dropdown').style.display = 'block';document.getElementById('skrivanje_skola_dolazaka').style.display = 'block';document.getElementById('pokazivanje_skola_dolazaka').style.display = 'none';">+</span>
+                            <span id="skrivanje_skola_dolazaka" class="text-white float-end d-none" style="cursor: pointer;"
+                                  data-toggle-panel
+                                  data-panel-id="skola_dolasci_dropdown"
+                                  data-show-id="pokazivanje_skola_dolazaka"
+                                  data-hide-id="skrivanje_skola_dolazaka"
+                                  data-expand="0">_</span>
+                            <span id="pokazivanje_skola_dolazaka" class="text-white float-end" style="cursor: pointer;"
+                                  data-toggle-panel
+                                  data-panel-id="skola_dolasci_dropdown"
+                                  data-show-id="pokazivanje_skola_dolazaka"
+                                  data-hide-id="skrivanje_skola_dolazaka"
+                                  data-expand="1">+</span>
                         </div>
                     </div>
                 </div>
-                <div id="skola_dolasci_dropdown" class="container-xxl bg-white shadow" style="display: none">
+                <div id="skola_dolasci_dropdown" class="container-xxl bg-white shadow d-none">
                     <div class="row p-3">
                         <div class="col-lg-12">
                             @foreach($evidencijeSkole as $evidencija)
@@ -384,7 +390,7 @@
                                     <p class="fw-bold mb-2">
                                         Evidencija polaznika: {{ $evidencija->Ime }} {{ $evidencija->Prezime }}
                                         @if(!empty($evidencija->prebacen_at))
-                                            (prebačen {{ optional($evidencija->prebacen_at)->format('d.m.Y.') }})
+                                            (prebačen {{ $evidencija->prebacen_at?->format('d.m.Y.') ?? '-' }})
                                         @endif
                                     </p>
                                     <div class="table-responsive">
@@ -402,7 +408,7 @@
                                                 @endphp
                                                 <tr>
                                                     <td>{{ $i }}</td>
-                                                    <td>{{ empty($dolazak?->datum) ? '-' : optional($dolazak->datum)->format('d.m.Y.') }}</td>
+                                                    <td>{{ $dolazak?->datum?->format('d.m.Y.') ?? '-' }}</td>
                                                 </tr>
                                             @endfor
                                             </tbody>
@@ -418,6 +424,8 @@
     @endauth
 
     @php
+        use Illuminate\Support\Collection;
+
         $timskeMedaljePoTipu = (isset($timskeMedalje) && $timskeMedalje->count() > 0)
             ? $timskeMedalje->groupBy(fn ($tim) => (int)($tim->turnir?->tipTurnira?->id ?? 0))
             : collect();
@@ -512,11 +520,17 @@
                     ->values();
 
                 $imaPojedinacno = $turniriPopis->contains(function ($turnirClan) use ($tip, $clan) {
-                    if ((int)$turnirClan->tipTurnira->id !== (int)$tip->id) {
+                    $tipTurnira = $turnirClan->tipTurnira ?? null;
+                    if ((int)($tipTurnira->id ?? 0) !== (int)$tip->id) {
                         return false;
                     }
 
-                    return $turnirClan->rezultatiOpci->contains('clan_id', $clan->id);
+                    $rezultatiOpci = $turnirClan->rezultatiOpci ?? null;
+                    if (!($rezultatiOpci instanceof Collection)) {
+                        return false;
+                    }
+
+                    return $rezultatiOpci->contains('clan_id', $clan->id);
                 });
             @endphp
 
@@ -531,7 +545,7 @@
                                         {{$tip->naziv}}
                                     </th>
                                 </tr>
-                                <tr style="--bs-table-bg:var(--bs-success);">
+                                <tr class="table-success">
                                     <th class="text-white">Datum</th>
                                     <th class="text-white">Turnir</th>
                                     <th class="text-white">Stil</th>
@@ -662,6 +676,43 @@
     @endif
 
     @once
+        <script>
+            (function () {
+                const togglePanelVisibility = (panelId, showId, hideId, expand) => {
+                    const panel = document.getElementById(panelId);
+                    const showHandle = document.getElementById(showId);
+                    const hideHandle = document.getElementById(hideId);
+
+                    if (panel) {
+                        panel.classList.toggle('d-none', !expand);
+                    }
+                    if (showHandle) {
+                        showHandle.classList.toggle('d-none', !!expand);
+                    }
+                    if (hideHandle) {
+                        hideHandle.classList.toggle('d-none', !expand);
+                    }
+                };
+
+                document.querySelectorAll('[data-toggle-panel]').forEach((handle) => {
+                    handle.addEventListener('click', () => {
+                        const panelId = handle.getAttribute('data-panel-id') || '';
+                        const showId = handle.getAttribute('data-show-id') || '';
+                        const hideId = handle.getAttribute('data-hide-id') || '';
+                        const expand = handle.getAttribute('data-expand') === '1';
+
+                        if (!panelId || !showId || !hideId) {
+                            return;
+                        }
+
+                        togglePanelVisibility(panelId, showId, hideId, expand);
+                    });
+                });
+            })();
+        </script>
+    @endonce
+
+    @once
         <style>
             .rezultat-chart-wrap {
                 width: 100%;
@@ -676,13 +727,13 @@
                 display: block;
             }
 
-            @media (max-width: 767.98px) {
+            @media (max-width: 767px) {
                 .rezultat-chart-wrap {
                     height: 14rem;
                 }
             }
 
-            @media (max-width: 479.98px) {
+            @media (max-width: 479px) {
                 .rezultat-chart-wrap {
                     height: 13rem;
                 }
@@ -690,15 +741,22 @@
         </style>
         <script>
             (function () {
-                if (window.__clanRezultatChartsInit) {
+                if (window['__clanRezultatChartsInit']) {
                     return;
                 }
-                window.__clanRezultatChartsInit = true;
+                window['__clanRezultatChartsInit'] = true;
 
                 const createSvgElement = (name, attrs = {}) => {
                     const node = document.createElementNS('http://www.w3.org/2000/svg', name);
                     Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, String(value)));
                     return node;
+                };
+
+                const readPointValue = (point, key, fallback = null) => {
+                    if (!point || typeof point !== 'object') {
+                        return fallback;
+                    }
+                    return key in point ? point[key] : fallback;
                 };
 
                 const renderChart = (svg) => {
@@ -742,12 +800,27 @@
                     const gridColor = document.body.classList.contains('theme-dark') ? 'rgba(255,255,255,0.18)' : '#dee2e6';
                     const axisColor = document.body.classList.contains('theme-dark') ? 'rgba(255,255,255,0.45)' : '#adb5bd';
 
-                    const totals = points.map((p) => Number(p.total) || 0);
-                    const minValue = Math.min(...totals, 0);
-                    const maxValue = Math.max(...totals, 1);
+                    const totals = points.map((point) => Number(readPointValue(point, 'total', 0)) || 0);
+
+                    let minTotal = 0;
+                    let maxTotal = 1;
+                    if (totals.length > 0) {
+                        minTotal = Number(totals[0]) || 0;
+                        maxTotal = Number(totals[0]) || 0;
+                        totals.forEach((totalRaw) => {
+                            const total = Number(totalRaw) || 0;
+                            if (total < minTotal) {
+                                minTotal = total;
+                            }
+                            if (total > maxTotal) {
+                                maxTotal = total;
+                            }
+                        });
+                    }
+
+                    const minValue = Math.min(minTotal, 0);
+                    const maxValue = Math.max(maxTotal, 1);
                     const range = Math.max(maxValue - minValue, 1);
-                    const minTotal = Math.min(...totals);
-                    const maxTotal = Math.max(...totals);
                     const minIndex = totals.findIndex((value) => value === minTotal);
                     const maxIndex = totals.findIndex((value) => value === maxTotal);
                     const brojTocaka = points.length;
@@ -829,7 +902,7 @@
                     };
                     const linePath = points.map((point, index) => {
                         const x = startX + stepX * index;
-                        const y = yToPx(Number(point.total) || 0);
+                        const y = yToPx(Number(readPointValue(point, 'total', 0)) || 0);
                         return `${index === 0 ? 'M' : 'L'}${x},${y}`;
                     }).join(' ');
 
@@ -844,7 +917,8 @@
 
                     points.forEach((point, index) => {
                         const x = startX + stepX * index;
-                        const y = yToPx(Number(point.total) || 0);
+                        const pointTotal = Number(readPointValue(point, 'total', 0)) || 0;
+                        const y = yToPx(pointTotal);
 
                         const circle = createSvgElement('circle', {
                             cx: x,
@@ -853,12 +927,15 @@
                             fill: primaryColor
                         });
 
-                        const turnirUrl = (typeof point.turnir_url === 'string' && point.turnir_url.length > 0)
-                            ? point.turnir_url
+                        const turnirUrlRaw = readPointValue(point, 'turnir_url', null);
+                        const turnirUrl = (typeof turnirUrlRaw === 'string' && turnirUrlRaw.length > 0)
+                            ? turnirUrlRaw
                             : null;
-                        const turnirNaziv = (typeof point.turnir_naziv === 'string' && point.turnir_naziv.length > 0)
-                            ? point.turnir_naziv
+                        const turnirNazivRaw = readPointValue(point, 'turnir_naziv', null);
+                        const turnirNaziv = (typeof turnirNazivRaw === 'string' && turnirNazivRaw.length > 0)
+                            ? turnirNazivRaw
                             : 'Turnir';
+                        const datum = String(readPointValue(point, 'datum', '-'));
 
                         if (turnirUrl) {
                             const link = document.createElementNS('http://www.w3.org/2000/svg', 'a');
@@ -868,7 +945,7 @@
                             link.style.cursor = 'pointer';
 
                             const naslov = createSvgElement('title');
-                            naslov.textContent = `${turnirNaziv} (${point.datum}) - ${point.total}`;
+                            naslov.textContent = `${turnirNaziv} (${datum}) - ${pointTotal}`;
                             link.appendChild(naslov);
                             link.appendChild(circle);
                             svg.appendChild(link);
@@ -896,7 +973,7 @@
                                 'font-weight': isMinOrMax ? '700' : '600',
                                 fill: fallbackBody
                             });
-                            valueLabel.textContent = String(point.total);
+                            valueLabel.textContent = String(pointTotal);
                             svg.appendChild(valueLabel);
                         }
                     });
@@ -912,19 +989,19 @@
             .clan-birthday-hero {
                 position: relative;
                 overflow: hidden;
-                color: var(--bs-body-color, #212529);
+                color: #212529;
                 background:
                     radial-gradient(circle at 14% 20%, rgba(255, 209, 102, .26), rgba(255, 255, 255, 0) 44%),
                     radial-gradient(circle at 86% 22%, rgba(86, 204, 242, .22), rgba(255, 255, 255, 0) 42%),
-                    var(--bs-body-bg, #ffffff);
+                    #ffffff;
             }
 
             .clan-birthday-hero a {
-                color: var(--theme-link-color, var(--bs-primary));
+                color: #0d6efd;
             }
 
             .clan-birthday-hero a:hover {
-                color: var(--theme-link-hover-color, var(--bs-primary));
+                color: #0a58ca;
             }
 
             .clan-birthday-balloons {
@@ -976,10 +1053,11 @@
             }
 
             .theme-dark .clan-birthday-hero {
+                color: #e9ecef;
                 background:
                     radial-gradient(circle at 14% 20%, rgba(255, 209, 102, .14), rgba(0, 0, 0, 0) 44%),
                     radial-gradient(circle at 86% 22%, rgba(86, 204, 242, .12), rgba(0, 0, 0, 0) 42%),
-                    var(--bs-dark-bg-subtle, #1f2329);
+                    #1f2329;
             }
 
             .theme-dark .clan-birthday-balloon::after {

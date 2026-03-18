@@ -1,6 +1,7 @@
 {{-- JS/CSS pomoćni kod za render grafova treninga i napretka rezultata. --}}
 @once
     <style>
+        /*noinspection CssUnusedSymbol*/
         .trening-chart-wrap {
             width: 100%;
             height: 17rem;
@@ -8,19 +9,22 @@
             overflow-y: hidden;
         }
 
+        /*noinspection CssUnusedSymbol*/
         .js-trening-chart {
             width: 100%;
             height: 100%;
             display: block;
         }
 
-        @media (max-width: 767.98px) {
+        @media (max-width: 767px) {
+            /*noinspection CssUnusedSymbol*/
             .trening-chart-wrap {
                 height: 14rem;
             }
         }
 
-        @media (max-width: 479.98px) {
+        @media (max-width: 479px) {
+            /*noinspection CssUnusedSymbol*/
             .trening-chart-wrap {
                 height: 13rem;
             }
@@ -28,10 +32,11 @@
     </style>
     <script>
         (function () {
-            if (window.__treningChartsInit) {
+            const chartsWindow = /** @type {Window & { __treningChartsInit?: boolean }} */ (window);
+            if (chartsWindow.__treningChartsInit) {
                 return;
             }
-            window.__treningChartsInit = true;
+            chartsWindow.__treningChartsInit = true;
 
             const createSvgElement = (name, attrs = {}) => {
                 const node = document.createElementNS('http://www.w3.org/2000/svg', name);
@@ -39,14 +44,26 @@
                 return node;
             };
 
+            const normalizePoint = (item) => {
+                const source = item && typeof item === 'object' ? item : {};
+                const parsedTotal = Number(source['total'] ?? 0);
+                const total = Number.isFinite(parsedTotal) ? parsedTotal : 0;
+                const datum = typeof source['datum'] === 'string' ? source['datum'] : '';
+
+                return {total, datum};
+            };
+
             const renderChart = (svg) => {
                 const rawPoints = svg.dataset.points || '[]';
-                let points;
-                try {
-                    points = JSON.parse(rawPoints);
-                } catch (e) {
-                    points = [];
-                }
+                /** @type {Array<{total: number, datum: string}>} */
+                const points = (() => {
+                    try {
+                        const parsed = JSON.parse(rawPoints);
+                        return Array.isArray(parsed) ? parsed.map(normalizePoint) : [];
+                    } catch (e) {
+                        return [];
+                    }
+                })();
 
                 while (svg.firstChild) {
                     svg.removeChild(svg.firstChild);
@@ -80,7 +97,7 @@
                 const gridColor = document.body.classList.contains('theme-dark') ? 'rgba(255,255,255,0.18)' : '#dee2e6';
                 const axisColor = document.body.classList.contains('theme-dark') ? 'rgba(255,255,255,0.45)' : '#adb5bd';
 
-                const totals = points.map((p) => Number(p.total) || 0);
+                const totals = points.map((p) => p.total);
                 const minValue = Math.min(...totals, 0);
                 const maxValue = Math.max(...totals, 1);
                 const range = Math.max(maxValue - minValue, 1);
@@ -170,7 +187,7 @@
                 };
                 const linePath = points.map((point, index) => {
                     const x = startX + stepX * index;
-                    const y = yToPx(Number(point.total) || 0);
+                    const y = yToPx(point.total);
                     return `${index === 0 ? 'M' : 'L'}${x},${y}`;
                 }).join(' ');
 
@@ -186,7 +203,7 @@
 
                 points.forEach((point, index) => {
                     const x = startX + stepX * index;
-                    const y = yToPx(Number(point.total) || 0);
+                    const y = yToPx(point.total);
 
                     const circle = createSvgElement('circle', {
                         cx: x,

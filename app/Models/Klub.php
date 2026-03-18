@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -11,13 +10,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Klub extends Model
 {
-    use HasFactory;
 
     protected $fillable = ['naziv', 'adresa', 'telefon', 'email', 'racun'];
 
     /**
      * Klub može imati više povezanih zapisa: funkcije članova u klubu.
      */
+    /** @noinspection PhpUnused */
     public function funkcije(): HasMany
     {
         return $this->hasMany(clanoviFunkcije::class, 'klub_id', 'id');

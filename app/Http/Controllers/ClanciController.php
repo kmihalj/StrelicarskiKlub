@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\FacebookContentBlockSupport;
 use App\Models\Clanci;
 use App\Models\MedijiClanaka;
 use Illuminate\Contracts\View\View;
@@ -18,8 +19,7 @@ use Throwable;
  */
 class ClanciController extends Controller
 {
-    private const AUTO_FACEBOOK_BLOK_START = '<!--AUTO_FACEBOOK_LINK_START-->';
-    private const AUTO_FACEBOOK_BLOK_END = '<!--AUTO_FACEBOOK_LINK_END-->';
+    use FacebookContentBlockSupport;
 
     /**
      * Otvara formu za unos novog članka.
@@ -256,23 +256,7 @@ class ClanciController extends Controller
      */
     private function izvuciFacebookLinkIzSadrzaja(?string $sadrzaj): ?string
     {
-        $vrijednost = (string)$sadrzaj;
-        if ($vrijednost === '') {
-            return null;
-        }
-
-        $oznaceniBlokRegex = '/<!--\s*AUTO_FACEBOOK_LINK_START\s*-->(.*?)<!--\s*AUTO_FACEBOOK_LINK_END\s*-->/is';
-        if (preg_match($oznaceniBlokRegex, $vrijednost, $blokPodudaranje) === 1
-            && preg_match('/href=(["\'])(.*?)\1/i', $blokPodudaranje[1], $linkPodudaranje) === 1) {
-            return html_entity_decode($linkPodudaranje[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        }
-
-        $legacyRegex = '/<a[^>]*href=(["\'])(.*?)\1[^>]*>\s*(?:<svg[\s\S]*?<\/svg>\s*)?Facebook\s*<\/a>/iu';
-        if (preg_match($legacyRegex, $vrijednost, $legacyPodudaranje) === 1) {
-            return html_entity_decode($legacyPodudaranje[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        }
-
-        return null;
+        return $this->extractFacebookLinkFromHtml($sadrzaj);
     }
 
     /**
@@ -280,18 +264,7 @@ class ClanciController extends Controller
      */
     private function ukloniFacebookBlokIzSadrzaja(?string $sadrzaj): string
     {
-        $vrijednost = (string)$sadrzaj;
-        if ($vrijednost === '') {
-            return '';
-        }
-
-        $oznaceniBlokRegex = '/<!--\s*AUTO_FACEBOOK_LINK_START\s*-->.*?<!--\s*AUTO_FACEBOOK_LINK_END\s*-->/is';
-        $vrijednost = preg_replace($oznaceniBlokRegex, '', $vrijednost) ?? $vrijednost;
-
-        $legacyRegex = '/<p[^>]*>\s*(?:<a[^>]*>\s*)?<svg[\s\S]*?<\/svg>\s*Facebook\s*(?:<\/a>)?\s*<\/p>/iu';
-        $vrijednost = preg_replace($legacyRegex, '', $vrijednost) ?? $vrijednost;
-
-        return trim($vrijednost);
+        return $this->stripFacebookBlockFromHtml($sadrzaj);
     }
 
     /**
@@ -299,16 +272,7 @@ class ClanciController extends Controller
      */
     private function izradiFacebookBlokZaSadrzaj(string $facebookLink): string
     {
-        $siguranLink = htmlspecialchars($facebookLink, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-
-        return self::AUTO_FACEBOOK_BLOK_START
-            . '<p style="text-align:center;">'
-            . '<a href="' . $siguranLink . '" target="_blank" rel="noopener noreferrer">'
-            . '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24px" height="24px"><path fill="#3F51B5" d="M42,37c0,2.762-2.238,5-5,5H11c-2.761,0-5-2.238-5-5V11c0-2.762,2.239-5,5-5h26c2.762,0,5,2.238,5,5V37z"></path><path fill="#FFF" d="M34.368,25H31v13h-5V25h-3v-4h3v-2.41c0.002-3.508,1.459-5.59,5.592-5.59H35v4h-2.287C31.104,17,31,17.6,31,18.723V21h4L34.368,25z"></path></svg>'
-            . 'Facebook'
-            . '</a>'
-            . '</p>'
-            . self::AUTO_FACEBOOK_BLOK_END;
+        return $this->buildFacebookBlockHtml($facebookLink);
     }
 
 }

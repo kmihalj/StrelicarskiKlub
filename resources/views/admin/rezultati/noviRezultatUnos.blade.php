@@ -69,25 +69,28 @@
 </div>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const rezultatForm = document.getElementById('unos_rezultata');
-        const formTitle = document.getElementById('rezultat_form_title');
-        const clanSelect = document.getElementById('clan');
-        const stilSelect = document.getElementById('stil');
-        const kategorijaSelect = document.getElementById('kategorija');
-        const plasmanInput = document.getElementById('plasman');
-        const plasmanEliminacijeInput = document.getElementById('plasman_eliminacije');
-        const rezultatIdInput = document.getElementById('rezultat_id');
-        const spremiButton = document.getElementById('rezultat_spremi_btn');
-        const odustaniButton = document.getElementById('rezultat_odustani_btn');
-        const poljeInputi = Array.from(document.querySelectorAll('input[name="polje[]"][form="unos_rezultata"]'));
-        const rezPoTipuIdInputi = Array.from(document.querySelectorAll('input[name="rez_po_tipu_ids[]"][form="unos_rezultata"]'));
-        const editButtons = Array.from(document.querySelectorAll('.js-rezultat-edit'));
+        const rezultatForm = /** @type {HTMLFormElement|null} */ (document.getElementById('unos_rezultata'));
+        const formTitle = /** @type {HTMLElement|null} */ (document.getElementById('rezultat_form_title'));
+        const clanSelect = /** @type {HTMLSelectElement|null} */ (document.getElementById('clan'));
+        const stilSelect = /** @type {HTMLSelectElement|null} */ (document.getElementById('stil'));
+        const kategorijaSelect = /** @type {HTMLSelectElement|null} */ (document.getElementById('kategorija'));
+        const plasmanInput = /** @type {HTMLInputElement|null} */ (document.getElementById('plasman'));
+        const plasmanEliminacijeInput = /** @type {HTMLInputElement|null} */ (document.getElementById('plasman_eliminacije'));
+        const rezultatIdInput = /** @type {HTMLInputElement|null} */ (document.getElementById('rezultat_id'));
+        const spremiButton = /** @type {HTMLButtonElement|null} */ (document.getElementById('rezultat_spremi_btn'));
+        const odustaniButton = /** @type {HTMLButtonElement|null} */ (document.getElementById('rezultat_odustani_btn'));
+        const poljeInputi = /** @type {HTMLInputElement[]} */ (Array.from(document.querySelectorAll('input[name="polje[]"][form="unos_rezultata"]')));
+        const rezPoTipuIdInputi = /** @type {HTMLInputElement[]} */ (Array.from(document.querySelectorAll('input[name="rez_po_tipu_ids[]"][form="unos_rezultata"]')));
+        const editButtons = /** @type {HTMLButtonElement[]} */ (Array.from(document.querySelectorAll('.js-rezultat-edit')));
 
-        if (!rezultatForm || !clanSelect || !kategorijaSelect || kategorijaSelect.options.length === 0) {
+        if (!rezultatForm || !clanSelect || !stilSelect || !kategorijaSelect || !plasmanInput || kategorijaSelect.options.length === 0) {
             return;
         }
 
-        const placeholder = kategorijaSelect.options[0];
+        const placeholder = kategorijaSelect.options.item(0);
+        if (!placeholder) {
+            return;
+        }
         const sveKategorije = Array.from(kategorijaSelect.options)
             .filter((option) => option.value !== '')
             .map((option) => ({

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -13,13 +12,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Kategorije extends Model
 {
-    use HasFactory;
 
     protected $fillable = ['naziv', 'spol'];
 
     /**
      * Kategorija može imati više povezanih zapisa: pojedinačne rezultate članova.
      */
+    /** @noinspection PhpUnused */
     public function rezultatiOpci(): HasMany
     {
         return $this->hasMany(RezultatiOpci::class, 'kategorija_id', 'id');

@@ -7,8 +7,10 @@ use App\Models\PolaznikPaymentProfile;
 use App\Models\PolaznikSkole;
 use App\Models\SiteSetting;
 use Carbon\Carbon;
+use InvalidArgumentException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
+use Throwable;
 
 /**
  * Servis za školarinu polaznika škole streličarstva.
@@ -91,6 +93,7 @@ class SchoolPaymentService
     /**
      * Sprema globalne postavke školarine (uključeno/isključeno i iznosi za punoljetne/maloljetne).
      */
+    /** @noinspection PhpUnused */
     public function updateSetup(array $data): void
     {
         if (!$this->supportsSchoolPayments()) {
@@ -173,8 +176,7 @@ class SchoolPaymentService
             $profile->save();
         }
 
-        $attendanceCount = $this->attendanceCount($polaznik);
-        $this->syncCharges($profile, $attendanceCount, $adminUserId);
+        $this->syncCharges($profile, $adminUserId);
 
         return $profile->fresh();
     }
@@ -193,7 +195,7 @@ class SchoolPaymentService
         int $adminUserId
     ): void {
         if ((int)$charge->polaznik_skole_id !== (int)$polaznik->id) {
-            throw new \InvalidArgumentException('Stavka plaćanja ne pripada odabranom polazniku.');
+            throw new InvalidArgumentException('Stavka plaćanja ne pripada odabranom polazniku.');
         }
 
         $profile = $this->ensureProfile($polaznik, $adminUserId);
@@ -201,12 +203,11 @@ class SchoolPaymentService
             return;
         }
 
-        $attendanceCount = $this->attendanceCount($polaznik);
-        $this->syncCharges($profile, $attendanceCount, $adminUserId);
+        $this->syncCharges($profile, $adminUserId);
 
         $charge->refresh();
         if ($charge->status === self::STATUS_DELETED) {
-            throw new \InvalidArgumentException('Stavka plaćanja je arhivirana i ne može se mijenjati.');
+            throw new InvalidArgumentException('Stavka plaćanja je arhivirana i ne može se mijenjati.');
         }
 
         if (!$isPaid) {
@@ -215,13 +216,13 @@ class SchoolPaymentService
             $charge->updated_by = $adminUserId;
             $charge->save();
 
-            $this->syncCharges($profile, $attendanceCount, $adminUserId);
+            $this->syncCharges($profile, $adminUserId);
             return;
         }
 
         $paidDate = $this->normalizeDate($paidAt) ?? now()->toDateString();
         $settlement = $settlementType;
-        if ($settlement === null || !in_array($settlement, [self::SETTLEMENT_FULL, self::SETTLEMENT_HALF], true)) {
+        if (!in_array($settlement, [self::SETTLEMENT_FULL, self::SETTLEMENT_HALF], true)) {
             $settlement = self::SETTLEMENT_FULL;
         }
 
@@ -254,7 +255,10 @@ class SchoolPaymentService
         $charge->updated_by = $adminUserId;
         $charge->save();
 
-        $this->syncCharges($profile->fresh(), $attendanceCount, $adminUserId);
+        $freshProfile = $profile->fresh();
+        if ($freshProfile instanceof PolaznikPaymentProfile) {
+            $this->syncCharges($freshProfile, $adminUserId);
+        }
     }
 
     /**
@@ -276,7 +280,7 @@ class SchoolPaymentService
 
         $profile = $this->ensureProfile($polaznik);
         if ($profile !== null) {
-            $this->syncCharges($profile, $this->attendanceCount($polaznik), null);
+            $this->syncCharges($profile, null);
         }
 
         $charges = PolaznikPaymentCharge::query()
@@ -393,6 +397,7 @@ class SchoolPaymentService
     /**
      * Vraća čitljiv naziv odabranog modela plaćanja školarine.
      */
+    /** @noinspection PhpUnused */
     public function modeLabel(?string $mode): string
     {
         return match ($mode) {
@@ -475,7 +480,7 @@ class SchoolPaymentService
     /**
      * Generira ili ažurira zaduženja školarine prema broju odrađenih treninga i odabranom modelu plaćanja.
      */
-    private function syncCharges(PolaznikPaymentProfile $profile, int $attendanceCount, ?int $adminUserId): void
+    private function syncCharges(PolaznikPaymentProfile $profile, ?int $adminUserId): void
     {
         $mode = $this->normalizeMode($profile->payment_mode) ?? self::MODE_FULL;
         $totalAmount = round((float)$profile->tuition_amount, 2);
@@ -576,7 +581,7 @@ class SchoolPaymentService
      */
     private function attendanceCount(PolaznikSkole $polaznik): int
     {
-        return (int)$polaznik->dolasci()
+        return $polaznik->dolasci()
             ->whereNotNull('datum')
             ->count();
     }
@@ -634,7 +639,7 @@ class SchoolPaymentService
 
         try {
             return Carbon::parse($candidate)->toDateString();
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return null;
         }
     }

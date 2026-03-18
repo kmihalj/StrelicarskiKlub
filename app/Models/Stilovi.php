@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -11,12 +10,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Stilovi extends Model
 {
-    use HasFactory;
     protected $fillable = ['naziv'];
 
     /**
      * Stil luka može imati više povezanih zapisa: pojedinačne rezultate članova.
      */
+    /** @noinspection PhpUnused */
     public function rezultatiOpci(): HasMany
     {
         return $this->hasMany(RezultatiOpci::class, 'stil_id', 'id');

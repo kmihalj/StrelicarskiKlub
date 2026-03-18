@@ -3,6 +3,8 @@
 
 @section('content')
     @php
+        use App\Services\PaymentTrackingService;
+
         $profile = $paymentSummary['profile'] ?? null;
         $charges = $paymentSummary['charges'] ?? collect();
         $unpaidCharges = $paymentSummary['unpaidCharges'] ?? collect();
@@ -23,7 +25,7 @@
         $hasConfiguredPaymentProfile = !empty($profile) && !empty($profile->paymentOption);
         $hasAnyCharges = $charges->count() > 0;
         $showPaymentDetails = $hasConfiguredPaymentProfile || $hasAnyCharges;
-        $paymentService = app(\App\Services\PaymentTrackingService::class);
+        $paymentService = app(PaymentTrackingService::class);
         $hubEmptyDefaultMessage = $nextChargeIsCashCollection
             ? 'Za ovu stavku uplata ide gotovinom treneru. Barkod nije dostupan.'
             : 'Odaberite neplaćenu stavku za prikaz podataka i barkoda.';
@@ -67,7 +69,7 @@
                                 </div>
                                 <div class="col-lg-3">
                                     <span class="fw-semibold">Početak praćenja:</span>
-                                    {{ optional($profile->start_date)->format('d.m.Y.') ?? '-' }}
+                                    {{ $profile->start_date?->format('d.m.Y.') ?? '-' }}
                                 </div>
                                 <div class="col-lg-4 text-lg-end">
                                     <span class="fw-semibold">Otvoreno za uplatu:</span>
@@ -103,7 +105,7 @@
                                                         <tbody>
                                                         @foreach($charges as $charge)
                                                             @php
-                                                                $isPaid = $charge->status === \App\Services\PaymentTrackingService::STATUS_PAID;
+                                                                $isPaid = $charge->status === PaymentTrackingService::STATUS_PAID;
                                                                 $paidVariant = $paymentService->selectedVariantForCharge($charge);
                                                                 $paidVariantLabel = $paymentService->variantLabelForCharge($charge, $paidVariant);
                                                                 $paidVariantNote = $paymentService->restrictionNoteForCharge($charge, $paidVariant);
@@ -111,7 +113,7 @@
                                                             <tr>
                                                                 <td>
                                                                     {{ $charge->title }}
-                                                                    @if($isPaid && !empty($paidVariantLabel) && $paidVariant !== \App\Services\PaymentTrackingService::VARIANT_FULL)
+                                                                    @if($isPaid && !empty($paidVariantLabel) && $paidVariant !== PaymentTrackingService::VARIANT_FULL)
                                                                         <div class="small text-warning-emphasis">{{ $paidVariantLabel }}</div>
                                                                     @endif
                                                                     @if($isPaid && !empty($paidVariantNote))
@@ -167,7 +169,7 @@
                                                     @foreach($currentCharges as $currentCharge)
                                                         <li>
                                                             {{ $currentCharge->title }}
-                                                            @if($currentCharge->status === \App\Services\PaymentTrackingService::STATUS_PAID)
+                                                            @if($currentCharge->status === PaymentTrackingService::STATUS_PAID)
                                                                 <span class="text-success">(plaćeno)</span>
                                                             @else
                                                                 <span class="text-danger">(nije plaćeno)</span>
@@ -308,9 +310,9 @@
     </div>
 
     @if($unpaidCharges->count() > 0 || !empty($hubPayload))
-        <script src="https://cdn.jsdelivr.net/gh/pkoretic/pdf417-generator@master/lib/libbcmath.js"></script>
-        <script src="https://cdn.jsdelivr.net/gh/pkoretic/pdf417-generator@master/lib/bcmath.js"></script>
-        <script src="https://cdn.jsdelivr.net/gh/bkuzmic/pdf417-js@master/pdf417.js"></script>
+        <script src="{{ asset('vendor/pdf417/libbcmath.js') }}"></script>
+        <script src="{{ asset('vendor/pdf417/bcmath.js') }}"></script>
+        <script src="{{ asset('vendor/pdf417/pdf417.js') }}"></script>
         <script>
             (function () {
                 const initialPayload = @json($hubPayload);
@@ -318,23 +320,45 @@
                 const variantActionTemplate = @json(route('javno.clanovi.placanja.odabir', ['clan' => $clan, 'charge' => '__CHARGE__']));
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-                const chargeSelect = document.getElementById('selected_charge');
-                const chargeForm = document.getElementById('charge-select-form');
+                const chargeSelectElement = document.getElementById('selected_charge');
+                const chargeSelect = chargeSelectElement instanceof HTMLSelectElement ? chargeSelectElement : null;
+                const chargeFormElement = document.getElementById('charge-select-form');
+                const chargeForm = chargeFormElement instanceof HTMLFormElement ? chargeFormElement : null;
                 const selectedChargeInfo = document.getElementById('selected-charge-info');
                 const selectedChargeTitle = document.getElementById('selected-charge-title');
                 const selectedChargeAmount = document.getElementById('selected-charge-amount');
-                const variantForm = document.getElementById('payment-variant-form');
-                const variantSelect = document.getElementById('payment_variant');
+                const variantFormElement = document.getElementById('payment-variant-form');
+                const variantForm = variantFormElement instanceof HTMLFormElement ? variantFormElement : null;
+                const variantSelectElement = document.getElementById('payment_variant');
+                const variantSelect = variantSelectElement instanceof HTMLSelectElement ? variantSelectElement : null;
                 const restrictionBox = document.getElementById('next-charge-restriction');
                 const paymentHubTitle = document.getElementById('payment-hub-title');
                 const hubFields = document.getElementById('hub-fields');
                 const hubCanvasWrap = document.getElementById('hub-canvas-wrap');
                 const hubEmptyMessage = document.getElementById('hub-empty-message');
-                const canvas = document.getElementById('payment-hub-barcode');
+                const canvasElement = document.getElementById('payment-hub-barcode');
+                const canvas = canvasElement instanceof HTMLCanvasElement ? canvasElement : null;
+                const hubFieldPrimatelj = document.getElementById('hub-field-primatelj');
+                const hubFieldAdresa = document.getElementById('hub-field-adresa');
+                const hubFieldIban = document.getElementById('hub-field-iban');
+                const hubFieldModel = document.getElementById('hub-field-model');
+                const hubFieldPoziv = document.getElementById('hub-field-poziv');
+                const hubFieldOpis = document.getElementById('hub-field-opis');
 
                 function formatEur(amount) {
                     const numeric = Number(amount ?? 0);
                     return numeric.toLocaleString('hr-HR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' EUR';
+                }
+
+                function submitForm(form) {
+                    if (!form) {
+                        return;
+                    }
+                    if (typeof form.requestSubmit === 'function') {
+                        form.requestSubmit();
+                        return;
+                    }
+                    HTMLFormElement.prototype.submit.call(form);
                 }
 
                 function setVisible(element, visible) {
@@ -344,24 +368,50 @@
                     element.classList.toggle('d-none', !visible);
                 }
 
+                function getPdf417Api() {
+                    const api = window['PDF417'];
+                    if (!api || typeof api !== 'object') {
+                        return null;
+                    }
+
+                    const init = api['init'];
+                    const getBarcodeArray = api['getBarcodeArray'];
+                    if (typeof init !== 'function' || typeof getBarcodeArray !== 'function') {
+                        return null;
+                    }
+
+                    return {
+                        init(payload) {
+                            init.call(api, payload);
+                        },
+                        getBarcodeArray() {
+                            return getBarcodeArray.call(api);
+                        }
+                    };
+                }
+
                 function renderBarcode(payload) {
-                    if (!canvas || !payload || typeof PDF417 === 'undefined' || typeof PDF417.init !== 'function' || typeof PDF417.getBarcodeArray !== 'function') {
+                    const pdf417 = getPdf417Api();
+                    if (!canvas || !payload || !pdf417) {
                         return false;
                     }
 
                     try {
-                        PDF417.init(payload);
+                        pdf417.init(payload);
                     } catch (error) {
                         return false;
                     }
 
-                    const barcode = PDF417.getBarcodeArray();
-                    if (!barcode || !barcode.num_cols || !barcode.num_rows || !barcode.bcode) {
+                    const barcode = pdf417.getBarcodeArray();
+                    const numCols = Number(barcode['num_cols'] ?? 0);
+                    const numRows = Number(barcode['num_rows'] ?? 0);
+                    const matrix = Array.isArray(barcode['bcode']) ? barcode['bcode'] : [];
+                    if (numCols <= 0 || numRows <= 0 || matrix.length === 0) {
                         return false;
                     }
 
-                    canvas.width = 2 * barcode.num_cols;
-                    canvas.height = 2 * barcode.num_rows;
+                    canvas.width = 2 * numCols;
+                    canvas.height = 2 * numRows;
 
                     const context = canvas.getContext('2d');
                     if (!context) {
@@ -373,10 +423,11 @@
                     context.fillStyle = '#000000';
 
                     let y = 0;
-                    for (let row = 0; row < barcode.num_rows; ++row) {
+                    for (let row = 0; row < numRows; row += 1) {
+                        const rowValues = Array.isArray(matrix[row]) ? matrix[row] : [];
                         let x = 0;
-                        for (let col = 0; col < barcode.num_cols; ++col) {
-                            const value = barcode.bcode[row][col];
+                        for (let col = 0; col < numCols; col += 1) {
+                            const value = rowValues[col];
                             if (value === 1 || value === '1') {
                                 context.fillRect(x, y, 2, 2);
                             }
@@ -394,11 +445,13 @@
                     }
 
                     variantSelect.innerHTML = '';
-                    (variants || []).forEach((variant) => {
+                    const variantList = Array.isArray(variants) ? variants : [];
+                    variantList.forEach((variant) => {
+                        const item = variant && typeof variant === 'object' ? variant : null;
                         const option = document.createElement('option');
-                        const value = variant?.value ?? '';
-                        const label = variant?.label ?? value;
-                        const amount = variant?.amount;
+                        const value = String(item && 'value' in item ? item.value : '');
+                        const label = String(item && 'label' in item ? item.label : value);
+                        const amount = item && 'amount' in item ? item.amount : null;
 
                         option.value = value;
                         option.textContent = (amount === null || amount === undefined)
@@ -418,16 +471,23 @@
                         return;
                     }
 
-                    const selectedId = data.selectedChargeId ?? null;
-                    const nextCharge = data.nextCharge ?? null;
-                    const nextChargeVariants = data.nextChargeVariants ?? [];
-                    const selectedVariant = data.nextChargeSelectedVariant ?? null;
-                    const restrictionNote = data.nextChargeRestrictionNote ?? null;
-                    const effectiveAmount = data.nextChargeEffectiveAmount ?? null;
-                    const isCashCollection = !!data.isCashCollection;
-                    const hubData = data.paymentHubData ?? null;
-                    const hubPayload = hubData?.payload ?? null;
-                    const hub = hubData?.fields ?? null;
+                    const payload = data;
+                    const selectedId = payload['selectedChargeId'] ?? null;
+                    const nextCharge = payload['nextCharge'] && typeof payload['nextCharge'] === 'object'
+                        ? payload['nextCharge']
+                        : null;
+                    const nextChargeVariants = Array.isArray(payload['nextChargeVariants']) ? payload['nextChargeVariants'] : [];
+                    const selectedVariant = payload['nextChargeSelectedVariant'] ?? null;
+                    const restrictionNote = payload['nextChargeRestrictionNote'] ?? null;
+                    const effectiveAmount = payload['nextChargeEffectiveAmount'] ?? null;
+                    const isCashCollection = Boolean(payload['isCashCollection']);
+                    const hubData = payload['paymentHubData'] && typeof payload['paymentHubData'] === 'object'
+                        ? payload['paymentHubData']
+                        : null;
+                    const hubPayload = hubData && typeof hubData['payload'] === 'string' ? hubData['payload'] : null;
+                    const hub = hubData && hubData['fields'] && typeof hubData['fields'] === 'object'
+                        ? hubData['fields']
+                        : null;
 
                     if (chargeSelect && selectedId !== null) {
                         chargeSelect.value = String(selectedId);
@@ -435,7 +495,7 @@
 
                     setVisible(selectedChargeInfo, !!nextCharge);
                     if (selectedChargeTitle) {
-                        selectedChargeTitle.textContent = nextCharge?.title ?? '';
+                        selectedChargeTitle.textContent = String(nextCharge?.['title'] ?? '');
                     }
                     if (selectedChargeAmount) {
                         selectedChargeAmount.textContent = nextCharge ? formatEur(effectiveAmount) : '-';
@@ -445,13 +505,13 @@
                         const hasVariants = !!nextCharge && Array.isArray(nextChargeVariants) && nextChargeVariants.length > 0;
                         setVisible(variantForm, hasVariants);
                         if (hasVariants) {
-                            variantForm.action = variantActionTemplate.replace('__CHARGE__', String(nextCharge.id));
+                            variantForm.setAttribute('action', variantActionTemplate.replace('__CHARGE__', String(nextCharge?.['id'] ?? '')));
                             updateVariantOptions(nextChargeVariants, selectedVariant);
                         }
                     }
 
                     if (restrictionBox) {
-                        restrictionBox.textContent = restrictionNote || '';
+                        restrictionBox.textContent = restrictionNote ? String(restrictionNote) : '';
                         setVisible(restrictionBox, !!restrictionNote);
                     }
 
@@ -466,19 +526,12 @@
                     }
 
                     if (hub) {
-                        const primatelj = document.getElementById('hub-field-primatelj');
-                        const adresa = document.getElementById('hub-field-adresa');
-                        const iban = document.getElementById('hub-field-iban');
-                        const model = document.getElementById('hub-field-model');
-                        const poziv = document.getElementById('hub-field-poziv');
-                        const opis = document.getElementById('hub-field-opis');
-
-                        if (primatelj) primatelj.textContent = hub.primatelj ?? '';
-                        if (adresa) adresa.textContent = hub.adresa ?? '-';
-                        if (iban) iban.textContent = hub.iban ?? '';
-                        if (model) model.textContent = hub.model ?? '';
-                        if (poziv) poziv.textContent = hub.poziv_na_broj ?? '';
-                        if (opis) opis.textContent = hub.opis ?? '';
+                        if (hubFieldPrimatelj) hubFieldPrimatelj.textContent = String(hub['primatelj'] ?? '');
+                        if (hubFieldAdresa) hubFieldAdresa.textContent = String(hub['adresa'] ?? '-');
+                        if (hubFieldIban) hubFieldIban.textContent = String(hub['iban'] ?? '');
+                        if (hubFieldModel) hubFieldModel.textContent = String(hub['model'] ?? '');
+                        if (hubFieldPoziv) hubFieldPoziv.textContent = String(hub['poziv_na_broj'] ?? '');
+                        if (hubFieldOpis) hubFieldOpis.textContent = String(hub['opis'] ?? '');
                     }
 
                     const drawn = !isCashCollection && renderBarcode(hubPayload);
@@ -496,17 +549,24 @@
                 }
 
                 if (chargeSelect && chargeForm) {
-                    chargeSelect.addEventListener('change', async function () {
-                        const selectedId = this.value;
+                    chargeSelect.addEventListener('change', async (event) => {
+                        const target = event.currentTarget;
+                        if (!(target instanceof HTMLSelectElement)) {
+                            return;
+                        }
+
+                        const selectedId = target.value;
                         if (!selectedId) {
                             return;
                         }
 
-                        this.disabled = true;
+                        target.disabled = true;
                         if (variantSelect) variantSelect.disabled = true;
 
                         try {
-                            const data = await fetchJson(`${chargeForm.action}?charge=${encodeURIComponent(selectedId)}&ajax=1`, {
+                            const action = chargeForm.getAttribute('action') || memberPaymentsUrl;
+                            const separator = action.includes('?') ? '&' : '?';
+                            const data = await fetchJson(`${action}${separator}charge=${encodeURIComponent(selectedId)}&ajax=1`, {
                                 method: 'GET',
                                 headers: {
                                     'Accept': 'application/json',
@@ -516,18 +576,23 @@
                             updateUi(data);
                             window.history.replaceState(null, '', `${memberPaymentsUrl}?charge=${encodeURIComponent(selectedId)}`);
                         } catch (error) {
-                            chargeForm.submit();
+                            submitForm(chargeForm);
                         } finally {
-                            this.disabled = false;
+                            target.disabled = false;
                             if (variantSelect) variantSelect.disabled = false;
                         }
                     });
                 }
 
                 if (variantSelect && variantForm) {
-                    variantSelect.addEventListener('change', async function () {
-                        const selectedVariant = this.value;
-                        this.disabled = true;
+                    variantSelect.addEventListener('change', async (event) => {
+                        const target = event.currentTarget;
+                        if (!(target instanceof HTMLSelectElement)) {
+                            return;
+                        }
+
+                        const selectedVariant = target.value;
+                        target.disabled = true;
                         if (chargeSelect) chargeSelect.disabled = true;
 
                         try {
@@ -535,7 +600,13 @@
                             body.append('payment_variant', selectedVariant);
                             body.append('ajax', '1');
 
-                            const data = await fetchJson(variantForm.action, {
+                            const action = variantForm.getAttribute('action') || '';
+                            if (!action) {
+                                submitForm(variantForm);
+                                return;
+                            }
+
+                            const data = await fetchJson(action, {
                                 method: 'POST',
                                 headers: {
                                     'Accept': 'application/json',
@@ -547,15 +618,15 @@
                             });
                             updateUi(data);
                         } catch (error) {
-                            variantForm.submit();
+                            submitForm(variantForm);
                         } finally {
-                            this.disabled = false;
+                            target.disabled = false;
                             if (chargeSelect) chargeSelect.disabled = false;
                         }
                     });
                 }
 
-                if (initialPayload) {
+                if (typeof initialPayload === 'string' && initialPayload.length > 0) {
                     renderBarcode(initialPayload);
                 }
             })();
