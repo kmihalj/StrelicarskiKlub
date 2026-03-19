@@ -13,10 +13,11 @@
     $destroyRouteName = $destroyRouteName ?? null;
     $destroyRouteExtraParams = $destroyRouteExtraParams ?? [];
     $imaAkcijuBrisanja = !empty($destroyRouteName);
+    $zaglavljeRazmakKlasa = ($imaTablicu && !$prikaziGraf) ? 'mb-3' : 'mb-0';
 @endphp
 
 <div class="container-xxl">
-    <div class="row justify-content-center p-2 mb-0 shadow bg-danger fw-bolder">
+    <div id="{{ $sekcijaDomId }}_zaglavlje" class="row justify-content-center p-2 {{ $zaglavljeRazmakKlasa }} shadow bg-danger fw-bolder">
         <div class="col-lg-12 text-white d-flex flex-wrap align-items-center justify-content-between gap-2">
             <span>{{ $naslov }}</span>
             <span class="d-inline-flex align-items-center gap-2">
@@ -117,6 +118,7 @@
                 const tableWrap = /** @type {HTMLElement|null} */ (document.getElementById(sekcijaDomId + '_tablica'));
                 const pregledToggle = /** @type {HTMLElement|null} */ (document.getElementById('pregled-toggle-' + sekcijaDomId));
                 const graphWrap = /** @type {HTMLElement|null} */ (document.getElementById(sekcijaDomId + '_graf_okvir'));
+                const headerWrap = /** @type {HTMLElement|null} */ (document.getElementById(sekcijaDomId + '_zaglavlje'));
                 if (!tableWrap) {
                     return;
                 }
@@ -133,6 +135,9 @@
                 if (graphWrap) {
                     graphWrap.classList.toggle('mb-0', visible);
                     graphWrap.classList.toggle('mb-3', !visible);
+                } else if (headerWrap) {
+                    headerWrap.classList.toggle('mb-0', visible);
+                    headerWrap.classList.toggle('mb-3', !visible);
                 }
             };
 
@@ -186,7 +191,7 @@
 
 @if($imaTablicu)
     <div id="{{ $sekcijaDomId }}_tablica" class="container-xxl" style="display: none;">
-        <div class="row justify-content-center pt-0 pb-3 mb-3 shadow bg-white">
+        <div class="row justify-content-center pt-3 pb-3 mb-3 shadow bg-white">
             <div class="col-lg-12">
                 <div class="table-responsive d-none d-md-block">
                     <table class="table table-hover align-middle mb-0 border">
