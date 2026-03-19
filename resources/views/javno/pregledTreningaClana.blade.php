@@ -6,7 +6,7 @@
     @endphp
 
     <div class="container-xxl">
-        <div class="row justify-content-center p-2 mb-3 shadow bg-dark fw-bolder">
+        <div class="row justify-content-center p-2 mb-3 shadow bg-danger fw-bolder">
             <div class="col-lg-12 text-white d-flex flex-wrap align-items-center justify-content-between gap-2">
                 <span>Pregled treninga</span>
                 <button class="btn btn-sm btn-warning" type="button"
