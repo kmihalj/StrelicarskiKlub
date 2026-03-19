@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use DateTimeInterface;
 use App\Models\Clanci;
 use App\Models\ClanDokument;
 use App\Models\ClanLijecnickiPregled;
@@ -537,7 +538,6 @@ class JavnoController extends Controller
             }
             if ($polje === 'medals_bronze_total') {
                 $zaglavlja[] = 'Brončane medalje (ukupno)';
-                continue;
             }
         }
 
@@ -583,6 +583,10 @@ class JavnoController extends Controller
     {
         $clanId = (int)$clan->id;
         $praznaMedaljaStatistika = $this->praznaCsvMedaljaStatistika();
+        $lijecnickiDoVrijednost = $clan->getAttribute('lijecnicki_do');
+        $lijecnickiDo = is_string($lijecnickiDoVrijednost)
+            ? $lijecnickiDoVrijednost
+            : (empty($lijecnickiDoVrijednost) ? null : (string)$lijecnickiDoVrijednost);
 
         $turniriUkupno = (int)data_get($statistika, 'turniri_ukupno.' . $clanId, 0);
         $medaljeUkupno = data_get($statistika, 'medalje_ukupno.' . $clanId, $praznaMedaljaStatistika);
@@ -609,7 +613,7 @@ class JavnoController extends Controller
                 continue;
             }
             if ($polje === 'last_medical_duration') {
-                $red[] = $this->formatirajTrajanjeZadnjegLijecnickogZaCsv($clan->lijecnicki_do);
+                $red[] = $this->formatirajTrajanjeZadnjegLijecnickogZaCsv($lijecnickiDo);
                 continue;
             }
             if ($polje === 'tournaments_total') {
@@ -633,10 +637,6 @@ class JavnoController extends Controller
             }
             if ($polje === 'medals_bronze_total') {
                 $red[] = (int)data_get($medaljeUkupno, 'bronca', 0);
-                continue;
-            }
-            if ($polje === 'medals_year' || $polje === 'medals_gold_year' || $polje === 'medals_silver_year' || $polje === 'medals_bronze_year') {
-                continue;
             }
         }
 
@@ -701,7 +701,7 @@ class JavnoController extends Controller
     private function formatirajClanOdZaCsv(Clanovi $clan): string
     {
         $datumPocetka = $clan->datum_pocetka_clanstva;
-        if ($datumPocetka instanceof \DateTimeInterface) {
+        if ($datumPocetka instanceof DateTimeInterface) {
             return $datumPocetka->format('d.m.Y.');
         }
 
@@ -728,7 +728,7 @@ class JavnoController extends Controller
             return '-';
         }
 
-        $timestamp = strtotime((string)$lijecnickiDo);
+        $timestamp = strtotime($lijecnickiDo);
         if ($timestamp === false) {
             return '-';
         }
@@ -795,20 +795,16 @@ class JavnoController extends Controller
                 ? (int)data_get($rezultat, 'plasman_nakon_eliminacija', 0)
                 : (int)data_get($rezultat, 'plasman', 0);
 
-            $this->dodajTurnirClanu($turniriUkupnoSet, $clanId, $turnirId);
-            $this->dodajMedaljuClanu($medaljeUkupno, $clanId, $plasman);
-
-            if ($godina > 0) {
-                if (!isset($turniriPoGodiniSet[$godina])) {
-                    $turniriPoGodiniSet[$godina] = [];
-                }
-                if (!isset($medaljePoGodini[$godina])) {
-                    $medaljePoGodini[$godina] = [];
-                }
-
-                $this->dodajTurnirClanu($turniriPoGodiniSet[$godina], $clanId, $turnirId);
-                $this->dodajMedaljuClanu($medaljePoGodini[$godina], $clanId, $plasman);
-            }
+            $this->dodajCsvRezultatUStatistiku(
+                $turniriUkupnoSet,
+                $turniriPoGodiniSet,
+                $medaljeUkupno,
+                $medaljePoGodini,
+                $clanId,
+                $turnirId,
+                $plasman,
+                $godina
+            );
         }
 
         if ($this->timskeTabliceDostupne()) {
@@ -831,20 +827,16 @@ class JavnoController extends Controller
                 $godina = (int)data_get($rezultat, 'godina', 0);
                 $plasman = (int)data_get($rezultat, 'plasman', 0);
 
-                $this->dodajTurnirClanu($turniriUkupnoSet, $clanId, $turnirId);
-                $this->dodajMedaljuClanu($medaljeUkupno, $clanId, $plasman);
-
-                if ($godina > 0) {
-                    if (!isset($turniriPoGodiniSet[$godina])) {
-                        $turniriPoGodiniSet[$godina] = [];
-                    }
-                    if (!isset($medaljePoGodini[$godina])) {
-                        $medaljePoGodini[$godina] = [];
-                    }
-
-                    $this->dodajTurnirClanu($turniriPoGodiniSet[$godina], $clanId, $turnirId);
-                    $this->dodajMedaljuClanu($medaljePoGodini[$godina], $clanId, $plasman);
-                }
+                $this->dodajCsvRezultatUStatistiku(
+                    $turniriUkupnoSet,
+                    $turniriPoGodiniSet,
+                    $medaljeUkupno,
+                    $medaljePoGodini,
+                    $clanId,
+                    $turnirId,
+                    $plasman,
+                    $godina
+                );
             }
         }
 
@@ -866,6 +858,43 @@ class JavnoController extends Controller
             'medalje_ukupno' => $medaljeUkupno,
             'medalje_po_godini' => $medaljePoGodini,
         ];
+    }
+
+    /**
+     * Dodaje jednu rezultatnu stavku u agregate za CSV statistiku članova.
+     *
+     * @param array<int, array<int, bool>> $turniriUkupnoSet
+     * @param array<int, array<int, array<int, bool>>> $turniriPoGodiniSet
+     * @param array<int, array<string, int>> $medaljeUkupno
+     * @param array<int, array<int, array<string, int>>> $medaljePoGodini
+     */
+    private function dodajCsvRezultatUStatistiku(
+        array &$turniriUkupnoSet,
+        array &$turniriPoGodiniSet,
+        array &$medaljeUkupno,
+        array &$medaljePoGodini,
+        int $clanId,
+        int $turnirId,
+        int $plasman,
+        int $godina
+    ): void {
+        $this->dodajTurnirClanu($turniriUkupnoSet, $clanId, $turnirId);
+        $this->dodajMedaljuClanu($medaljeUkupno, $clanId, $plasman);
+
+        if ($godina <= 0) {
+            return;
+        }
+
+        if (!isset($turniriPoGodiniSet[$godina])) {
+            $turniriPoGodiniSet[$godina] = [];
+        }
+
+        if (!isset($medaljePoGodini[$godina])) {
+            $medaljePoGodini[$godina] = [];
+        }
+
+        $this->dodajTurnirClanu($turniriPoGodiniSet[$godina], $clanId, $turnirId);
+        $this->dodajMedaljuClanu($medaljePoGodini[$godina], $clanId, $plasman);
     }
 
     /**
