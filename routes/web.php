@@ -176,7 +176,7 @@ Route::middleware('auth')->group(function () {
 
     Route::post('profil/tema-prikaz', [UserThemePreferenceController::class, 'update'])->name('user.theme_mode.update');
 });
-Route::get('clanovi/csv-export', [JavnoController::class, 'exportAktivnihClanovaCsv'])->name('javno.clanovi.csv_export')->middleware('auth');
+Route::get('clanovi/csv-export', [JavnoController::class, 'exportAktivnihClanovaCsv'])->name('javno.clanovi.csv_export')->middleware(['auth', 'admin']);
 Route::get('clanovi/{clan}/lijecnicki/{pregled}/pregled', [JavnoController::class, 'preuzmi_lijecnicki_pregled'])->name('javno.clanovi.preuzmi_lijecnicki')->middleware('auth');
 Route::get('clanovi/{clan}/dokumenti/{dokument}/pregled', [JavnoController::class, 'preuzmi_dokument'])->name('javno.clanovi.preuzmi_dokument')->middleware('auth');
 Route::get('clanovi/{clan}', [JavnoController::class, 'pregledClana'])->name('javno.clanovi.prikaz_clana');

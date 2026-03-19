@@ -104,7 +104,12 @@
                             <div class="col-12 col-lg-8">
                                 <div class="d-flex flex-wrap justify-content-lg-end align-items-end gap-2">
                                     <span class="fw-semibold">Br. članova: {{ $brojAktivnihClanova }}</span>
-                                    <a href="{{ route('javno.clanovi.csv_export') }}" class="btn btn-outline-success btn-sm">CSV Export</a>
+                                    @if($jeAdmin)
+                                        <button type="button" class="btn btn-outline-success btn-sm"
+                                                data-bs-toggle="modal" data-bs-target="#CsvExportClanova_modal">
+                                            CSV Export
+                                        </button>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -182,6 +187,10 @@
                     </div>
                 </div>
             </div>
+
+            @if($jeAdmin)
+                @include('javno.partials.csvExportClanovaModal')
+            @endif
 
             @if(auth()->user()->rola <= 1)
                 <div class="container-xxl shadow mt-3">
@@ -303,6 +312,28 @@
                             toggleNeaktivniClanovi(shouldShow);
                         });
                     });
+
+                    const csvYearSelect = /** @type {HTMLSelectElement|null} */ (document.getElementById('csv-export-stat-years'));
+                    const csvYearHelp = /** @type {HTMLElement|null} */ (document.getElementById('csv-export-stat-year-help'));
+                    const csvYearFields = Array.from(document.querySelectorAll('.js-csv-year-field'));
+                    const updateCsvYearControl = function () {
+                        if (!csvYearSelect || csvYearFields.length === 0) {
+                            return;
+                        }
+
+                        const hasYearBasedField = csvYearFields.some((field) => field instanceof HTMLInputElement && field.checked);
+                        csvYearSelect.disabled = !hasYearBasedField;
+                        csvYearSelect.required = hasYearBasedField;
+
+                        if (csvYearHelp) {
+                            csvYearHelp.classList.toggle('text-danger', hasYearBasedField);
+                            csvYearHelp.classList.toggle('fw-semibold', hasYearBasedField);
+                        }
+                    };
+                    csvYearFields.forEach((field) => {
+                        field.addEventListener('change', updateCsvYearControl);
+                    });
+                    updateCsvYearControl();
 
                     const tableWrappers = Array.from(document.querySelectorAll('.js-clanovi-table-wrap'));
 

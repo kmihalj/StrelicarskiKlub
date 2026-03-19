@@ -32,6 +32,45 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class JavnoController extends Controller
 {
+    private const CSV_OPTIONAL_POLJA = [
+        'phone',
+        'email',
+        'license_number',
+        'member_since',
+        'club_function',
+        'last_medical_duration',
+        'tournaments_total',
+        'tournaments_year',
+        'medals_total',
+        'medals_gold_total',
+        'medals_silver_total',
+        'medals_bronze_total',
+        'medals_year',
+        'medals_gold_year',
+        'medals_silver_year',
+        'medals_bronze_year',
+    ];
+
+    private const CSV_GODISNJA_POLJA = [
+        'tournaments_year',
+        'medals_year',
+        'medals_gold_year',
+        'medals_silver_year',
+        'medals_bronze_year',
+    ];
+
+    private const CSV_STAT_POLJA = [
+        'tournaments_total',
+        'tournaments_year',
+        'medals_total',
+        'medals_gold_total',
+        'medals_silver_total',
+        'medals_bronze_total',
+        'medals_year',
+        'medals_gold_year',
+        'medals_silver_year',
+        'medals_bronze_year',
+    ];
 
 
     /**
@@ -290,6 +329,21 @@ class JavnoController extends Controller
     {
         $paymentService = app(PaymentTrackingService::class);
         $clanovi = Clanovi::orderBy('Prezime')->orderBy('Ime')->get();
+        $dostupneGodineCsv = Turniri::query()
+            ->selectRaw('YEAR(datum) as godina')
+            ->whereNotNull('datum')
+            ->distinct()
+            ->orderByDesc('godina')
+            ->pluck('godina')
+            ->map(static fn ($godina): int => (int)$godina)
+            ->filter(static fn (int $godina): bool => $godina > 0)
+            ->values();
+
+        if ($dostupneGodineCsv->isEmpty()) {
+            $dostupneGodineCsv = collect([(int)date('Y')]);
+        }
+
+        $zadanaGodinaCsv = (int)$dostupneGodineCsv->first();
         $showPaymentColumn = auth()->check()
             && (int)auth()->user()->rola === 1
             && $paymentService->isEnabled();
@@ -304,27 +358,52 @@ class JavnoController extends Controller
             'paymentTrackingEnabled' => $paymentService->isEnabled(),
             'showPaymentColumn' => $showPaymentColumn,
             'paymentStatusByClan' => $paymentStatusByClan,
+            'dostupneGodineCsv' => $dostupneGodineCsv,
+            'zadanaGodinaCsv' => $zadanaGodinaCsv,
         ]);
     }
 
     /**
      * Izvozi CSV popis aktivnih članova kluba s podacima za administrativni rad.
      */
-    public function exportAktivnihClanovaCsv(): StreamedResponse
+    public function exportAktivnihClanovaCsv(Request $request): StreamedResponse
     {
-        if (!auth()->check() || !auth()->user()->imaPravoAdminOrMember()) {
+        if (!auth()->check() || (int)auth()->user()->rola !== 1) {
             abort(403);
         }
 
+        $odabranaPolja = $this->odabranaCsvPolja($request);
+        $imaGodisnjaPolja = $this->imaGodisnjaCsvPolja($odabranaPolja);
+        $godineStatistike = $imaGodisnjaPolja ? $this->odrediGodineCsvStatistike($request) : [];
+
         $clanovi = Clanovi::query()
+            ->with(['funkcijeUklubu' => fn ($query) => $query->orderBy('redniBroj')->orderBy('id')])
             ->where('aktivan', true)
             ->orderBy('Prezime')
             ->orderBy('Ime')
-            ->get(['Prezime', 'Ime', 'oib', 'spol', 'datum_rodjenja']);
+            ->get([
+                'id',
+                'Prezime',
+                'Ime',
+                'oib',
+                'spol',
+                'datum_rodjenja',
+                'br_telefona',
+                'email',
+                'broj_licence',
+                'clan_od',
+                'datum_pocetka_clanstva',
+                'lijecnicki_do',
+            ]);
 
+        $trebaStatistiku = count(array_intersect($odabranaPolja, self::CSV_STAT_POLJA)) > 0;
+        $statistika = $trebaStatistiku
+            ? $this->pripremiCsvStatistikuClanova($clanovi->pluck('id')->map(static fn ($id): int => (int)$id)->all())
+            : [];
+        $zaglavlja = $this->csvZaglavlja($odabranaPolja, $godineStatistike);
         $nazivDatoteke = 'aktivni_clanovi_' . date('Ymd_His') . '.csv';
 
-        return response()->streamDownload(function () use ($clanovi) {
+        return response()->streamDownload(function () use ($clanovi, $odabranaPolja, $godineStatistike, $statistika, $zaglavlja) {
             $izlaz = fopen('php://output', 'wb');
 
             if ($izlaz === false) {
@@ -332,22 +411,461 @@ class JavnoController extends Controller
             }
 
             fwrite($izlaz, "\xEF\xBB\xBF");
-            fputcsv($izlaz, ['Prezime', 'Ime', 'OIB', 'Spol', 'Datum rođenja'], ';');
+            fputcsv($izlaz, $zaglavlja, ';');
 
             foreach ($clanovi as $clan) {
-                fputcsv($izlaz, [
+                $red = [
                     (string)$clan->Prezime,
                     (string)$clan->Ime,
                     $this->formatirajOibZaCsv($clan->oib),
                     $this->mapirajSpolZaCsv($clan->spol),
-                    empty($clan->datum_rodjenja) ? '' : date('d.m.Y.', strtotime($clan->datum_rodjenja)),
-                ], ';');
+                    empty($clan->datum_rodjenja) ? '' : date('d.m.Y.', strtotime((string)$clan->datum_rodjenja)),
+                ];
+
+                $this->dodajCsvOpcionalnaPolja($red, $clan, $odabranaPolja, $godineStatistike, $statistika);
+                fputcsv($izlaz, $red, ';');
             }
 
             fclose($izlaz);
         }, $nazivDatoteke, [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
+    }
+
+    /**
+     * Normalizira i validira listu opcionalnih CSV polja iz korisnickog zahtjeva.
+     *
+     * @return array<int, string>
+     */
+    private function odabranaCsvPolja(Request $request): array
+    {
+        $trazenaPolja = array_map('strval', (array)$request->query('fields', []));
+        $odabranaPolja = [];
+
+        foreach (self::CSV_OPTIONAL_POLJA as $polje) {
+            if (in_array($polje, $trazenaPolja, true)) {
+                $odabranaPolja[] = $polje;
+            }
+        }
+
+        return $odabranaPolja;
+    }
+
+    /**
+     * Provjerava treba li primijeniti odabranu godinu za CSV statistiku.
+     *
+     * @param array<int, string> $odabranaPolja
+     */
+    private function imaGodisnjaCsvPolja(array $odabranaPolja): bool
+    {
+        return count(array_intersect($odabranaPolja, self::CSV_GODISNJA_POLJA)) > 0;
+    }
+
+    /**
+     * Dohvaca i validira godine za godisnje CSV stupce.
+     *
+     * @return array<int, int>
+     */
+    private function odrediGodineCsvStatistike(Request $request): array
+    {
+        $zadanaGodina = (int)date('Y');
+        $godine = collect((array)$request->query('stat_years', []))
+            ->map(static fn ($godina): int => (int)$godina)
+            ->filter(static fn (int $godina): bool => $godina >= 1900 && $godina <= ($zadanaGodina + 1))
+            ->unique()
+            ->sortDesc()
+            ->values()
+            ->all();
+
+        if (count($godine) === 0) {
+            return [$zadanaGodina];
+        }
+
+        return $godine;
+    }
+
+    /**
+     * Slaze zaglavlja CSV datoteke prema odabranim stupcima.
+     *
+     * @param array<int, string> $odabranaPolja
+     * @return array<int, string>
+     */
+    private function csvZaglavlja(array $odabranaPolja, array $godineStatistike): array
+    {
+        $zaglavlja = ['Prezime', 'Ime', 'OIB', 'Spol', 'Datum rođenja'];
+
+        foreach ($odabranaPolja as $polje) {
+            if ($polje === 'phone') {
+                $zaglavlja[] = 'Br. telefona';
+                continue;
+            }
+            if ($polje === 'email') {
+                $zaglavlja[] = 'E-mail';
+                continue;
+            }
+            if ($polje === 'license_number') {
+                $zaglavlja[] = 'Br. licence';
+                continue;
+            }
+            if ($polje === 'member_since') {
+                $zaglavlja[] = 'Član od';
+                continue;
+            }
+            if ($polje === 'club_function') {
+                $zaglavlja[] = 'Funkcija u klubu';
+                continue;
+            }
+            if ($polje === 'last_medical_duration') {
+                $zaglavlja[] = 'Trajanje zadnjeg liječničkog';
+                continue;
+            }
+            if ($polje === 'tournaments_total') {
+                $zaglavlja[] = 'Br. nastupa na turnirima (ukupno)';
+                continue;
+            }
+            if ($polje === 'medals_total') {
+                $zaglavlja[] = 'Broj osvojenih medalja (ukupno)';
+                continue;
+            }
+            if ($polje === 'medals_gold_total') {
+                $zaglavlja[] = 'Zlatne medalje (ukupno)';
+                continue;
+            }
+            if ($polje === 'medals_silver_total') {
+                $zaglavlja[] = 'Srebrne medalje (ukupno)';
+                continue;
+            }
+            if ($polje === 'medals_bronze_total') {
+                $zaglavlja[] = 'Brončane medalje (ukupno)';
+                continue;
+            }
+        }
+
+        $odabranaGodisnjaPolja = array_values(array_intersect(self::CSV_GODISNJA_POLJA, $odabranaPolja));
+        if (count($odabranaGodisnjaPolja) > 0) {
+            foreach ($godineStatistike as $godina) {
+                foreach ($odabranaGodisnjaPolja as $godisnjePolje) {
+                    if ($godisnjePolje === 'tournaments_year') {
+                        $zaglavlja[] = 'Br. nastupa na turnirima (' . $godina . ')';
+                        continue;
+                    }
+                    if ($godisnjePolje === 'medals_year') {
+                        $zaglavlja[] = 'Broj osvojenih medalja (' . $godina . ')';
+                        continue;
+                    }
+                    if ($godisnjePolje === 'medals_gold_year') {
+                        $zaglavlja[] = 'Zlatne medalje (' . $godina . ')';
+                        continue;
+                    }
+                    if ($godisnjePolje === 'medals_silver_year') {
+                        $zaglavlja[] = 'Srebrne medalje (' . $godina . ')';
+                        continue;
+                    }
+                    if ($godisnjePolje === 'medals_bronze_year') {
+                        $zaglavlja[] = 'Brončane medalje (' . $godina . ')';
+                    }
+                }
+            }
+        }
+
+        return $zaglavlja;
+    }
+
+    /**
+     * Dodaje odabrana opcionalna polja u jedan CSV red.
+     *
+     * @param array<int, mixed> $red
+     * @param array<int, string> $odabranaPolja
+     * @param array<int, int> $godineStatistike
+     * @param array<string, mixed> $statistika
+     */
+    private function dodajCsvOpcionalnaPolja(array &$red, Clanovi $clan, array $odabranaPolja, array $godineStatistike, array $statistika): void
+    {
+        $clanId = (int)$clan->id;
+        $praznaMedaljaStatistika = $this->praznaCsvMedaljaStatistika();
+
+        $turniriUkupno = (int)data_get($statistika, 'turniri_ukupno.' . $clanId, 0);
+        $medaljeUkupno = data_get($statistika, 'medalje_ukupno.' . $clanId, $praznaMedaljaStatistika);
+
+        foreach ($odabranaPolja as $polje) {
+            if ($polje === 'phone') {
+                $red[] = $this->formatirajTekstualnoPoljeZaCsv($clan->br_telefona);
+                continue;
+            }
+            if ($polje === 'email') {
+                $red[] = trim((string)$clan->email);
+                continue;
+            }
+            if ($polje === 'license_number') {
+                $red[] = $this->formatirajTekstualnoPoljeZaCsv($clan->broj_licence);
+                continue;
+            }
+            if ($polje === 'member_since') {
+                $red[] = $this->formatirajClanOdZaCsv($clan);
+                continue;
+            }
+            if ($polje === 'club_function') {
+                $red[] = $this->odrediFunkcijuClanaZaCsv($clan);
+                continue;
+            }
+            if ($polje === 'last_medical_duration') {
+                $red[] = $this->formatirajTrajanjeZadnjegLijecnickogZaCsv($clan->lijecnicki_do);
+                continue;
+            }
+            if ($polje === 'tournaments_total') {
+                $red[] = $turniriUkupno;
+                continue;
+            }
+            if ($polje === 'tournaments_year') {
+                continue;
+            }
+            if ($polje === 'medals_total') {
+                $red[] = (int)data_get($medaljeUkupno, 'ukupno', 0);
+                continue;
+            }
+            if ($polje === 'medals_gold_total') {
+                $red[] = (int)data_get($medaljeUkupno, 'zlato', 0);
+                continue;
+            }
+            if ($polje === 'medals_silver_total') {
+                $red[] = (int)data_get($medaljeUkupno, 'srebro', 0);
+                continue;
+            }
+            if ($polje === 'medals_bronze_total') {
+                $red[] = (int)data_get($medaljeUkupno, 'bronca', 0);
+                continue;
+            }
+            if ($polje === 'medals_year' || $polje === 'medals_gold_year' || $polje === 'medals_silver_year' || $polje === 'medals_bronze_year') {
+                continue;
+            }
+        }
+
+        $odabranaGodisnjaPolja = array_values(array_intersect(self::CSV_GODISNJA_POLJA, $odabranaPolja));
+        if (count($odabranaGodisnjaPolja) > 0) {
+            foreach ($godineStatistike as $godina) {
+                $medaljePoGodini = data_get($statistika, 'medalje_po_godini.' . $godina . '.' . $clanId, $praznaMedaljaStatistika);
+                $turniriPoGodini = (int)data_get($statistika, 'turniri_po_godini.' . $godina . '.' . $clanId, 0);
+
+                foreach ($odabranaGodisnjaPolja as $godisnjePolje) {
+                    if ($godisnjePolje === 'tournaments_year') {
+                        $red[] = $turniriPoGodini;
+                        continue;
+                    }
+                    if ($godisnjePolje === 'medals_year') {
+                        $red[] = (int)data_get($medaljePoGodini, 'ukupno', 0);
+                        continue;
+                    }
+                    if ($godisnjePolje === 'medals_gold_year') {
+                        $red[] = (int)data_get($medaljePoGodini, 'zlato', 0);
+                        continue;
+                    }
+                    if ($godisnjePolje === 'medals_silver_year') {
+                        $red[] = (int)data_get($medaljePoGodini, 'srebro', 0);
+                        continue;
+                    }
+                    if ($godisnjePolje === 'medals_bronze_year') {
+                        $red[] = (int)data_get($medaljePoGodini, 'bronca', 0);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Vraca funkciju clana u klubu; ako nije definirana vraca "Clan".
+     */
+    private function odrediFunkcijuClanaZaCsv(Clanovi $clan): string
+    {
+        $funkcije = $clan->funkcijeUklubu;
+        if ($funkcije === null || $funkcije->isEmpty()) {
+            return 'Član';
+        }
+
+        $naziviFunkcija = $funkcije
+            ->pluck('funkcija')
+            ->map(static fn ($funkcija): string => trim((string)$funkcija))
+            ->filter(static fn (string $funkcija): bool => $funkcija !== '')
+            ->unique()
+            ->values();
+
+        if ($naziviFunkcija->isEmpty()) {
+            return 'Član';
+        }
+
+        return $naziviFunkcija->implode(', ');
+    }
+
+    /**
+     * Formatira podatak "Clan od" u obliku datuma ili godine.
+     */
+    private function formatirajClanOdZaCsv(Clanovi $clan): string
+    {
+        $datumPocetka = $clan->datum_pocetka_clanstva;
+        if ($datumPocetka instanceof \DateTimeInterface) {
+            return $datumPocetka->format('d.m.Y.');
+        }
+
+        if (!empty($datumPocetka)) {
+            $timestamp = strtotime((string)$datumPocetka);
+            if ($timestamp !== false) {
+                return date('d.m.Y.', $timestamp);
+            }
+        }
+
+        if (!empty($clan->clan_od)) {
+            return (string)(int)$clan->clan_od;
+        }
+
+        return '-';
+    }
+
+    /**
+     * Formatira zadnje trajanje lijecnickog pregleda za CSV.
+     */
+    private function formatirajTrajanjeZadnjegLijecnickogZaCsv(?string $lijecnickiDo): string
+    {
+        if (empty($lijecnickiDo)) {
+            return '-';
+        }
+
+        $timestamp = strtotime((string)$lijecnickiDo);
+        if ($timestamp === false) {
+            return '-';
+        }
+
+        return date('d.m.Y.', $timestamp);
+    }
+
+    /**
+     * Vracanje praznog skupa medalja za CSV.
+     *
+     * @return array<string, int>
+     */
+    private function praznaCsvMedaljaStatistika(): array
+    {
+        return [
+            'ukupno' => 0,
+            'zlato' => 0,
+            'srebro' => 0,
+            'bronca' => 0,
+        ];
+    }
+
+    /**
+     * Priprema agregate turnira i medalja po clanu za CSV izvoz.
+     *
+     * @param array<int, int> $clanoviIds
+     * @return array<string, mixed>
+     */
+    private function pripremiCsvStatistikuClanova(array $clanoviIds): array
+    {
+        if (empty($clanoviIds)) {
+            return [
+                'turniri_ukupno' => [],
+                'turniri_po_godini' => [],
+                'medalje_ukupno' => [],
+                'medalje_po_godini' => [],
+            ];
+        }
+
+        $turniriUkupnoSet = [];
+        $turniriPoGodiniSet = [];
+        $medaljeUkupno = [];
+        $medaljePoGodini = [];
+
+        $individualniRezultati = RezultatiOpci::query()
+            ->join('turniris', 'turniris.id', '=', 'rezultati_opcis.turnir_id')
+            ->whereIn('rezultati_opcis.clan_id', $clanoviIds)
+            ->select([
+                'rezultati_opcis.clan_id',
+                'rezultati_opcis.turnir_id',
+                'turniris.eliminacije',
+                'rezultati_opcis.plasman',
+                'rezultati_opcis.plasman_nakon_eliminacija',
+                DB::raw('YEAR(turniris.datum) as godina'),
+            ])
+            ->get();
+
+        foreach ($individualniRezultati as $rezultat) {
+            $clanId = (int)data_get($rezultat, 'clan_id', 0);
+            $turnirId = (int)data_get($rezultat, 'turnir_id', 0);
+            $godina = (int)data_get($rezultat, 'godina', 0);
+            $eliminacije = (int)data_get($rezultat, 'eliminacije', 0);
+            $plasman = $eliminacije === 1
+                ? (int)data_get($rezultat, 'plasman_nakon_eliminacija', 0)
+                : (int)data_get($rezultat, 'plasman', 0);
+
+            $this->dodajTurnirClanu($turniriUkupnoSet, $clanId, $turnirId);
+            $this->dodajMedaljuClanu($medaljeUkupno, $clanId, $plasman);
+
+            if ($godina > 0) {
+                if (!isset($turniriPoGodiniSet[$godina])) {
+                    $turniriPoGodiniSet[$godina] = [];
+                }
+                if (!isset($medaljePoGodini[$godina])) {
+                    $medaljePoGodini[$godina] = [];
+                }
+
+                $this->dodajTurnirClanu($turniriPoGodiniSet[$godina], $clanId, $turnirId);
+                $this->dodajMedaljuClanu($medaljePoGodini[$godina], $clanId, $plasman);
+            }
+        }
+
+        if ($this->timskeTabliceDostupne()) {
+            $timskiRezultati = DB::table('rezultati_tim_clanovi as rtc')
+                ->join('rezultati_timovi as rt', 'rt.id', '=', 'rtc.rezultati_tim_id')
+                ->join('turniris as t', 't.id', '=', 'rt.turnir_id')
+                ->join('rezultati_opcis as ro', 'ro.id', '=', 'rtc.rezultat_opci_id')
+                ->whereIn('ro.clan_id', $clanoviIds)
+                ->select([
+                    'ro.clan_id',
+                    'rt.turnir_id',
+                    'rt.plasman',
+                    DB::raw('YEAR(t.datum) as godina'),
+                ])
+                ->get();
+
+            foreach ($timskiRezultati as $rezultat) {
+                $clanId = (int)data_get($rezultat, 'clan_id', 0);
+                $turnirId = (int)data_get($rezultat, 'turnir_id', 0);
+                $godina = (int)data_get($rezultat, 'godina', 0);
+                $plasman = (int)data_get($rezultat, 'plasman', 0);
+
+                $this->dodajTurnirClanu($turniriUkupnoSet, $clanId, $turnirId);
+                $this->dodajMedaljuClanu($medaljeUkupno, $clanId, $plasman);
+
+                if ($godina > 0) {
+                    if (!isset($turniriPoGodiniSet[$godina])) {
+                        $turniriPoGodiniSet[$godina] = [];
+                    }
+                    if (!isset($medaljePoGodini[$godina])) {
+                        $medaljePoGodini[$godina] = [];
+                    }
+
+                    $this->dodajTurnirClanu($turniriPoGodiniSet[$godina], $clanId, $turnirId);
+                    $this->dodajMedaljuClanu($medaljePoGodini[$godina], $clanId, $plasman);
+                }
+            }
+        }
+
+        $turniriUkupno = [];
+        foreach ($turniriUkupnoSet as $clanId => $turniri) {
+            $turniriUkupno[(int)$clanId] = count($turniri);
+        }
+
+        $turniriPoGodini = [];
+        foreach ($turniriPoGodiniSet as $godina => $turniriPoClanu) {
+            foreach ($turniriPoClanu as $clanId => $turniri) {
+                $turniriPoGodini[(int)$godina][(int)$clanId] = count($turniri);
+            }
+        }
+
+        return [
+            'turniri_ukupno' => $turniriUkupno,
+            'turniri_po_godini' => $turniriPoGodini,
+            'medalje_ukupno' => $medaljeUkupno,
+            'medalje_po_godini' => $medaljePoGodini,
+        ];
     }
 
     /**
@@ -709,14 +1227,21 @@ class JavnoController extends Controller
      */
     private function formatirajOibZaCsv(?string $oib): string
     {
-        $vrijednost = trim((string)$oib);
+        return $this->formatirajTekstualnoPoljeZaCsv($oib);
+    }
 
-        if ($vrijednost === '') {
+    /**
+     * Formatira vrijednost kao tekst za CSV (sprječava automatsko pretvaranje u broj u tabličnim alatima).
+     */
+    private function formatirajTekstualnoPoljeZaCsv(?string $vrijednost): string
+    {
+        $tekst = trim((string)$vrijednost);
+
+        if ($tekst === '') {
             return '';
         }
 
-        // OIB šaljemo kao tekstualnu formulu da Excel/LibreOffice ne maknu vodeće nule.
-        return '="' . str_replace('"', '""', $vrijednost) . '"';
+        return "\t" . $tekst;
     }
 
     /**
