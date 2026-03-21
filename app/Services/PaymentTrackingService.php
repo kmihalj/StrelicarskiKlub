@@ -47,6 +47,8 @@ class PaymentTrackingService
     public const COLLECTION_CASH = 'cash';
 
     private const DEFAULT_INFO_ARTICLE_ID = 33;
+    private const SUPPORTING_MEMBER_RATIO = 1 / 3;
+    private const ANNUAL_MIXED_SUPPORTING_RATIO = 2 / 3;
     private ?bool $optionArchivedColumnSupported = null;
 
     /**
@@ -587,7 +589,7 @@ class PaymentTrackingService
                 [
                     'value' => self::VARIANT_SUPPORTING,
                     'label' => 'Podupirući član',
-                    'amount' => round($baseAmount / 2, 2),
+                    'amount' => round($baseAmount * self::SUPPORTING_MEMBER_RATIO, 2),
                 ],
             ];
         }
@@ -602,17 +604,17 @@ class PaymentTrackingService
                 [
                     'value' => self::VARIANT_ANNUAL_SUPPORTING_INDOOR,
                     'label' => 'Sezona dvoranska podupirući + vanjska puna',
-                    'amount' => round($baseAmount * 0.75, 2),
+                    'amount' => round($baseAmount * self::ANNUAL_MIXED_SUPPORTING_RATIO, 2),
                 ],
                 [
                     'value' => self::VARIANT_ANNUAL_SUPPORTING_OUTDOOR,
                     'label' => 'Sezona dvoranska puna + vanjska podupirući',
-                    'amount' => round($baseAmount * 0.75, 2),
+                    'amount' => round($baseAmount * self::ANNUAL_MIXED_SUPPORTING_RATIO, 2),
                 ],
                 [
                     'value' => self::VARIANT_ANNUAL_SUPPORTING_BOTH,
                     'label' => 'Sezona dvoranska podupirući + vanjska podupirući',
-                    'amount' => round($baseAmount * 0.50, 2),
+                    'amount' => round($baseAmount * self::SUPPORTING_MEMBER_RATIO, 2),
                 ],
             ];
         }
@@ -1731,9 +1733,9 @@ class PaymentTrackingService
 
         return match ($variant) {
             self::VARIANT_SUPPORTING,
-            self::VARIANT_ANNUAL_SUPPORTING_BOTH => round($baseAmount * 0.5, 2),
+            self::VARIANT_ANNUAL_SUPPORTING_BOTH => round($baseAmount * self::SUPPORTING_MEMBER_RATIO, 2),
             self::VARIANT_ANNUAL_SUPPORTING_INDOOR,
-            self::VARIANT_ANNUAL_SUPPORTING_OUTDOOR => round($baseAmount * 0.75, 2),
+            self::VARIANT_ANNUAL_SUPPORTING_OUTDOOR => round($baseAmount * self::ANNUAL_MIXED_SUPPORTING_RATIO, 2),
             default => round($baseAmount, 2),
         };
     }
