@@ -75,6 +75,7 @@
                     outline-offset: 2px;
                     border-radius: 2px;
                 }
+
             </style>
 
             <div class="container-xxl bg-white shadow">

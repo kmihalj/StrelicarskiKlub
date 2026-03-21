@@ -1,14 +1,25 @@
 {{-- Predložak jednog retka u tablici popisa članova. --}}
+@php
+    $showPaymentColumn = (bool)($showPaymentColumn ?? false);
+    $paymentStatus = ($paymentStatusByClan[(int)$clan->id] ?? null);
+    $datumRodjenjaTimestamp = null;
+    if (!empty($clan->datum_rodjenja)) {
+        $parsedDatumRodjenja = strtotime((string)$clan->datum_rodjenja);
+        if ($parsedDatumRodjenja !== false) {
+            $datumRodjenjaTimestamp = $parsedDatumRodjenja;
+        }
+    }
+    $granicaPunoljetnosti = strtotime(date('Y-m-d', strtotime('-18 years')));
+    $jeMaloljetan = $datumRodjenjaTimestamp !== null && $datumRodjenjaTimestamp > $granicaPunoljetnosti;
+    $datumRodjenjaPrikaz = $datumRodjenjaTimestamp !== null ? date('d.m.Y.', $datumRodjenjaTimestamp) : '-';
+@endphp
 <tr class="js-clan-row"
     data-ime="{{ trim((string) $clan->Ime) }}"
     data-prezime="{{ trim((string) $clan->Prezime) }}"
-    data-datum-rodjenja="{{ $clan->datum_rodjenja ? strtotime($clan->datum_rodjenja) : '' }}"
+    data-datum-rodjenja="{{ $datumRodjenjaTimestamp ?? '' }}"
     data-godina-registracije="{{ is_null($clan->clan_od) ? '' : (int) $clan->clan_od }}"
-    data-lijecnicki-do="{{ $clan->lijecnicki_do ? strtotime($clan->lijecnicki_do) : '' }}">
-    @php
-        $showPaymentColumn = (bool)($showPaymentColumn ?? false);
-        $paymentStatus = ($paymentStatusByClan[(int)$clan->id] ?? null);
-    @endphp
+    data-lijecnicki-do="{{ $clan->lijecnicki_do ? strtotime($clan->lijecnicki_do) : '' }}"
+    data-maloljetan="{{ $jeMaloljetan ? '1' : '0' }}">
     @auth()
         @if((int)auth()->user()->rola === 1)
             <td class="text-center align-middle" style="width: 44px;">
@@ -60,7 +71,13 @@
                 </p>
             </td>
             <td>
-                <p class="fw-bold mb-1">{{ date('d.m.Y.', strtotime($clan->datum_rodjenja)) }}</p>
+                <p class="fw-bold mb-1"
+                   @style([
+                       'color: #0a58ca !important' => $jeMaloljetan,
+                       'color: #6ea8fe !important' => $jeMaloljetan && ($isDarkMode ?? false),
+                   ])>
+                    {{ $datumRodjenjaPrikaz }}
+                </p>
             </td>
         @endif
     @endauth
