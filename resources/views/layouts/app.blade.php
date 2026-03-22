@@ -12,15 +12,15 @@
     @php
         $faviconUrl = $activeThemeFaviconUrl ?? asset('favicon.ico');
         $faviconType = $activeThemeFaviconType ?? 'image/x-icon';
-        $faviconIcoUrl = asset('favicon.ico');
         $faviconVersion = $activeThemeFaviconVersion
             ?? (@filemtime(public_path('favicon.png')) ?: (@filemtime(public_path('favicon.ico')) ?: time()));
+        $faviconSeparator = str_contains($faviconUrl, '?') ? '&' : '?';
+        $faviconHref = $faviconUrl . $faviconSeparator . 'v=' . $faviconVersion;
         $resolvedThemeMode = $themeModeResolved ?? (($activeThemeIsDark ?? false) ? 'dark' : 'light');
     @endphp
-    <link rel="icon" type="{{ $faviconType }}" href="{{ $faviconUrl }}?v={{ $faviconVersion }}">
-    <link rel="icon" type="image/x-icon" href="{{ $faviconIcoUrl }}?v={{ $faviconVersion }}">
-    <link rel="shortcut icon" href="{{ $faviconIcoUrl }}?v={{ $faviconVersion }}">
-    <link rel="apple-touch-icon" href="{{ $faviconUrl }}?v={{ $faviconVersion }}">
+    <link rel="icon" type="{{ $faviconType }}" href="{{ $faviconHref }}">
+    <link rel="shortcut icon" href="{{ $faviconHref }}">
+    <link rel="apple-touch-icon" href="{{ $faviconHref }}">
 
     <!-- Fonts -->
     <link rel="dns-prefetch" href="//fonts.bunny.net">
