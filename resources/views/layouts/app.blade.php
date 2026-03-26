@@ -16,6 +16,9 @@
             ?? (@filemtime(public_path('favicon.png')) ?: (@filemtime(public_path('favicon.ico')) ?: time()));
         $faviconSeparator = str_contains($faviconUrl, '?') ? '&' : '?';
         $faviconHref = $faviconUrl . $faviconSeparator . 'v=' . $faviconVersion;
+        $ckStylePath = public_path('assets/ckeditor5/ck_style.css');
+        $ckStyleVersion = @filemtime($ckStylePath) ?: time();
+        $ckStyleHref = asset('assets/ckeditor5/ck_style.css') . '?v=' . $ckStyleVersion;
         $resolvedThemeMode = $themeModeResolved ?? (($activeThemeIsDark ?? false) ? 'dark' : 'light');
     @endphp
     <link rel="icon" type="{{ $faviconType }}" href="{{ $faviconHref }}">
@@ -25,7 +28,7 @@
     <!-- Fonts -->
     <link rel="dns-prefetch" href="//fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=Nunito" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('assets/ckeditor5/ck_style.css') }}" type="text/css">
+    <link rel="stylesheet" href="{{ $ckStyleHref }}" type="text/css">
 
     <!-- Scripts -->
     @vite(['resources/js/app.js'])
