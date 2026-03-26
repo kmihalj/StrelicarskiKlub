@@ -10,7 +10,8 @@
                 <div class="card-body bg-white shadow">
                     <p class="mb-4">
                         Registracija je za članove kluba, polaznike škole streličarstva i roditelje maloljetnih članova i polaznika.<br><br>
-                        Molimo roditelje da se registiraju sa svojim podacima, ne sa podacima djece (OIB, br. telefona, ime i prezime, e-mail). Administrator će Vaš račun povezati sa podacima Vaše djece.<br><br>
+                        Molimo roditelje da se registiraju sa svojim podacima, ne sa podacima djece (OIB, br. telefona, ime i prezime, e-mail). <br>
+                        Administrator će Vaš račun povezati sa podacima Vaše djece.<br><br>
                         Ako se podaci podudaraju sa postojećim članom/polaznikom (OIB, e-mail, ime i prezime, telefon), račun automatski dobiva odgovarajuća prava.<br><br>
                         Ako podaci nisu potpuno usklađeni, registracija je uspješna, ali prava dodjeljuje administrator.
                     </p>
