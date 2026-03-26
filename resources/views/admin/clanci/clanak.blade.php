@@ -29,11 +29,11 @@
             ->where('vrsta', 'video')
             ->filter(fn ($medij) => Storage::disk('public')->exists('clanci/' . $clanak->id . '/' . $medij->link))
             ->values();
-        $sadrzajImaSlike = stripos((string)$clanak->sadrzaj, '<img') !== false;
+        $prikaziMedijeIspod = (bool) $clanak->galerija;
     @endphp
 
     <div class="col-lg-12">
-        @if($clanak->galerija && $slikeClanka->count() != 0)
+        @if($prikaziMedijeIspod && $slikeClanka->count() != 0)
             <div class="justified-gallery js-justified-gallery mt-2" data-row-height="165" data-gap="8">
                 @foreach($slikeClanka as $i => $medij)
                     <button type="button"
@@ -94,27 +94,7 @@
             </div>
         @endif
 
-        @if(!$clanak->galerija && !$sadrzajImaSlike && $slikeClanka->count() != 0)
-            <div class="row justify-content-center mt-3">
-                <div class="col-12">
-                    <p class="fw-bold mb-2">Fotografije</p>
-                </div>
-            </div>
-            <div class="justified-gallery js-justified-gallery pb-1" data-row-height="165" data-gap="8">
-                @foreach($slikeClanka as $medij)
-                    <a href="{{ asset('storage/clanci/' . $clanak->id . '/' . $medij->link) }}"
-                       target="_blank"
-                       class="justified-gallery-item">
-                        <img src="{{ asset('storage/clanci/' . $clanak->id . '/' . $medij->link) }}"
-                             class="justified-gallery-img"
-                             loading="lazy"
-                             alt="{{ $clanak->naslov }} - slika">
-                    </a>
-                @endforeach
-            </div>
-        @endif
-
-        @if($videoClanka->count() != 0)
+        @if($prikaziMedijeIspod && $videoClanka->count() != 0)
             <div class="justified-video-gallery pt-2">
                 @foreach($videoClanka as $medij)
                     <div class="justified-video-item pb-3">
