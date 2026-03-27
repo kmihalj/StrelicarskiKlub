@@ -4,6 +4,7 @@ use App\Http\Controllers\ClanciController;
 use App\Http\Controllers\ClanoviController;
 use App\Http\Controllers\JavnoController;
 use App\Http\Controllers\KorisniciController;
+use App\Http\Controllers\KlupskiZidController;
 use App\Http\Controllers\KlubController;
 use App\Http\Controllers\AdminThemeModePolicyController;
 use App\Http\Controllers\PlacanjaController;
@@ -140,6 +141,7 @@ Route::get('admin/turniri', [TurniriController::class, 'index'])->name('admin.re
 Route::get('rezultati', [JavnoController::class, 'prikazRezultata'])->name('javno.rezultati');
 Route::get('rezultati/{turnir}', [JavnoController::class, 'pokaziTurnir'])->name('javno.rezultati.prikaz_turnira');
 Route::get('clanovi', [JavnoController::class, 'popisClanova'])->name('javno.clanovi');
+Route::get('klupski-zid/poruke', [KlupskiZidController::class, 'index'])->name('javno.klupski_zid.index');
 Route::middleware(['auth', 'admin_member_or_school'])->group(function () {
     Route::get('skola/polaznici', [PolazniciSkoleController::class, 'index'])->name('javno.skola.polaznici.index');
     Route::get('skola/polaznici/{polaznik}', [PolazniciSkoleController::class, 'show'])->name('javno.skola.polaznici.show');
@@ -149,6 +151,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('skola/evidencija-dolazaka', [PolazniciSkoleController::class, 'evidencijaDolasaka'])->name('javno.skola.evidencija.index');
 });
 Route::middleware('auth')->group(function () {
+    Route::post('klupski-zid/poruke', [KlupskiZidController::class, 'store'])->name('javno.klupski_zid.store');
+
     Route::get('clanovi/{clan}/treninzi', [TreninziController::class, 'pregledClana'])->name('javno.treninzi.clan.index');
     Route::get('moji-treninzi', [TreninziController::class, 'index'])->name('javno.treninzi.index');
     Route::get('moji-treninzi/dvoranski/novi', [TreninziController::class, 'createDvoranski'])->name('javno.treninzi.dvoranski.create');
@@ -175,6 +179,10 @@ Route::middleware('auth')->group(function () {
     Route::post('skola/polaznici/{polaznik}/placanja/{charge}/status', [PolazniciSkoleController::class, 'updateSkolarinaStatus'])->name('admin.skola.polaznici.placanja.status')->middleware('admin');
 
     Route::post('profil/tema-prikaz', [UserThemePreferenceController::class, 'update'])->name('user.theme_mode.update');
+});
+Route::middleware(['auth', 'admin'])->group(function () {
+    Route::post('klupski-zid/poruke/{message}/obrisi', [KlupskiZidController::class, 'destroy'])->name('javno.klupski_zid.destroy');
+    Route::post('klupski-zid/poruke/{message}/istakni', [KlupskiZidController::class, 'toggleHighlight'])->name('javno.klupski_zid.highlight');
 });
 Route::get('clanovi/csv-export', [JavnoController::class, 'exportAktivnihClanovaCsv'])->name('javno.clanovi.csv_export')->middleware(['auth', 'admin']);
 Route::get('clanovi/{clan}/lijecnicki/{pregled}/pregled', [JavnoController::class, 'preuzmi_lijecnicki_pregled'])->name('javno.clanovi.preuzmi_lijecnicki')->middleware('auth');

@@ -1,6 +1,11 @@
 {{-- Naslovnica aplikacije s personaliziranim blokovima (statusi, rezultati, članci, rođendani). --}}
 @extends('layouts.app')
 @section('content')
+    @php
+        $korisnikPrijavljen = auth()->check();
+        $mozePisatiKlupskiZid = $korisnikPrijavljen && auth()->user()->imaPravoAdminMemberOrSchool();
+        $mozeModeriratiKlupskiZid = $korisnikPrijavljen && (int)auth()->user()->rola === 1;
+    @endphp
     <div class="container-xxl">
         <div class="row">
             <!-- Prikaz na desktop browseru -->
@@ -31,6 +36,14 @@
                         </div>
                     @endif
                 </div>
+
+                @include('javno.partials.klupskiZid', [
+                    'headerClass' => 'row justify-content-center p-2 shadow bg-danger fw-bolder me-lg-1',
+                    'bodyClass' => 'row justify-content-start mb-3 pt-3 pb-2 shadow bg-white me-lg-1',
+                    'mozePisatiKlupskiZid' => $mozePisatiKlupskiZid,
+                    'mozeModeriratiKlupskiZid' => $mozeModeriratiKlupskiZid,
+                ])
+
                 <!-- Članci za naslovnicu -->
                 @if($clanciNaslovnica->count() != 0)
                     {{-- "Škola streličarstva" ide prva jer je najčešće ključna informacija za nove korisnike. --}}
@@ -125,8 +138,24 @@
             <div class="col-xxl-9 col-xl-12 col-lg-12 col-md-12 col-sm-12">
                 {{-- Informativni status blokovi (rođendani, liječnički, škola, status djece) prikazuju se kontekstualno po ulozi korisnika. --}}
                 @include('javno.naslovnaRodjendani', ['rodendaniDanas' => $rodendaniDanas])
-                @include('javno.naslovnaLijecnickiStatus', ['statusLijecnickiKorisnika' => $statusLijecnickiKorisnika])
-                @include('javno.naslovnaSkolaStatus', ['statusSkolaKorisnika' => $statusSkolaKorisnika ?? null])
+
+                {{-- Srednji ekran: Klupski zid ide iznad "Mojih podataka". --}}
+                <div class="d-none d-lg-block d-xxl-none">
+                    @include('javno.partials.klupskiZid', [
+                        'mozePisatiKlupskiZid' => $mozePisatiKlupskiZid,
+                        'mozeModeriratiKlupskiZid' => $mozeModeriratiKlupskiZid,
+                    ])
+                </div>
+
+                @if($korisnikPrijavljen)
+                    <div class="d-none d-lg-block">
+                        @include('javno.partials.naslovnaMojiPodaci', [
+                            'statusLijecnickiKorisnika' => $statusLijecnickiKorisnika,
+                            'statusSkolaKorisnika' => $statusSkolaKorisnika ?? null,
+                        ])
+                    </div>
+                @endif
+
                 @if(isset($statusLijecnickiDjeca))
                     @foreach($statusLijecnickiDjeca as $statusLijecnickiDijete)
                         @include('javno.naslovnaRoditeljLijecnickiStatus', ['statusLijecnickiDijete' => $statusLijecnickiDijete])
@@ -136,6 +165,20 @@
                     @foreach($statusSkolaDjeca as $statusSkolaDijete)
                         @include('javno.naslovnaRoditeljSkolaStatus', ['statusSkolaDijete' => $statusSkolaDijete])
                     @endforeach
+                @endif
+                <div class="d-lg-none">
+                    @include('javno.partials.klupskiZid', [
+                        'mozePisatiKlupskiZid' => $mozePisatiKlupskiZid,
+                        'mozeModeriratiKlupskiZid' => $mozeModeriratiKlupskiZid,
+                    ])
+                </div>
+                @if($korisnikPrijavljen)
+                    <div class="d-lg-none">
+                        @include('javno.partials.naslovnaMojiPodaci', [
+                            'statusLijecnickiKorisnika' => $statusLijecnickiKorisnika,
+                            'statusSkolaKorisnika' => $statusSkolaKorisnika ?? null,
+                        ])
+                    </div>
                 @endif
                 <div class="row justify-content-center p-2 shadow bg-danger fw-bolder">
                     <div class="col-lg-12 text-white">
