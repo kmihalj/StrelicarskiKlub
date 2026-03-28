@@ -37,13 +37,6 @@
                     @endif
                 </div>
 
-                @include('javno.partials.klupskiZid', [
-                    'headerClass' => 'row justify-content-center p-2 shadow bg-danger fw-bolder me-lg-1',
-                    'bodyClass' => 'row justify-content-start mb-3 pt-3 pb-2 shadow bg-white me-lg-1',
-                    'mozePisatiKlupskiZid' => $mozePisatiKlupskiZid,
-                    'mozeModeriratiKlupskiZid' => $mozeModeriratiKlupskiZid,
-                ])
-
                 <!-- Članci za naslovnicu -->
                 @if($clanciNaslovnica->count() != 0)
                     {{-- "Škola streličarstva" ide prva jer je najčešće ključna informacija za nove korisnike. --}}
@@ -62,6 +55,14 @@
                             @break
                         @endif
                     @endforeach
+
+                    @include('javno.partials.klupskiZid', [
+                        'headerClass' => 'row justify-content-center p-2 shadow bg-danger fw-bolder me-lg-1',
+                        'bodyClass' => 'row justify-content-start mb-3 pt-3 pb-2 shadow bg-white me-lg-1',
+                        'mozePisatiKlupskiZid' => $mozePisatiKlupskiZid,
+                        'mozeModeriratiKlupskiZid' => $mozeModeriratiKlupskiZid,
+                    ])
+
                     {{-- Ostali naslovni članci slijede nakon škole, redoslijedom iz baze. --}}
                     @foreach($clanciNaslovnica as $clanak)
                         @if($clanak->naslov != "Škola streličarstva")
@@ -78,6 +79,13 @@
 
                         @endif
                     @endforeach
+                @else
+                    @include('javno.partials.klupskiZid', [
+                        'headerClass' => 'row justify-content-center p-2 shadow bg-danger fw-bolder me-lg-1',
+                        'bodyClass' => 'row justify-content-start mb-3 pt-3 pb-2 shadow bg-white me-lg-1',
+                        'mozePisatiKlupskiZid' => $mozePisatiKlupskiZid,
+                        'mozeModeriratiKlupskiZid' => $mozeModeriratiKlupskiZid,
+                    ])
                 @endif
             </div>
 
