@@ -7,9 +7,10 @@
     $bodyClass = $bodyClass ?? 'row justify-content-start mb-3 pt-3 pb-2 shadow bg-white';
     $headerColumnClass = $headerColumnClass ?? 'col-lg-12 text-white';
     $bodyColumnClass = $bodyColumnClass ?? 'col-lg-12 justify-content-start';
+    $widgetClass = $widgetClass ?? '';
 @endphp
 
-<div class="js-club-wall-widget club-wall-widget"
+<div class="js-club-wall-widget club-wall-widget {{ $widgetClass }}"
      data-list-url="{{ route('javno.klupski_zid.index') }}"
      data-store-url="{{ route('javno.klupski_zid.store') }}"
      data-destroy-url-template="{{ route('javno.klupski_zid.destroy', ['message' => '__ID__']) }}"
@@ -194,7 +195,7 @@
             background: rgba(248, 113, 113, .16);
         }
 
-        @media (min-width: 1400px) {
+        @media (min-width: 992px) {
             .club-wall-time {
                 display: none;
             }
