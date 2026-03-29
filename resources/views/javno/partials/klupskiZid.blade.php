@@ -55,14 +55,14 @@
 </div>
 
 @once
+    <!--suppress CssUnusedSymbol -->
     <style>
         .club-wall-feed {
             height: 16rem;
             overflow-y: auto;
-            padding-right: .2rem;
             border: 1px solid rgba(0, 0, 0, .12);
             border-radius: .35rem;
-            padding: .45rem;
+            padding: .45rem .2rem .45rem .45rem;
             background-color: rgba(0, 0, 0, .02);
         }
 
@@ -74,7 +74,7 @@
         }
 
         .club-wall-item-highlighted {
-            background-color: rgba(var(--bs-primary-rgb), .08);
+            background-color: rgba(13, 110, 253, .08);
         }
 
         .club-wall-send-btn {
@@ -171,7 +171,7 @@
         }
 
         .theme-dark .club-wall-item-highlighted {
-            background-color: rgba(var(--bs-primary-rgb), .2);
+            background-color: rgba(13, 110, 253, .2);
         }
 
         .theme-dark .club-wall-icon-btn {
@@ -277,7 +277,7 @@
 
                 const appendLinkifiedText = (parent, text) => {
                     const input = String(text || '');
-                    const regex = /https?:\/\/[^\s]+/gi;
+                    const regex = /https?:\/\/\S+/gi;
                     let cursor = 0;
                     let match;
 
@@ -338,11 +338,14 @@
                     const actions = document.createElement('div');
                     actions.className = 'club-wall-admin-actions';
 
+                    const messageId = Number(message['id'] ?? 0);
+                    const isHighlighted = Boolean(message['highlighted']);
+
                     const highlightButton = document.createElement('button');
                     highlightButton.type = 'button';
                     highlightButton.className = 'club-wall-icon-btn club-wall-icon-highlight';
                     highlightButton.textContent = '✎';
-                    setHighlightButtonState(highlightButton, message.highlighted);
+                    setHighlightButtonState(highlightButton, isHighlighted);
                     highlightButton.addEventListener('click', async () => {
                         const template = widget.dataset.highlightUrlTemplate || '';
                         if (template === '') {
@@ -351,7 +354,7 @@
 
                         highlightButton.disabled = true;
                         try {
-                            await postAction(urlWithId(template, message.id));
+                            await postAction(urlWithId(template, messageId));
                         } finally {
                             highlightButton.disabled = false;
                         }
@@ -375,7 +378,7 @@
 
                         deleteButton.disabled = true;
                         try {
-                            await postAction(urlWithId(template, message.id));
+                            await postAction(urlWithId(template, messageId));
                         } finally {
                             deleteButton.disabled = false;
                         }
@@ -394,8 +397,8 @@
                 }
 
                 feed.innerHTML = '';
-                const messages = Array.isArray(payload.messages) ? payload.messages : [];
-                if (messages.length === 0) {
+                const rawMessages = Array.isArray(payload['messages']) ? payload['messages'] : [];
+                if (rawMessages.length === 0) {
                     const empty = document.createElement('div');
                     empty.className = 'small text-muted';
                     empty.textContent = 'Nema poruka.';
@@ -403,22 +406,32 @@
                     return;
                 }
 
-                const canModerate = Boolean(payload.canModerate);
-                for (const message of messages) {
+                const canModerate = Boolean(payload['canModerate']);
+                for (const rawMessage of rawMessages) {
+                    const message = rawMessage && typeof rawMessage === 'object' ? rawMessage : {};
+                    const messageId = Number(message['id'] ?? 0);
+                    const isHighlighted = Boolean(message['highlighted']);
+                    const authorProfileUrl = typeof message['authorProfileUrl'] === 'string' ? message['authorProfileUrl'] : '';
+                    const authorName = typeof message['authorName'] === 'string' && message['authorName'].trim() !== ''
+                        ? message['authorName']
+                        : 'Nepoznati korisnik';
+                    const createdAt = typeof message['createdAt'] === 'string' ? message['createdAt'] : '';
+                    const messageText = typeof message['text'] === 'string' ? message['text'] : '';
+
                     const item = document.createElement('div');
                     item.className = 'club-wall-item';
-                    if (message.highlighted) {
+                    if (isHighlighted) {
                         item.classList.add('club-wall-item-highlighted');
                     }
 
                     const top = document.createElement('div');
                     top.className = 'd-flex align-items-start justify-content-between gap-2';
 
-                    const author = document.createElement(message.authorProfileUrl ? 'a' : 'span');
+                    const author = document.createElement(authorProfileUrl !== '' ? 'a' : 'span');
                     author.className = 'club-wall-author';
-                    author.textContent = message.authorName || 'Nepoznati korisnik';
-                    if (message.authorProfileUrl) {
-                        author.href = message.authorProfileUrl;
+                    author.textContent = authorName;
+                    if (authorProfileUrl !== '') {
+                        author.href = authorProfileUrl;
                     }
 
                     const meta = document.createElement('div');
@@ -426,20 +439,23 @@
 
                     const time = document.createElement('p');
                     time.className = 'club-wall-time text-muted';
-                    time.textContent = message.createdAt || '';
+                    time.textContent = createdAt;
 
                     top.appendChild(author);
                     meta.appendChild(time);
                     if (canModerate) {
-                        meta.appendChild(createAdminActions(widget, message));
+                        meta.appendChild(createAdminActions(widget, {
+                            id: messageId,
+                            highlighted: isHighlighted,
+                        }));
                     }
                     top.appendChild(meta);
                     item.appendChild(top);
 
-                    const text = document.createElement('div');
-                    text.className = 'club-wall-message-text';
-                    appendLinkifiedText(text, message.text || '');
-                    item.appendChild(text);
+                    const messageTextContainer = document.createElement('div');
+                    messageTextContainer.className = 'club-wall-message-text';
+                    appendLinkifiedText(messageTextContainer, messageText);
+                    item.appendChild(messageTextContainer);
 
                     feed.appendChild(item);
                 }
@@ -450,7 +466,7 @@
                     return;
                 }
 
-                const signature = String(payload.signature || '');
+                const signature = typeof payload['signature'] === 'string' ? payload['signature'] : '';
                 if (signature !== '' && signature === latestSignature) {
                     return;
                 }
@@ -460,41 +476,46 @@
                     renderMessagesOnWidget(widget, payload);
                 }
 
-                if (payload.disabled) {
+                const isDisabled = Boolean(payload['disabled']);
+                if (isDisabled) {
+                    const disabledReason = typeof payload['disabledReason'] === 'string' && payload['disabledReason'].trim() !== ''
+                        ? payload['disabledReason']
+                        : 'Klupski zid trenutno nije dostupan.';
                     setFormsEnabled(false);
-                    setStatusMessage(payload.disabledReason || 'Klupski zid trenutno nije dostupan.');
+                    setStatusMessage(disabledReason);
                 } else {
                     setFormsEnabled(true);
                 }
                 };
 
                 const parseJson = async (response) => {
-                let data = null;
+                let data;
                 try {
-                    data = await response.json();
+                    const parsed = await response.json();
+                    data = parsed && typeof parsed === 'object' ? parsed : {};
                 } catch (error) {
-                    data = null;
+                    data = {};
                 }
 
                 if (!response.ok) {
-                    let message = data?.message || '';
-                    if (message === '') {
+                    let responseMessage = typeof data['message'] === 'string' ? data['message'] : '';
+                    if (responseMessage === '') {
                         if (response.status === 401) {
-                            message = 'Potrebna je prijava korisnika.';
+                            responseMessage = 'Potrebna je prijava korisnika.';
                         } else if (response.status === 403) {
-                            message = 'Nemate pravo za ovu akciju.';
+                            responseMessage = 'Nemate pravo za ovu akciju.';
                         } else if (response.status === 419) {
-                            message = 'Sesija je istekla. Osvježite stranicu i pokušajte ponovno.';
+                            responseMessage = 'Sesija je istekla. Osvježite stranicu i pokušajte ponovno.';
                         } else if (response.status >= 500) {
-                            message = 'Greška na serveru. Pokušajte ponovno kroz nekoliko sekundi.';
+                            responseMessage = 'Greška na serveru. Pokušajte ponovno kroz nekoliko sekundi.';
                         } else {
-                            message = 'Zahtjev nije uspio.';
+                            responseMessage = 'Zahtjev nije uspio.';
                         }
                     }
-                    throw new Error(message);
+                    throw new Error(responseMessage);
                 }
 
-                return data || {};
+                return data;
                 };
 
                 const loadMessages = async (loudError = false) => {
@@ -525,8 +546,11 @@
                     });
 
                     const payload = await parseJson(response);
-                    if (!Array.isArray(payload.messages)) {
-                        throw new Error('Neispravan odgovor servera.');
+                    if (!Array.isArray(payload['messages'])) {
+                        if (loudError) {
+                            setStatusMessage('Neispravan odgovor servera.');
+                        }
+                        return;
                     }
                     applyPayloadToAll(payload);
                     setStatusMessage('');
@@ -553,7 +577,7 @@
                 });
 
                 const payload = await parseJson(response);
-                if (!Array.isArray(payload.messages)) {
+                if (!Array.isArray(payload['messages'])) {
                     throw new Error('Neispravan odgovor servera.');
                 }
                 applyPayloadToAll(payload);
