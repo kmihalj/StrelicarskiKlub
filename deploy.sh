@@ -5,7 +5,7 @@ REMOTE="${DEPLOY_REMOTE:-origin}"
 BRANCH="${DEPLOY_BRANCH:-main}"
 TARGET_REF="${REMOTE}/${BRANCH}"
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMPOSER_BIN="${DEPLOY_COMPOSER_BIN:-composer}"
+COMPOSER_BIN="${DEPLOY_COMPOSER_BIN:-}"
 KEEP_FILES=(
     "public/favicon.ico"
     "public/favicon.png"
@@ -38,6 +38,19 @@ require_bin() {
 
 require_cmd git
 require_cmd php
+
+if [[ -z "$COMPOSER_BIN" ]]; then
+    if command -v composer >/dev/null 2>&1; then
+        COMPOSER_BIN="composer"
+    elif [[ -x "${HOME}/composer.phar" ]]; then
+        COMPOSER_BIN="${HOME}/composer.phar"
+    elif [[ -x "/home/skdubravahr/composer.phar" ]]; then
+        COMPOSER_BIN="/home/skdubravahr/composer.phar"
+    else
+        fail "Composer not found. Install 'composer' in PATH or set DEPLOY_COMPOSER_BIN=/path/to/composer.phar"
+    fi
+fi
+
 require_bin "$COMPOSER_BIN" composer
 
 cd "$APP_DIR"
