@@ -62,7 +62,7 @@
                             </td>
                             @if($turnir->eliminacije)
                                 <td>
-                                    <p class="fw-bold mb-1"> {{ $rezultat->plasman_nakon_eliminacija }}
+                                    <p class="fw-bold mb-1">@if(!$rezultat->bez_eliminacija){{ $rezultat->plasman_nakon_eliminacija }}@endif</p>
                                 </td>
                             @endif
                             <td class="text-end">
@@ -79,6 +79,7 @@
                                         data-kategorija-id="{{ $rezultat->kategorija_id }}"
                                         data-plasman="{{ $rezultat->plasman }}"
                                         data-plasman-eliminacije="{{ $rezultat->plasman_nakon_eliminacija }}"
+                                        data-bez-eliminacija="{{ $rezultat->bez_eliminacija ? 1 : 0 }}"
                                         data-polja='@json($poljaVrijednosti)'
                                         data-polja-ids='@json($poljaIds)'>
                                         @include('admin.SVG.uredi')

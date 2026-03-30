@@ -782,6 +782,7 @@ class JavnoController extends Controller
                 'turniris.eliminacije',
                 'rezultati_opcis.plasman',
                 'rezultati_opcis.plasman_nakon_eliminacija',
+                'rezultati_opcis.bez_eliminacija',
                 DB::raw('YEAR(turniris.datum) as godina'),
             ])
             ->get();
@@ -791,9 +792,14 @@ class JavnoController extends Controller
             $turnirId = (int)data_get($rezultat, 'turnir_id', 0);
             $godina = (int)data_get($rezultat, 'godina', 0);
             $eliminacije = (int)data_get($rezultat, 'eliminacije', 0);
-            $plasman = $eliminacije === 1
-                ? (int)data_get($rezultat, 'plasman_nakon_eliminacija', 0)
-                : (int)data_get($rezultat, 'plasman', 0);
+            $plasman = $this->odrediPojedinacniPlasmanZaMedalju(
+                $eliminacije === 1,
+                (int)data_get($rezultat, 'plasman', 0),
+                data_get($rezultat, 'plasman_nakon_eliminacija') === null
+                    ? null
+                    : (int)data_get($rezultat, 'plasman_nakon_eliminacija', 0),
+                (int)data_get($rezultat, 'bez_eliminacija', 0) === 1
+            );
 
             $this->dodajCsvRezultatUStatistiku(
                 $turniriUkupnoSet,
@@ -968,21 +974,46 @@ class JavnoController extends Controller
             ->count();
 
         // broj osvojenih medalja (pojedinačno + timski)
-        $turniri['prva'] = RezultatiOpci::whereHas('turnir', function ($query) {
-                $query->where('eliminacije', '=', 0);
-            })->where('clan_id', '=', $clan->id)->where('plasman', '=', 1)->count() + RezultatiOpci::whereHas('turnir', function ($query) {
-                $query->where('eliminacije', '=', 1);
-            })->where('clan_id', '=', $clan->id)->where('plasman_nakon_eliminacija', '=', 1)->count() + ($timoviClana ? (clone $timoviClana)->where('plasman', 1)->count() : 0);
-        $turniri['druga'] = RezultatiOpci::whereHas('turnir', function ($query) {
-                $query->where('eliminacije', '=', 0);
-            })->where('clan_id', '=', $clan->id)->where('plasman', '=', 2)->count() + RezultatiOpci::whereHas('turnir', function ($query) {
-                $query->where('eliminacije', '=', 1);
-            })->where('clan_id', '=', $clan->id)->where('plasman_nakon_eliminacija', '=', 2)->count() + ($timoviClana ? (clone $timoviClana)->where('plasman', 2)->count() : 0);
-        $turniri['treca'] = RezultatiOpci::whereHas('turnir', function ($query) {
-                $query->where('eliminacije', '=', 0);
-            })->where('clan_id', '=', $clan->id)->where('plasman', '=', 3)->count() + RezultatiOpci::whereHas('turnir', function ($query) {
-                $query->where('eliminacije', '=', 1);
-            })->where('clan_id', '=', $clan->id)->where('plasman_nakon_eliminacija', '=', 3)->count() + ($timoviClana ? (clone $timoviClana)->where('plasman', 3)->count() : 0);
+        $pojedinacniRezultatiZaMedalje = RezultatiOpci::query()
+            ->join('turniris', 'turniris.id', '=', 'rezultati_opcis.turnir_id')
+            ->where('rezultati_opcis.clan_id', '=', $clan->id)
+            ->select([
+                'turniris.eliminacije',
+                'rezultati_opcis.plasman',
+                'rezultati_opcis.plasman_nakon_eliminacija',
+                'rezultati_opcis.bez_eliminacija',
+            ])
+            ->get();
+
+        $pojedinacnaPrva = 0;
+        $pojedinacnaDruga = 0;
+        $pojedinacnaTreca = 0;
+        foreach ($pojedinacniRezultatiZaMedalje as $rezultat) {
+            $plasman = $this->odrediPojedinacniPlasmanZaMedalju(
+                (int)data_get($rezultat, 'eliminacije', 0) === 1,
+                (int)data_get($rezultat, 'plasman', 0),
+                data_get($rezultat, 'plasman_nakon_eliminacija') === null
+                    ? null
+                    : (int)data_get($rezultat, 'plasman_nakon_eliminacija', 0),
+                (int)data_get($rezultat, 'bez_eliminacija', 0) === 1
+            );
+
+            if ($plasman === 1) {
+                $pojedinacnaPrva++;
+                continue;
+            }
+            if ($plasman === 2) {
+                $pojedinacnaDruga++;
+                continue;
+            }
+            if ($plasman === 3) {
+                $pojedinacnaTreca++;
+            }
+        }
+
+        $turniri['prva'] = $pojedinacnaPrva + ($timoviClana ? (clone $timoviClana)->where('plasman', 1)->count() : 0);
+        $turniri['druga'] = $pojedinacnaDruga + ($timoviClana ? (clone $timoviClana)->where('plasman', 2)->count() : 0);
+        $turniri['treca'] = $pojedinacnaTreca + ($timoviClana ? (clone $timoviClana)->where('plasman', 3)->count() : 0);
         $turniri['medalje'] = $turniri['prva'] + $turniri['druga'] + $turniri['treca'];
 
         $timskeMedalje = collect();
@@ -1293,6 +1324,7 @@ class JavnoController extends Controller
                 'turniris.eliminacije',
                 'rezultati_opcis.plasman',
                 'rezultati_opcis.plasman_nakon_eliminacija',
+                'rezultati_opcis.bez_eliminacija',
             ])
             ->get()
             ->map(static function ($rezultat): array {
@@ -1301,16 +1333,22 @@ class JavnoController extends Controller
                     'turnir_id' => (int)data_get($rezultat, 'turnir_id', 0),
                     'eliminacije' => (int)data_get($rezultat, 'eliminacije', 0),
                     'plasman' => (int)data_get($rezultat, 'plasman', 0),
-                    'plasman_nakon_eliminacija' => (int)data_get($rezultat, 'plasman_nakon_eliminacija', 0),
+                    'plasman_nakon_eliminacija' => data_get($rezultat, 'plasman_nakon_eliminacija') === null
+                        ? null
+                        : (int)data_get($rezultat, 'plasman_nakon_eliminacija', 0),
+                    'bez_eliminacija' => (int)data_get($rezultat, 'bez_eliminacija', 0),
                 ];
             });
 
         foreach ($individualniRezultati as $rezultat) {
             $clanId = $rezultat['clan_id'];
             $turnirId = $rezultat['turnir_id'];
-            $plasman = ($rezultat['eliminacije'] === 1)
-                ? $rezultat['plasman_nakon_eliminacija']
-                : $rezultat['plasman'];
+            $plasman = $this->odrediPojedinacniPlasmanZaMedalju(
+                $rezultat['eliminacije'] === 1,
+                $rezultat['plasman'],
+                $rezultat['plasman_nakon_eliminacija'],
+                $rezultat['bez_eliminacija'] === 1
+            );
 
             $this->dodajTurnirClanu($turniriPoClanu, $clanId, $turnirId);
             $this->dodajMedaljuClanu($medaljePoClanu, $clanId, $plasman);
@@ -1379,6 +1417,22 @@ class JavnoController extends Controller
             'najvise_broncanih' => $this->izracunajVodece($broncanePoClanu, $imenaClanova),
             'najvise_turnira' => $this->izracunajVodece($turniriBrojPoClanu, $imenaClanova),
         ];
+    }
+
+    /**
+     * Određuje plasman koji se koristi za medalju kod pojedinačnih rezultata.
+     */
+    private function odrediPojedinacniPlasmanZaMedalju(
+        bool $turnirImaEliminacije,
+        int $plasman,
+        ?int $plasmanNakonEliminacija,
+        bool $bezEliminacija
+    ): int {
+        if (!$turnirImaEliminacije || $bezEliminacija) {
+            return $plasman;
+        }
+
+        return $plasmanNakonEliminacija ?? 0;
     }
 
     /**

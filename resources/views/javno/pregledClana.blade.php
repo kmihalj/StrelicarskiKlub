@@ -562,13 +562,12 @@
                                     @if((int)$turnirClan->tipTurnira->id === (int)$tip->id)
                                         @foreach($turnirClan->rezultatiOpci as $i => $rezultat)
                                             @if((int)$rezultat->clan_id === (int)$clan->id)
-                                                <tr
-                                                    @if($turnirClan->eliminacije && $rezultat->plasman_nakon_eliminacija <=3)
-                                                        class="fw-bold"
-                                                    @endif
-                                                    @if(!($turnirClan->eliminacije) && $rezultat->plasman <=3)
-                                                        class="fw-bold"
-                                                    @endif>
+                                                @php
+                                                    $plasmanZaMedalju = ($turnirClan->eliminacije && !$rezultat->bez_eliminacija)
+                                                        ? (int)($rezultat->plasman_nakon_eliminacija ?? 0)
+                                                        : (int)$rezultat->plasman;
+                                                @endphp
+                                                <tr @if(in_array($plasmanZaMedalju, [1, 2, 3], true)) class="fw-bold" @endif>
                                                     <td>
                                                         <p class="mb-1">
                                                             <a class="@if(in_array($turnirClan->datum, $datumiRekorda)) link-danger @else link-dark @endif"
@@ -599,40 +598,25 @@
                                                     @endforeach
                                                     <td class="@if(in_array($turnirClan->datum, $datumiRekorda)) text-danger @endif">
                                                         <p class="mb-1">{{ $rezultat->plasman }}
-                                                            @if($turnirClan->eliminacije)
+                                                            @if($turnirClan->eliminacije && !$rezultat->bez_eliminacija)
                                                                 ({{ $rezultat->plasman_nakon_eliminacija }})
                                                             @endif
                                                         </p>
                                                     </td>
                                                     <td class="@if(in_array($turnirClan->datum, $datumiRekorda)) text-danger align-text-bottom @endif">
                                                         <p class="mb-1">
-                                                            @if(!($turnirClan->eliminacije))
-                                                                @switch($rezultat->plasman)
-                                                                    @case(1)
-                                                                        <span class="float-end"> @include('admin.SVG.gold') </span>
-                                                                        @break
-                                                                    @case(2)
-                                                                        <span class="float-end"> @include('admin.SVG.silver') </span>
-                                                                        @break
-                                                                    @case(3)
-                                                                        <span class="float-end"> @include('admin.SVG.bronze') </span>
-                                                                        @break
-                                                                @endswitch
-                                                            @endif
-                                                            @if($turnirClan->eliminacije)
-                                                                @switch($rezultat->plasman_nakon_eliminacija)
-                                                                    @case(1)
-                                                                        <span class="float-end"> @include('admin.SVG.gold') </span>
-                                                                        @break
-                                                                    @case(2)
-                                                                        <span class="float-end"> @include('admin.SVG.silver') </span>
-                                                                        @break
-                                                                    @case(3)
-                                                                        <span class="float-end"> @include('admin.SVG.bronze') </span>
-                                                                        @break
-                                                                @endswitch
+                                                            @switch($plasmanZaMedalju)
+                                                                @case(1)
+                                                                    <span class="float-end"> @include('admin.SVG.gold') </span>
+                                                                    @break
+                                                                @case(2)
+                                                                    <span class="float-end"> @include('admin.SVG.silver') </span>
+                                                                    @break
+                                                                @case(3)
+                                                                    <span class="float-end"> @include('admin.SVG.bronze') </span>
+                                                                    @break
+                                                            @endswitch
                                                         </p>
-                                                        @endif
                                                     </td>
                                                 </tr>
                                             @endif

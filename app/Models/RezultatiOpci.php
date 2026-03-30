@@ -13,11 +13,24 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property mixed $stil_id
  * @property mixed $plasman
  * @property mixed|null $plasman_nakon_eliminacija
+ * @property bool|mixed $bez_eliminacija
  */
 class RezultatiOpci extends Model
 {
 
-    protected $fillable = ['turnir_id', 'clan_id', 'kategorija_id', 'stil_id', 'plasman', 'plasman_nakon_eliminacija' ];
+    protected $fillable = [
+        'turnir_id',
+        'clan_id',
+        'kategorija_id',
+        'stil_id',
+        'plasman',
+        'plasman_nakon_eliminacija',
+        'bez_eliminacija',
+    ];
+
+    protected $casts = [
+        'bez_eliminacija' => 'bool',
+    ];
 
     /**
      * Pojedinačni rezultat člana je povezan s jednim zapisom: turnir.

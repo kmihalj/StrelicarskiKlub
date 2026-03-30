@@ -60,7 +60,27 @@
             <label for="plasman_eliminacije">Eliminacije - plasman:</label>
             <input type="number" form="unos_rezultata" class="form-control" name="plasman_eliminacije" id="plasman_eliminacije" aria-label="plasman_eliminacije">
         </div>
+        <div class="col-lg-6 col-md-8 col-12 mb-2 d-flex align-items-end">
+            <div class="form-check">
+                <input class="form-check-input"
+                       type="checkbox"
+                       form="unos_rezultata"
+                       id="bez_eliminacija"
+                       name="bez_eliminacija"
+                       value="1">
+                <label class="form-check-label rezultat-bez-eliminacija-label" for="bez_eliminacija">
+                    Nema eliminacija u ovoj kategoriji/stilu (medalja po plasmanu)
+                </label>
+            </div>
+        </div>
     @endif
+    <style>
+        @media (min-width: 768px) {
+            .rezultat-bez-eliminacija-label {
+                white-space: nowrap;
+            }
+        }
+    </style>
     <div class="col-lg-12 col-md-12 col-12 mb-2 text-end">
         {{-- Odustani je vidljiv samo u edit modu; vraća formu na "novi unos". --}}
         <button type="button" id="rezultat_odustani_btn" class="btn btn-outline-secondary d-none">Odustani</button>
@@ -76,6 +96,7 @@
         const kategorijaSelect = /** @type {HTMLSelectElement|null} */ (document.getElementById('kategorija'));
         const plasmanInput = /** @type {HTMLInputElement|null} */ (document.getElementById('plasman'));
         const plasmanEliminacijeInput = /** @type {HTMLInputElement|null} */ (document.getElementById('plasman_eliminacije'));
+        const bezEliminacijaInput = /** @type {HTMLInputElement|null} */ (document.getElementById('bez_eliminacija'));
         const rezultatIdInput = /** @type {HTMLInputElement|null} */ (document.getElementById('rezultat_id'));
         const spremiButton = /** @type {HTMLButtonElement|null} */ (document.getElementById('rezultat_spremi_btn'));
         const odustaniButton = /** @type {HTMLButtonElement|null} */ (document.getElementById('rezultat_odustani_btn'));
@@ -167,6 +188,18 @@
             }
         }
 
+        function osvjeziPoljeEliminacija() {
+            if (!plasmanEliminacijeInput || !bezEliminacijaInput) {
+                return;
+            }
+
+            const bezEliminacija = !!bezEliminacijaInput.checked;
+            plasmanEliminacijeInput.disabled = bezEliminacija;
+            if (bezEliminacija) {
+                plasmanEliminacijeInput.value = '';
+            }
+        }
+
         function prebaciUNoviUnos() {
             // Reset svih polja i povratak na osnovnu akciju spremanja (novi redak).
             rezultatForm.action = rezultatForm.dataset.storeAction || rezultatForm.action;
@@ -193,6 +226,10 @@
             if (plasmanEliminacijeInput) {
                 plasmanEliminacijeInput.value = '';
             }
+            if (bezEliminacijaInput) {
+                bezEliminacijaInput.checked = false;
+            }
+            osvjeziPoljeEliminacija();
 
             poljeInputi.forEach((input) => {
                 input.value = '';
@@ -222,6 +259,10 @@
             if (plasmanEliminacijeInput) {
                 plasmanEliminacijeInput.value = button.dataset.plasmanEliminacije || '';
             }
+            if (bezEliminacijaInput) {
+                bezEliminacijaInput.checked = (button.dataset.bezEliminacija || '0') === '1';
+            }
+            osvjeziPoljeEliminacija();
 
             poljeInputi.forEach((input, index) => {
                 const vrijednost = polja[index];
@@ -256,7 +297,11 @@
         if (odustaniButton) {
             odustaniButton.addEventListener('click', prebaciUNoviUnos);
         }
+        if (bezEliminacijaInput) {
+            bezEliminacijaInput.addEventListener('change', osvjeziPoljeEliminacija);
+        }
 
         osvjeziKategorije();
+        osvjeziPoljeEliminacija();
     });
 </script>

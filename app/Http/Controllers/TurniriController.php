@@ -303,7 +303,11 @@ class TurniriController extends Controller
         $rezOpci->kategorija_id = $kategorija->id;
         $rezOpci->stil_id = $stil->id;
         $rezOpci->plasman = $request->input('plasman');
-        $rezOpci->plasman_nakon_eliminacija = ($request->input('plasman_eliminacije') !== null) ? $request->input('plasman_eliminacije') : null;
+        $koristiBodovniPlasman = $this->koristiBodovniPlasmanZaTurnirBezEliminacija($request, $turnir);
+        $rezOpci->bez_eliminacija = $koristiBodovniPlasman;
+        $rezOpci->plasman_nakon_eliminacija = ($turnir->eliminacije && !$koristiBodovniPlasman && $request->input('plasman_eliminacije') !== null)
+            ? $request->input('plasman_eliminacije')
+            : null;
         $rezOpci->save();
         if ($this->timskeTabliceDostupne()) {
             $this->osvjeziTimoveTurnira((int)$turnir->id);
@@ -421,7 +425,9 @@ class TurniriController extends Controller
                 $rezultat->kategorija_id = (int)$kategorija->id;
                 $rezultat->stil_id = (int)$stil->id;
                 $rezultat->plasman = $request->input('plasman');
-                $rezultat->plasman_nakon_eliminacija = $turnir->eliminacije
+                $koristiBodovniPlasman = $this->koristiBodovniPlasmanZaTurnirBezEliminacija($request, $turnir);
+                $rezultat->bez_eliminacija = $koristiBodovniPlasman;
+                $rezultat->plasman_nakon_eliminacija = ($turnir->eliminacije && !$koristiBodovniPlasman)
                     ? ($request->input('plasman_eliminacije') !== null ? $request->input('plasman_eliminacije') : null)
                     : null;
                 $rezultat->save();
@@ -797,6 +803,14 @@ class TurniriController extends Controller
         }
 
         return [$clan, $kategorija, $stil];
+    }
+
+    /**
+     * Vraća je li za ovaj pojedinačni rezultat potrebno računati plasman po bodovima (bez eliminacija).
+     */
+    private function koristiBodovniPlasmanZaTurnirBezEliminacija(Request $request, Turniri $turnir): bool
+    {
+        return (bool)$turnir->eliminacije && $request->boolean('bez_eliminacija');
     }
 
     /**

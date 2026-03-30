@@ -49,13 +49,12 @@
                     </thead>
                     <tbody>
                     @foreach($turnir->rezultatiOpci as $i => $rezultat)
-                        <tr
-                            @if($turnir->eliminacije && $rezultat->plasman_nakon_eliminacija <=3)
-                                class="fw-bold"
-                            @endif
-                            @if(!($turnir->eliminacije) && $rezultat->plasman <=3)
-                                class="fw-bold"
-                            @endif >
+                        @php
+                            $plasmanZaMedalju = ($turnir->eliminacije && !$rezultat->bez_eliminacija)
+                                ? (int)($rezultat->plasman_nakon_eliminacija ?? 0)
+                                : (int)$rezultat->plasman;
+                        @endphp
+                        <tr @if(in_array($plasmanZaMedalju, [1, 2, 3], true)) class="fw-bold" @endif>
                             <td>
                                 <p class="mb-1">
                                     <a class="link-primary link-offset-2 link-underline-opacity-0 link-underline-opacity-0-hover"
@@ -84,7 +83,7 @@
                             </td>
                             @if(!($turnir->eliminacije))
                                 <td>
-                                    @switch($rezultat->plasman)
+                                    @switch($plasmanZaMedalju)
                                         @case(1)
                                             <span class="float-end"> @include('admin.SVG.gold') </span>
                                             @break
@@ -98,10 +97,10 @@
                                 </td>
                             @else
                                 <td>
-                                    <p class="mb-1"> {{ $rezultat->plasman_nakon_eliminacija }} </p>
+                                    <p class="mb-1"> @if(!$rezultat->bez_eliminacija){{ $rezultat->plasman_nakon_eliminacija }}@endif </p>
                                 </td>
                                 <td>
-                                    @switch($rezultat->plasman_nakon_eliminacija)
+                                    @switch($plasmanZaMedalju)
                                         @case(1)
                                             <span class="float-end"> @include('admin.SVG.gold') </span>
                                             @break
