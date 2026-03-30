@@ -5,6 +5,7 @@ REMOTE="${DEPLOY_REMOTE:-origin}"
 BRANCH="${DEPLOY_BRANCH:-main}"
 TARGET_REF="${REMOTE}/${BRANCH}"
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+COMPOSER_BIN="${DEPLOY_COMPOSER_BIN:-composer}"
 KEEP_FILES=(
     "public/favicon.ico"
     "public/favicon.png"
@@ -23,9 +24,21 @@ require_cmd() {
     command -v "$1" >/dev/null 2>&1 || fail "Missing required command: $1"
 }
 
+require_bin() {
+    local bin="$1"
+    local label="${2:-$1}"
+
+    if [[ "$bin" == */* ]]; then
+        [[ -x "$bin" ]] || fail "Missing required executable for ${label}: ${bin}"
+        return 0
+    fi
+
+    command -v "$bin" >/dev/null 2>&1 || fail "Missing required command: ${label}"
+}
+
 require_cmd git
 require_cmd php
-require_cmd composer
+require_bin "$COMPOSER_BIN" composer
 
 cd "$APP_DIR"
 
@@ -95,7 +108,7 @@ for file in "${KEEP_FILES[@]}"; do
 done
 
 log "Installing Composer dependencies (production)..."
-composer install --no-dev --optimize-autoloader --no-interaction
+"$COMPOSER_BIN" install --no-dev --optimize-autoloader --no-interaction
 
 log "Running database migrations..."
 php artisan migrate --force
