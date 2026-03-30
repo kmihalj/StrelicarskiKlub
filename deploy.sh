@@ -59,21 +59,22 @@ is_keep_file() {
     return 1
 }
 
-mapfile -t CHANGED_FILES < <(
-    {
-        git diff --name-only
-        git diff --cached --name-only
-        git ls-files --others --exclude-standard
-    } | sed '/^$/d' | sort -u
-)
+CHANGED_LIST_FILE="$(mktemp)"
+{
+    git diff --name-only
+    git diff --cached --name-only
+    git ls-files --others --exclude-standard
+} | sed '/^$/d' | sort -u > "$CHANGED_LIST_FILE"
 
 HAS_DISALLOWED=0
-for path in "${CHANGED_FILES[@]}"; do
+while IFS= read -r path; do
+    [[ -z "$path" ]] && continue
     if ! is_keep_file "$path"; then
         printf "Disallowed local change: %s\n" "$path" >&2
         HAS_DISALLOWED=1
     fi
-done
+done < "$CHANGED_LIST_FILE"
+rm -f "$CHANGED_LIST_FILE"
 
 if [[ "$HAS_DISALLOWED" -ne 0 ]]; then
     fail "Working tree has local changes outside allowed favicon overrides."
