@@ -152,7 +152,7 @@
         </div>
         <div class="row p-3">
             <div class="col-12 table-responsive">
-                <table class="table table-hover align-middle mb-0 border">
+                <table class="table table-hover align-middle mb-0 border" style="min-width: 1080px;">
                     <thead class="table-warning">
                     <tr>
                         <th>Datum</th>
@@ -163,7 +163,7 @@
                         <th>Prijave</th>
                         <th>Kotizacija</th>
                         <th>Poziv</th>
-                        <th></th>
+                        <th class="text-nowrap text-end" style="width: 1%;"></th>
                     </tr>
                     </thead>
                     <tbody>
@@ -210,7 +210,7 @@
                         @endphp
                         <tr>
                             <td rowspan="3" class="align-middle">{{ $turnir->datumRasponLabel() }}</td>
-                            <td rowspan="3" class="align-middle">
+                            <td rowspan="3" class="align-middle text-break">
                                 <div class="fw-semibold">{{ $turnir->naziv }}</div>
                                 @if($turnir->organizator)
                                     <div class="small text-muted">{{ $turnir->organizator }}</div>
@@ -262,14 +262,16 @@
                                     -
                                 @endif
                             </td>
-                            <td rowspan="3" class="text-end align-middle">
-                                <a href="{{ route('admin.nadolazeci_turniri.show', $turnir) }}" class="btn btn-sm btn-primary">Prijave</a>
-                                <a href="{{ route('admin.nadolazeci_turniri.index', ['uredi' => $turnir->id]) }}" class="btn btn-sm btn-success">Uredi</a>
-                                <form action="{{ route('admin.nadolazeci_turniri.destroy', $turnir) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="btn btn-sm btn-danger"
-                                            onclick="return confirm('Obrisati turnir i sve prijave?')">Obriši</button>
-                                </form>
+                            <td rowspan="3" class="text-end align-middle text-nowrap">
+                                <div class="d-inline-flex align-items-center justify-content-end flex-nowrap gap-1">
+                                    <a href="{{ route('admin.nadolazeci_turniri.show', $turnir) }}" class="btn btn-sm btn-primary">Prijave</a>
+                                    <a href="{{ route('admin.nadolazeci_turniri.index', ['uredi' => $turnir->id]) }}" class="btn btn-sm btn-success">Uredi</a>
+                                    <form action="{{ route('admin.nadolazeci_turniri.destroy', $turnir) }}" method="POST" class="m-0">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-danger"
+                                                onclick="return confirm('Obrisati turnir i sve prijave?')">Obriši</button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         <tr>
@@ -310,7 +312,7 @@
         </div>
         <div class="row p-3">
             <div class="col-12 table-responsive">
-                <table class="table table-hover align-middle mb-0 border">
+                <table class="table table-hover align-middle mb-0 border" style="min-width: 1080px;">
                     <thead class="table-warning">
                     <tr>
                         <th>Datum</th>
@@ -320,7 +322,7 @@
                         <th>Prijave</th>
                         <th>Kotizacija</th>
                         <th>Poziv</th>
-                        <th></th>
+                        <th class="text-nowrap text-end" style="width: 1%;"></th>
                     </tr>
                     </thead>
                     <tbody>
@@ -341,7 +343,7 @@
                         @endphp
                         <tr>
                             <td rowspan="2" class="align-middle">{{ $turnir->datumRasponLabel() }}</td>
-                            <td rowspan="2" class="align-middle">
+                            <td rowspan="2" class="align-middle text-break">
                                 <div class="fw-semibold">{{ $turnir->naziv }}</div>
                                 @if($turnir->organizator)
                                     <div class="small text-muted">{{ $turnir->organizator }}</div>
@@ -379,9 +381,11 @@
                                     -
                                 @endif
                             </td>
-                            <td rowspan="2" class="text-end align-middle">
-                                <a href="{{ route('admin.nadolazeci_turniri.show', $turnir) }}" class="btn btn-sm btn-primary">Prijave</a>
-                                <a href="{{ route('admin.nadolazeci_turniri.index', ['uredi' => $turnir->id]) }}" class="btn btn-sm btn-success">Uredi</a>
+                            <td rowspan="2" class="text-end align-middle text-nowrap">
+                                <div class="d-inline-flex align-items-center justify-content-end flex-nowrap gap-1">
+                                    <a href="{{ route('admin.nadolazeci_turniri.show', $turnir) }}" class="btn btn-sm btn-primary">Prijave</a>
+                                    <a href="{{ route('admin.nadolazeci_turniri.index', ['uredi' => $turnir->id]) }}" class="btn btn-sm btn-success">Uredi</a>
+                                </div>
                             </td>
                         </tr>
                         <tr>
