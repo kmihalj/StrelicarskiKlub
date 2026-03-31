@@ -115,7 +115,7 @@
 
                     @if(!empty($urediTurnir?->poziv_pdf_path))
                         <div class="col-12">
-                            <a href="{{ asset('storage/' . $urediTurnir->poziv_pdf_path) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <a href="{{ asset('storage/' . $urediTurnir->poziv_pdf_path) }}" target="_blank" class="btn btn-sm btn-primary">
                                 Trenutni PDF poziv
                             </a>
                         </div>
@@ -126,7 +126,7 @@
                             {{ $jeUredjivanje ? 'Spremi promjene' : 'Spremi turnir' }}
                         </button>
                         @if($jeUredjivanje)
-                            <a href="{{ route('admin.nadolazeci_turniri.index') }}" class="btn btn-outline-secondary">Odustani</a>
+                            <a href="{{ route('admin.nadolazeci_turniri.index') }}" class="btn btn-secondary">Odustani</a>
                         @endif
                     </div>
                 </form>
@@ -249,11 +249,11 @@
                                 @endif
                             </td>
                             <td rowspan="3" class="text-end align-middle">
-                                <a href="{{ route('admin.nadolazeci_turniri.show', $turnir) }}" class="btn btn-sm btn-outline-primary">Prijave</a>
-                                <a href="{{ route('admin.nadolazeci_turniri.index', ['uredi' => $turnir->id]) }}" class="btn btn-sm btn-outline-success">Uredi</a>
+                                <a href="{{ route('admin.nadolazeci_turniri.show', $turnir) }}" class="btn btn-sm btn-primary">Prijave</a>
+                                <a href="{{ route('admin.nadolazeci_turniri.index', ['uredi' => $turnir->id]) }}" class="btn btn-sm btn-success">Uredi</a>
                                 <form action="{{ route('admin.nadolazeci_turniri.destroy', $turnir) }}" method="POST" class="d-inline">
                                     @csrf
-                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                    <button type="submit" class="btn btn-sm btn-danger"
                                             onclick="return confirm('Obrisati turnir i sve prijave?')">Obriši</button>
                                 </form>
                             </td>
@@ -363,8 +363,8 @@
                                 @endif
                             </td>
                             <td rowspan="2" class="text-end align-middle">
-                                <a href="{{ route('admin.nadolazeci_turniri.show', $turnir) }}" class="btn btn-sm btn-outline-primary">Prijave</a>
-                                <a href="{{ route('admin.nadolazeci_turniri.index', ['uredi' => $turnir->id]) }}" class="btn btn-sm btn-outline-success">Uredi</a>
+                                <a href="{{ route('admin.nadolazeci_turniri.show', $turnir) }}" class="btn btn-sm btn-primary">Prijave</a>
+                                <a href="{{ route('admin.nadolazeci_turniri.index', ['uredi' => $turnir->id]) }}" class="btn btn-sm btn-success">Uredi</a>
                             </td>
                         </tr>
                         <tr>

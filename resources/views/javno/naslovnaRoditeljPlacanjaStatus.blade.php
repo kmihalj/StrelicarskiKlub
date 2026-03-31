@@ -11,7 +11,7 @@
             <div class="alert alert-{{ $placanjeNotice['variant'] ?? 'secondary' }} mb-2 mt-2">
                 <div class="fw-bold">Plaćanje - {{ $placanjeClan->Ime }} {{ $placanjeClan->Prezime }}</div>
                 <div class="small">{{ $placanjeNotice['message'] ?? '' }}</div>
-                <a class="btn btn-sm btn-outline-primary mt-2" href="{{ route('javno.clanovi.placanja', $placanjeClan) }}">
+                <a class="btn btn-sm btn-primary mt-2" href="{{ route('javno.clanovi.placanja', $placanjeClan) }}">
                     Pregled plaćanja
                 </a>
             </div>

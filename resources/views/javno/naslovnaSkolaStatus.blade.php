@@ -47,7 +47,7 @@
                             <div class="fw-bold">{{ $skolarinaNotice['title'] ?? 'Status školarine' }}</div>
                             <div class="small">{{ $skolarinaNotice['message'] ?? '' }}</div>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary text-nowrap"
+                        <button type="button" class="btn btn-sm btn-primary text-nowrap"
                                 onclick="location.href='{{ route('javno.skola.polaznici.show', ['polaznik' => $statusSkolaKorisnika['polaznik'], 'open_payments' => 1]) }}'">
                             Moja školarina
                         </button>

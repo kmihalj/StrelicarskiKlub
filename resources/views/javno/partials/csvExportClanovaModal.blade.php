@@ -153,7 +153,7 @@
 
             <div class="modal-footer">
                 <button type="submit" class="btn btn-danger" form="csv_export_clanova_form">Preuzmi CSV</button>
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Odustani</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Odustani</button>
             </div>
         </div>
     </div>

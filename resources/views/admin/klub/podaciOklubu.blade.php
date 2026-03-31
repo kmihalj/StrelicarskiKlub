@@ -214,7 +214,7 @@
                                                 <option value={{ $clan->id }}>{{ $clan->Prezime }} {{ $clan->Ime }}</option>
                                             @endforeach
                                         </select>
-                                        <button class="btn btn-outline-danger" type="submit" form="SpremanjeTrenera" id="button-addon2">Spremi</button>
+                                        <button class="btn btn-danger" type="submit" form="SpremanjeTrenera" id="button-addon2">Spremi</button>
                                     </div>
                                 </div>
                                 <div class="col-lg-4 mb-3 align-self-center">

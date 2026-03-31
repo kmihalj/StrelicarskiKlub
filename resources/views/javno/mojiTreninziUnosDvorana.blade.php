@@ -35,8 +35,8 @@
                         <div class="col-lg-9 col-md-8 col-sm-6">
                             <input type="hidden" id="unos_json" name="unos_json">
                             <div class="btn-group" role="group" aria-label="Odabir runde">
-                                <button type="button" class="btn btn-outline-danger js-round-btn active" data-round="0">Runda 1</button>
-                                <button type="button" class="btn btn-outline-danger js-round-btn" data-round="1">Runda 2</button>
+                                <button type="button" class="btn btn-danger js-round-btn active" data-round="0">Runda 1</button>
+                                <button type="button" class="btn btn-secondary js-round-btn" data-round="1">Runda 2</button>
                             </div>
                         </div>
                     </div>
@@ -73,9 +73,9 @@
                             <p class="mb-2 small text-muted">Klikni polje u tablici pa odaberi pogodak:</p>
                             <div id="dvorana-keypad" class="d-flex flex-wrap gap-2 mb-2">
                                 @foreach(['X', '10', '9', '8', '7', '6', '5', '4', '3', '2', '1', 'M'] as $pogodak)
-                                    <button type="button" class="btn btn-sm btn-outline-secondary js-hit-key" data-value="{{ $pogodak }}">{{ $pogodak }}</button>
+                                    <button type="button" class="btn btn-sm btn-secondary js-hit-key" data-value="{{ $pogodak }}">{{ $pogodak }}</button>
                                 @endforeach
-                                <button type="button" class="btn btn-sm btn-outline-dark js-hit-key" data-value="CLEAR">Obriši polje</button>
+                                <button type="button" class="btn btn-sm btn-dark js-hit-key" data-value="CLEAR">Obriši polje</button>
                             </div>
                             <p class="mb-0 small text-muted">
                                 `X` i `10` vrijede 10 bodova, `M` je promašaj (0 bodova). Nakon unosa ide automatski na sljedeću strijelu.
@@ -352,7 +352,7 @@
                     const isActive = index === state.activeRound;
                     button.classList.toggle('active', isActive);
                     button.classList.toggle('btn-danger', isActive);
-                    button.classList.toggle('btn-outline-danger', !isActive);
+                    button.classList.toggle('btn-secondary', !isActive);
                 });
             }
 
@@ -373,7 +373,7 @@
                         button.type = 'button';
                         button.className = 'btn btn-sm w-100 js-shot-cell';
                         const isActiveCell = state.activeRow === rowIndex && state.activeCol === colIndex;
-                        button.classList.add(isActiveCell ? 'btn-danger' : 'btn-outline-secondary');
+                        button.classList.add(isActiveCell ? 'btn-danger' : 'btn-secondary');
                         button.setAttribute('data-row', String(rowIndex));
                         button.setAttribute('data-col', String(colIndex));
                         button.textContent = row['shots'][colIndex] ?? '-';

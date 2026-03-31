@@ -28,7 +28,7 @@
                             </button>
                         @endif
                         @if((int)($authUser->rola ?? 0) === 1)
-                            <button class="btn btn-outline-danger" type="button" onclick="location.href='{{ route('javno.skola.evidencija.index') }}'">
+                            <button class="btn btn-danger" type="button" onclick="location.href='{{ route('javno.skola.evidencija.index') }}'">
                                 Evidencija dolazaka - škola
                             </button>
                         @endif

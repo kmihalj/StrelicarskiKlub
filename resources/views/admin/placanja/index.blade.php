@@ -104,7 +104,7 @@
                                 </div>
                                 <div class="col-lg-3 col-md-8 d-flex gap-2">
                                     <button type="submit" class="btn btn-primary btn-sm w-100">Primijeni</button>
-                                    <a href="{{ route('admin.placanja.index') }}" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+                                    <a href="{{ route('admin.placanja.index') }}" class="btn btn-secondary btn-sm w-100">Reset</a>
                                     <button type="submit" formaction="{{ route('admin.placanja.export.csv') }}" name="scope" value="rows" class="btn btn-success btn-sm w-100">CSV</button>
                                 </div>
                             </form>
@@ -171,7 +171,7 @@
                         <div class="card-header bg-light fw-bold d-flex justify-content-between align-items-center">
                             <span>Popis dužnika</span>
                             <a href="{{ route('admin.placanja.export.csv', array_merge($exportBaseQuery, ['scope' => 'debtors'])) }}"
-                               class="btn btn-sm btn-outline-secondary py-0 px-2"
+                               class="btn btn-sm btn-secondary py-0 px-2"
                                title="CSV (dužnici)"
                                aria-label="CSV (dužnici)">⬇</a>
                         </div>
@@ -220,7 +220,7 @@
                         <div class="card-header bg-light fw-bold d-flex justify-content-between align-items-center">
                             <span>Sažetak po osobi</span>
                             <a href="{{ route('admin.placanja.export.csv', array_merge($exportBaseQuery, ['scope' => 'persons'])) }}"
-                               class="btn btn-sm btn-outline-secondary py-0 px-2"
+                               class="btn btn-sm btn-secondary py-0 px-2"
                                title="CSV (sažetak po osobi)"
                                aria-label="CSV (sažetak po osobi)">⬇</a>
                         </div>
@@ -271,7 +271,7 @@
                         <div class="card-header bg-light fw-bold d-flex justify-content-between align-items-center">
                             <span>Sve stavke plaćanja</span>
                             <a href="{{ route('admin.placanja.export.csv', array_merge($exportBaseQuery, ['scope' => 'rows'])) }}"
-                               class="btn btn-sm btn-outline-secondary py-0 px-2"
+                               class="btn btn-sm btn-secondary py-0 px-2"
                                title="CSV (sve stavke)"
                                aria-label="CSV (sve stavke)">⬇</a>
                         </div>

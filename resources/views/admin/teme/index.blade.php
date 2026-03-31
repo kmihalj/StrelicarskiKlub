@@ -81,7 +81,7 @@
                                     @if(!$isFamilyActive && $activationTheme !== null)
                                         <form action="{{ route('admin.teme.activate', $activationTheme) }}" method="POST" class="m-0">
                                             @csrf
-                                            <button type="submit" class="btn btn-sm btn-outline-success">Aktiviraj</button>
+                                            <button type="submit" class="btn btn-sm btn-success">Aktiviraj</button>
                                         </form>
                                     @endif
                                 </div>
@@ -117,7 +117,7 @@
                                                     @endif
                                                 </td>
                                                 <td class="text-end">
-                                                    <a href="{{ route('admin.teme.index', ['theme' => $theme->id]) }}" class="btn btn-sm btn-outline-primary">Uredi</a>
+                                                    <a href="{{ route('admin.teme.index', ['theme' => $theme->id]) }}" class="btn btn-sm btn-primary">Uredi</a>
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -133,7 +133,7 @@
                                                name="clone_name"
                                                placeholder="Naziv klona (npr. {{ $familyName }} 2)"
                                                required>
-                                        <button type="submit" class="btn btn-sm btn-outline-dark">Kloniraj temu (obje varijante)</button>
+                                        <button type="submit" class="btn btn-sm btn-dark">Kloniraj temu (obje varijante)</button>
                                     </form>
                                 @endif
                             </div>

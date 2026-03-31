@@ -37,13 +37,25 @@
                 <div class="card shadow-sm">
                     <div class="card-header bg-danger text-white fw-bolder d-flex justify-content-between align-items-center">
                         <span>Plaćanja člana: {{ $clan->Ime }} {{ $clan->Prezime }}</span>
-                        <a class="btn btn-sm btn-outline-light" href="{{ route('javno.clanovi.prikaz_clana', $clan) }}">Povratak na profil</a>
+                        <div class="d-flex flex-wrap align-items-center gap-2 justify-content-end">
+                            @auth
+                                @if((int) auth()->user()->rola <= 1)
+                                    <a class="btn btn-sm btn-warning"
+                                       href="{{ route('admin.clanovi.prikaz_clana', ['clan' => $clan, 'open_payments' => 1]) }}">
+                                        Pregled plaćanja - ažuriranje
+                                    </a>
+                                @endif
+                            @endauth
+                            <a class="btn btn-sm btn-light" href="{{ route('javno.clanovi.prikaz_clana', $clan) }}">Povratak na profil</a>
+                        </div>
                     </div>
                     <div class="card-body bg-secondary-subtle">
-                        @if(!empty($paymentNotice))
-                            <div class="alert alert-{{ $paymentNotice['variant'] ?? 'secondary' }} mb-3">
-                                <div class="fw-bold">{{ $paymentNotice['title'] ?? 'Status plaćanja' }}</div>
-                                <div>{{ $paymentNotice['message'] ?? '' }}</div>
+                        @if(!empty($paymentNotice) && str_starts_with((string)($paymentNotice['title'] ?? ''), 'Potrebna uplata'))
+                            <div class="alert alert-danger mb-3 py-2">
+                                <span class="fw-bold">{{ $paymentNotice['title'] ?? 'Potrebna uplata članarine' }}</span>
+                                @if(!empty($paymentNotice['message']))
+                                    <span> - {{ $paymentNotice['message'] }}</span>
+                                @endif
                             </div>
                         @endif
 
@@ -122,7 +134,11 @@
                                                                 </td>
                                                                 <td>
                                                                     @if($charge->period_start && $charge->period_end)
-                                                                        {{ $charge->period_start->format('d.m.Y.') }} - {{ $charge->period_end->format('d.m.Y.') }}
+                                                                        @if($charge->period_start->isSameDay($charge->period_end))
+                                                                            {{ $charge->period_start->format('d.m.Y.') }}
+                                                                        @else
+                                                                            {{ $charge->period_start->format('d.m.Y.') }} - {{ $charge->period_end->format('d.m.Y.') }}
+                                                                        @endif
                                                                     @elseif($charge->due_date)
                                                                         {{ $charge->due_date->format('d.m.Y.') }}
                                                                     @else
@@ -195,7 +211,9 @@
                                                                 @php
                                                                     $chargePeriodLabel = '-';
                                                                     if ($unpaidCharge->period_start && $unpaidCharge->period_end) {
-                                                                        $chargePeriodLabel = $unpaidCharge->period_start->format('d.m.Y.') . ' - ' . $unpaidCharge->period_end->format('d.m.Y.');
+                                                                        $chargePeriodLabel = $unpaidCharge->period_start->isSameDay($unpaidCharge->period_end)
+                                                                            ? $unpaidCharge->period_start->format('d.m.Y.')
+                                                                            : $unpaidCharge->period_start->format('d.m.Y.') . ' - ' . $unpaidCharge->period_end->format('d.m.Y.');
                                                                     } elseif ($unpaidCharge->due_date) {
                                                                         $chargePeriodLabel = $unpaidCharge->due_date->format('d.m.Y.');
                                                                     }
@@ -207,7 +225,7 @@
                                                             @endforeach
                                                         </select>
                                                         <noscript>
-                                                            <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap mt-2">Prikaži</button>
+                                                            <button type="submit" class="btn btn-sm btn-primary text-nowrap mt-2">Prikaži</button>
                                                         </noscript>
                                                     </div>
                                                 </form>
@@ -239,7 +257,7 @@
                                                             @endforeach
                                                         </select>
                                                         <noscript>
-                                                            <button type="submit" class="btn btn-sm btn-outline-primary mt-2">Primijeni</button>
+                                                            <button type="submit" class="btn btn-sm btn-primary mt-2">Primijeni</button>
                                                         </noscript>
                                                     </div>
                                                 </form>
@@ -294,7 +312,7 @@
                                             @endif
 
                                             @if(!empty($paymentInfoClanakId))
-                                                <a href="{{ route('javno.clanci.prikaz_clanka', $paymentInfoClanakId) }}" class="btn btn-outline-primary btn-sm mt-3">
+                                                <a href="{{ route('javno.clanci.prikaz_clanka', $paymentInfoClanakId) }}" class="btn btn-primary btn-sm mt-3">
                                                     Upute za plaćanje
                                                 </a>
                                             @endif

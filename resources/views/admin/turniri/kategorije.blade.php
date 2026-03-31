@@ -66,7 +66,7 @@
                         <option value="Ž">Žensko</option>
                     </select>
                     <input type="text" id="naziv_kategorije" name="naziv_kategorije" form="unos_Kategorije" class="form-control" placeholder="naziv" aria-label="naziv" aria-describedby="naziv_kategorije-addon2">
-                    <button class="btn btn-outline-danger" type="submit" form="unos_Kategorije" id="naziv_kategorije-addon2">Dodaj</button>
+                    <button class="btn btn-danger" type="submit" form="unos_Kategorije" id="naziv_kategorije-addon2">Dodaj</button>
                 </div>
             </div>
         </div>

@@ -48,10 +48,10 @@
                             <div class="row">
                                 <div class="col">
                                     <div class="container mt-2">
-                                        <button type="button" class="btn btn-outline-primary" title="Upload" data-bs-toggle="modal" data-bs-target="#upload_slike">
+                                        <button type="button" class="btn btn-primary" title="Upload" data-bs-toggle="modal" data-bs-target="#upload_slike">
                                             @include('admin.SVG.upload')
                                         </button>
-                                        <button type="submit" form="brisanje_slike_clana" class="btn btn-outline-danger float-end" title="Delete" onclick="return confirm('Da li ste sigurni da želite obrisati sliku člana ?')">
+                                        <button type="submit" form="brisanje_slike_clana" class="btn btn-danger float-end" title="Delete" onclick="return confirm('Da li ste sigurni da želite obrisati sliku člana ?')">
                                             @include('admin.SVG.obrisi')
                                         </button>
                                     </div>
@@ -114,14 +114,18 @@
                                 <div class="col-lg-12 mb-2 align-self-end">
                                     <div class="d-grid gap-2 d-md-flex justify-content-between align-items-center">
                                         <div class="d-grid gap-2 d-md-flex">
-                                            <button class="btn btn-outline-danger" type="submit" form="brisanje_clana"
+                                            <button class="btn btn-danger" type="submit" form="brisanje_clana"
                                                     onclick="return confirm('Da li ste sigurni da želite obrisati člana ?')">
                                                 Obriši člana
                                             </button>
                                         </div>
                                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                                             <button class="btn btn-primary me-md-2" type="submit" form="uredjivanje_clana">Spremi</button>
-                                            <button class="btn btn-outline-success" type="button" onclick="location.href='{{ route('javno.clanovi') }}'">Popis članova</button>
+                                            <button class="btn btn-primary" type="button"
+                                                    onclick="location.href='{{ route('javno.clanovi.prikaz_clana', $clan) }}'">
+                                                Profil
+                                            </button>
+                                            <button class="btn btn-success" type="button" onclick="location.href='{{ route('javno.clanovi') }}'">Popis članova</button>
                                         </div>
                                     </div>
                                 </div>
@@ -145,15 +149,17 @@
                           data-admin-sekcija="placanja"
                           data-admin-open="1">+</span>
                 </div>
-                <div id="admin_placanja_dropdown" class="card-body bg-secondary-subtle shadow" style="@if($otvoriPlacanja) display: block; @else display: none; @endif">
+                <div id="admin_placanja_dropdown" class="card-body bg-secondary-subtle shadow d-flex flex-column" style="@if($otvoriPlacanja) display: flex; @else display: none; @endif">
                     @if(!empty($paymentNotice))
-                        <div class="alert alert-{{ $paymentNotice['variant'] ?? 'secondary' }} mb-3">
-                            <div class="fw-bold">{{ $paymentNotice['title'] ?? 'Status plaćanja' }}</div>
-                            <div>{{ $paymentNotice['message'] ?? '' }}</div>
+                        <div class="alert alert-{{ $paymentNotice['variant'] ?? 'secondary' }} mb-3 py-2">
+                            <span class="fw-bold">{{ $paymentNotice['title'] ?? 'Status plaćanja' }}</span>
+                            @if(!empty($paymentNotice['message']))
+                                <span> - {{ $paymentNotice['message'] }}</span>
+                            @endif
                         </div>
                     @endif
 
-                    <div class="card mb-3">
+                    <div class="card mb-3 order-2">
                         <div class="card-header bg-warning text-dark fw-bold">Model plaćanja člana</div>
                         <div class="card-body">
                             <form action="{{ route('admin.clanovi.placanja.profil', $clan) }}" method="POST">
@@ -292,7 +298,7 @@
                         </div>
                     </div>
 
-                    <div class="card mb-3">
+                    <div class="card mb-3 order-3">
                         <div class="card-header bg-light fw-bold">Dodatna plaćanja (najam opreme, dvorana, ostalo)</div>
                         <div class="card-body">
                             <form action="{{ route('admin.clanovi.placanja.manual', $clan) }}" method="POST">
@@ -323,8 +329,8 @@
                         </div>
                     </div>
 
-                    <div class="card mb-2">
-                        <div class="card-header bg-light fw-bold">Popis stavki plaćanja</div>
+                    <div class="card mb-2 order-1">
+                        <div class="card-header bg-warning text-dark fw-bold">Popis stavki plaćanja</div>
                         <div class="card-body">
                             @if($paymentCharges->count() === 0)
                                 <p class="mb-0">Nema unosa plaćanja za člana.</p>
@@ -334,7 +340,7 @@
                                         <thead class="table-warning">
                                         <tr>
                                             <th>Naziv</th>
-                                            <th>Razdoblje</th>
+                                            <th>Razdoblje / datum</th>
                                             <th>Iznos</th>
                                             <th>Status</th>
                                             <th>Datum uplate</th>
@@ -365,9 +371,13 @@
                                                 <td>{{ $charge->title }}</td>
                                                 <td>
                                                     @if($charge->period_start && $charge->period_end)
-                                                        {{ $charge->period_start->format('d.m.Y.') }} - {{ $charge->period_end->format('d.m.Y.') }}
+                                                        @if($charge->period_start->isSameDay($charge->period_end))
+                                                            {{ $charge->period_start->format('d.m.Y.') }}
+                                                        @else
+                                                            {{ $charge->period_start->format('d.m.Y.') }} - {{ $charge->period_end->format('d.m.Y.') }}
+                                                        @endif
                                                     @elseif($charge->due_date)
-                                                        Zaduženje: {{ $charge->due_date->format('d.m.Y.') }}
+                                                        {{ $charge->due_date->format('d.m.Y.') }}
                                                     @else
                                                         -
                                                     @endif
@@ -440,16 +450,16 @@
                                                             </select>
                                                         @endif
                                                         @if($isPaid)
-                                                            <button type="submit" form="{{ $statusFormId }}" class="btn btn-outline-secondary btn-sm text-nowrap">
+                                                            <button type="submit" form="{{ $statusFormId }}" class="btn btn-secondary btn-sm text-nowrap">
                                                                 Vrati na neplaćeno
                                                             </button>
                                                         @else
-                                                            <button type="submit" form="{{ $statusFormId }}" class="btn btn-outline-success btn-sm text-nowrap">
+                                                            <button type="submit" form="{{ $statusFormId }}" class="btn btn-success btn-sm text-nowrap">
                                                                 Potvrdi uplatu
                                                             </button>
                                                         @endif
                                                         @if($canDeleteCharge)
-                                                            <button type="submit" form="{{ $deleteFormId }}" class="btn btn-outline-danger btn-sm text-nowrap"
+                                                            <button type="submit" form="{{ $deleteFormId }}" class="btn btn-danger btn-sm text-nowrap"
                                                                     onclick="return confirm('Da li ste sigurni da želite obrisati ovu stavku plaćanja?')">
                                                                 Obriši
                                                             </button>
@@ -711,7 +721,8 @@
                     return;
                 }
 
-                body.style.display = shouldOpen ? 'block' : 'none';
+                const displayMode = sekcija === 'placanja' ? 'flex' : 'block';
+                body.style.display = shouldOpen ? displayMode : 'none';
                 hideIcon.style.display = shouldOpen ? 'block' : 'none';
                 showIcon.style.display = shouldOpen ? 'none' : 'block';
             };

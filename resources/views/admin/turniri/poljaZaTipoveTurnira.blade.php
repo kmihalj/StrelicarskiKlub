@@ -81,7 +81,7 @@
                             <input type="hidden" id="odabir_tipa_turnira" name="odabir_tipa_turnira" value="{{$odabraniTipTurnira->id}}">
                         </form>
                         <input type="text" form="unos_polja_za_tip_turnira" id="naziv_polja_za_tip_turnira_unos" name="naziv_polja_za_tip_turnira_unos" class="form-control" placeholder="naziv" aria-label="naziv" aria-describedby="poljeZaTipTurnira_button-addon2">
-                        <button class="btn btn-outline-danger" type="submit" form="unos_polja_za_tip_turnira" id="poljeZaTipTurnira_button-addon2">Dodaj</button>
+                        <button class="btn btn-danger" type="submit" form="unos_polja_za_tip_turnira" id="poljeZaTipTurnira_button-addon2">Dodaj</button>
                     </div>
                 </div>
             </div>

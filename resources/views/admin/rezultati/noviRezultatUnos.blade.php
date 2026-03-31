@@ -83,7 +83,7 @@
     </style>
     <div class="col-lg-12 col-md-12 col-12 mb-2 text-end">
         {{-- Odustani je vidljiv samo u edit modu; vraća formu na "novi unos". --}}
-        <button type="button" id="rezultat_odustani_btn" class="btn btn-outline-secondary d-none">Odustani</button>
+        <button type="button" id="rezultat_odustani_btn" class="btn btn-secondary d-none">Odustani</button>
         <button type="submit" id="rezultat_spremi_btn" form="unos_rezultata" class="btn btn-danger">Spremi</button>
     </div>
 </div>

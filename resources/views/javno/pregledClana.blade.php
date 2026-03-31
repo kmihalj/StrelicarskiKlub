@@ -111,6 +111,16 @@
                     $jeVlastitiProfil = (int)auth()->user()->clan_id === (int)$clan->id;
                     $jeAdmin = (int)auth()->user()->rola <= 1;
                     $jeRoditeljPregled = (bool)($jeRoditeljPregled ?? false);
+                    $paymentNoticeVariant = $paymentNotice['variant'] ?? null;
+                    $paymentNoticeTitle = (string)($paymentNotice['title'] ?? '');
+                    $paymentNoticeMessage = trim((string)($paymentNotice['message'] ?? ''));
+                    $showPaymentDueNotice = !empty($paymentNotice) && str_starts_with($paymentNoticeTitle, 'Potrebna uplata');
+                    $korisnikPlacanjaBtnClass = match ($paymentNoticeVariant) {
+                        'danger', 'warning' => 'btn-danger',
+                        'success' => 'btn-success',
+                        default => 'btn-secondary',
+                    };
+                    $adminActionBtnClass = 'btn-warning';
                 @endphp
 
                 @if($jeAdmin || $jeVlastitiProfil || $jeRoditeljPregled)
@@ -135,67 +145,101 @@
                                 @endif
                                 @if($jeAdmin)
                                     @if($paymentProfileConfigured ?? false)
-                                        <button type="button" class="btn btn-sm btn-outline-primary"
-                                                onclick="location.href='{{ route('javno.clanovi.placanja', $clan) }}'">
-                                            Moja plaćanja
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-outline-primary"
+                                        <button type="button" class="btn btn-sm {{ $adminActionBtnClass }}"
                                                 onclick="location.href='{{ route('admin.clanovi.prikaz_clana', ['clan' => $clan, 'open_payments' => 1]) }}'">
                                             Pregled plaćanja
                                         </button>
                                     @endif
-                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                    <button type="button" class="btn btn-sm {{ $adminActionBtnClass }}"
                                             onclick="location.href='{{ route('admin.clanovi.prikaz_clana', $clan) }}'">
-                                        Uredi podatke
-                                    </button>
-                                @else
+                                            Uredi podatke
+                                        </button>
+                                @endif
+                                <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 ms-auto">
+                                    @if($showPaymentDueNotice)
+                                        <div class="alert alert-danger mb-0 py-1 px-2 small text-start text-md-nowrap me-auto">
+                                            <span class="fw-bold">{{ $paymentNoticeTitle }}</span>
+                                            @if($paymentNoticeMessage !== '')
+                                                <span> - {{ $paymentNoticeMessage }}</span>
+                                            @endif
+                                        </div>
+                                    @endif
                                     @if($paymentProfileConfigured ?? false)
-                                        <button type="button" class="btn btn-sm btn-outline-primary"
-                                                onclick="location.href='{{ route('javno.clanovi.placanja', $clan) }}'">
-                                            Moja plaćanja
+                                        <button type="button"
+                                                class="btn btn-sm {{ $korisnikPlacanjaBtnClass }} d-inline-flex align-items-center justify-content-center"
+                                                onclick="location.href='{{ route('javno.clanovi.placanja', $clan) }}'"
+                                                title="Plaćanja"
+                                                aria-label="Plaćanja">
+                                            @include('admin.SVG.cashcoin')
                                         </button>
                                     @endif
-                                @endif
-                                <button type="button" class="btn btn-sm btn-danger ms-auto"
-                                        onclick="location.href='{{ route('javno.treninzi.index') }}'">
-                                    Moji treninzi
-                                </button>
+                                    <button type="button" class="btn btn-sm btn-danger"
+                                            onclick="location.href='{{ route('javno.treninzi.index') }}'">
+                                        Moji treninzi
+                                    </button>
+                                </div>
                             </div>
                         @elseif($jeAdmin)
-                            <div class="text-end d-flex justify-content-end gap-2">
-                                @if($jeRoditeljPregled && ($mozeVidjetiPlacanja ?? false))
-                                    <button type="button" class="btn btn-sm btn-outline-primary"
-                                            onclick="location.href='{{ route('javno.clanovi.placanja', $clan) }}'">
-                                        Plaćanja
-                                    </button>
-                                @endif
+                            <div class="d-flex flex-wrap align-items-center gap-2">
                                 @if($paymentProfileConfigured ?? false)
-                                    <button type="button" class="btn btn-sm btn-outline-primary"
+                                    <button type="button" class="btn btn-sm {{ $adminActionBtnClass }}"
                                             onclick="location.href='{{ route('admin.clanovi.prikaz_clana', ['clan' => $clan, 'open_payments' => 1]) }}'">
                                         Pregled plaćanja
                                     </button>
                                 @endif
-                                <button type="button" class="btn btn-sm btn-danger"
+                                <button type="button" class="btn btn-sm {{ $adminActionBtnClass }}"
                                         onclick="location.href='{{ route('admin.treninzi.index', $clan) }}'">
                                     Pregled treninga
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                <button type="button" class="btn btn-sm {{ $adminActionBtnClass }}"
                                         onclick="location.href='{{ route('admin.clanovi.prikaz_clana', $clan) }}'">
                                     Uredi podatke
                                 </button>
+                                @if($jeRoditeljPregled && ($mozeVidjetiPlacanja ?? false))
+                                    <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 ms-auto">
+                                        @if($showPaymentDueNotice)
+                                            <div class="alert alert-danger mb-0 py-1 px-2 small text-start text-md-nowrap me-auto">
+                                                <span class="fw-bold">{{ $paymentNoticeTitle }}</span>
+                                                @if($paymentNoticeMessage !== '')
+                                                    <span> - {{ $paymentNoticeMessage }}</span>
+                                                @endif
+                                            </div>
+                                        @endif
+                                        <button type="button"
+                                                class="btn btn-sm {{ $korisnikPlacanjaBtnClass }} d-inline-flex align-items-center justify-content-center"
+                                                onclick="location.href='{{ route('javno.clanovi.placanja', $clan) }}'"
+                                                title="Plaćanja"
+                                                aria-label="Plaćanja">
+                                            @include('admin.SVG.cashcoin')
+                                        </button>
+                                    </div>
+                                @endif
                             </div>
                         @elseif($jeRoditeljPregled)
-                            <div class="text-end d-flex justify-content-end gap-2">
-                                @if($mozeVidjetiPlacanja ?? false)
-                                    <button type="button" class="btn btn-sm btn-outline-primary"
-                                            onclick="location.href='{{ route('javno.clanovi.placanja', $clan) }}'">
-                                        Plaćanja
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 ms-auto">
+                                    @if($showPaymentDueNotice)
+                                        <div class="alert alert-danger mb-0 py-1 px-2 small text-start text-md-nowrap me-auto">
+                                            <span class="fw-bold">{{ $paymentNoticeTitle }}</span>
+                                            @if($paymentNoticeMessage !== '')
+                                                <span> - {{ $paymentNoticeMessage }}</span>
+                                            @endif
+                                        </div>
+                                    @endif
+                                    @if($mozeVidjetiPlacanja ?? false)
+                                        <button type="button"
+                                                class="btn btn-sm {{ $korisnikPlacanjaBtnClass }} d-inline-flex align-items-center justify-content-center"
+                                                onclick="location.href='{{ route('javno.clanovi.placanja', $clan) }}'"
+                                                title="Plaćanja"
+                                                aria-label="Plaćanja">
+                                            @include('admin.SVG.cashcoin')
+                                        </button>
+                                    @endif
+                                    <button type="button" class="btn btn-sm btn-danger"
+                                            onclick="location.href='{{ route('javno.treninzi.clan.index', $clan) }}'">
+                                        Pregled treninga
                                     </button>
-                                @endif
-                                <button type="button" class="btn btn-sm btn-danger"
-                                        onclick="location.href='{{ route('javno.treninzi.clan.index', $clan) }}'">
-                                    Pregled treninga
-                                </button>
+                                </div>
                             </div>
                         @endif
                     </div>
@@ -203,19 +247,6 @@
             @endauth
         </div>
     </div>
-
-    @if(!empty($paymentNotice))
-        <div class="container-xxl shadow mt-3 bg-white">
-            <div class="row p-3">
-                <div class="col-12">
-                    <div class="alert alert-{{ $paymentNotice['variant'] ?? 'secondary' }} mb-0">
-                        <div class="fw-bold">{{ $paymentNotice['title'] ?? 'Status plaćanja' }}</div>
-                        <div>{{ $paymentNotice['message'] ?? '' }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    @endif
 
     @auth
         @if(($prijaveTurniraClana ?? collect())->count() > 0)
@@ -308,7 +339,7 @@
                                         @endif
                                     </td>
                                     <td rowspan="{{ $rowspan }}" class="text-end align-middle">
-                                        <a href="{{ route('javno.prijave_turnira.show', $prijavaTurnira) }}" class="btn btn-sm btn-outline-primary">Pregled</a>
+                                        <a href="{{ route('javno.prijave_turnira.show', $prijavaTurnira) }}" class="btn btn-sm btn-primary">Pregled</a>
                                     </td>
                                 </tr>
                                 <tr>
@@ -361,7 +392,7 @@
                     <div class="row p-3">
                         @if($adminPregled ?? false)
                             <div class="col-lg-12 mb-3">
-                                <a class="btn btn-outline-primary" href="{{ route('admin.clanovi.prikaz_clana', ['clan' => $clan, 'open_documents' => 1]) }}">Uredi dokumente i liječničke</a>
+                                <a class="btn btn-primary" href="{{ route('admin.clanovi.prikaz_clana', ['clan' => $clan, 'open_documents' => 1]) }}">Uredi dokumente i liječničke</a>
                             </div>
                         @endif
                         <div class="col-lg-12 mb-3">

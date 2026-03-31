@@ -41,8 +41,8 @@
                             <input type="hidden" id="unos_json" name="unos_json">
                             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                                 <div class="btn-group" role="group" aria-label="Odabir runde">
-                                    <button type="button" class="btn btn-outline-danger js-round-btn active" data-round="0">Runda 1</button>
-                                    <button type="button" class="btn btn-outline-danger js-round-btn" data-round="1">Runda 2</button>
+                                    <button type="button" class="btn btn-danger js-round-btn active" data-round="0">Runda 1</button>
+                                    <button type="button" class="btn btn-secondary js-round-btn" data-round="1">Runda 2</button>
                                 </div>
                                 <button type="button" id="btn-spremi" class="btn btn-danger">Spremi</button>
                             </div>
@@ -168,7 +168,7 @@
                     </div>
 
                     <div class="text-end">
-                        <button type="button" id="btn-zatvori" class="btn btn-outline-secondary">Zatvori</button>
+                        <button type="button" id="btn-zatvori" class="btn btn-secondary">Zatvori</button>
                     </div>
                 </form>
 
@@ -192,9 +192,9 @@
                     Trening nije spremljen. &#381;eli&#353; li spremiti prije zatvaranja?
                 </div>
                 <div class="modal-footer d-flex justify-content-between">
-                    <button type="button" id="btn-zatvori-bez-spremanja" class="btn btn-outline-danger">Zatvori</button>
+                    <button type="button" id="btn-zatvori-bez-spremanja" class="btn btn-danger">Zatvori</button>
                     <div class="d-flex gap-2">
-                        <button type="button" id="btn-odustani-zatvaranje" class="btn btn-outline-secondary" data-bs-dismiss="modal">Odustani</button>
+                        <button type="button" id="btn-odustani-zatvaranje" class="btn btn-secondary" data-bs-dismiss="modal">Odustani</button>
                         <button type="button" id="btn-spremi-i-zatvori" class="btn btn-danger">Spremi i zatvori</button>
                     </div>
                 </div>
@@ -961,7 +961,7 @@
                     const isActive = index === state.activeRound;
                     button.classList.toggle('active', isActive);
                     button.classList.toggle('btn-danger', isActive);
-                    button.classList.toggle('btn-outline-danger', !isActive);
+                    button.classList.toggle('btn-secondary', !isActive);
                 });
             }
 

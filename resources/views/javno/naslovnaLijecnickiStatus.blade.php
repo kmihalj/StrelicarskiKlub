@@ -2,6 +2,9 @@
 @if(isset($statusLijecnickiKorisnika))
     @php
         $placanjeNotice = $statusLijecnickiKorisnika['paymentNotice'] ?? null;
+        $placanjeImaDugovanje = in_array(($placanjeNotice['variant'] ?? null), ['danger', 'warning'], true);
+        $placanjePrikaziObavijest = !empty($placanjeNotice)
+            && str_starts_with((string)($placanjeNotice['title'] ?? ''), 'Potrebna uplata');
         $vlastitiClanId = (int)($statusLijecnickiKorisnika['clan']->id ?? 0);
         $prijaveTurniraKorisnika = collect($prijaveTurniraKorisnika ?? collect())
             ->where('clan_id', $vlastitiClanId)
@@ -44,34 +47,38 @@
                             </span>
                         </p>
                     @endif
-                    <p class="mb-0 mt-2">
-                        <button type="button" class="btn btn-sm btn-danger"
-                                onclick="location.href='{{ route('javno.treninzi.index') }}'">
-                            Moji treninzi
-                        </button>
-                    </p>
                 </div>
             </div>
-            @if(!empty($placanjeNotice))
-                <div class="alert alert-{{ $placanjeNotice['variant'] ?? 'secondary' }} mb-0 mt-3">
-                    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
-                        <div>
-                            <div class="fw-bold">{{ $placanjeNotice['title'] ?? 'Status plaćanja' }}</div>
-                            <div class="small">{{ $placanjeNotice['message'] ?? '' }}</div>
-                        </div>
-                        <a class="btn btn-sm btn-outline-primary text-nowrap"
-                           href="{{ route('javno.clanovi.placanja', $statusLijecnickiKorisnika['clan']) }}">
-                            Moja plaćanja
-                        </a>
+            <div class="mt-2 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                @if($placanjePrikaziObavijest)
+                    <div class="alert alert-danger mb-0 py-1 px-2 small text-start text-md-nowrap">
+                        <span class="fw-bold">{{ $placanjeNotice['title'] }}</span>
+                        @if(!empty($placanjeNotice['message']))
+                            <span> - {{ $placanjeNotice['message'] }}</span>
+                        @endif
                     </div>
+                @endif
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
+                    @if(!empty($placanjeNotice))
+                        <a class="btn btn-sm {{ $placanjeImaDugovanje ? 'btn-danger' : 'btn-success' }} d-inline-flex align-items-center justify-content-center"
+                           href="{{ route('javno.clanovi.placanja', $statusLijecnickiKorisnika['clan']) }}"
+                           title="Plaćanja"
+                           aria-label="Plaćanja">
+                            @include('admin.SVG.cashcoin')
+                        </a>
+                    @endif
+                    <button type="button" class="btn btn-sm btn-danger"
+                            onclick="location.href='{{ route('javno.treninzi.index') }}'">
+                        Moji treninzi
+                    </button>
                 </div>
-            @endif
+            </div>
             @if($prijaveTurniraKorisnika->count() > 0)
                 <div class="mt-3 pt-3 border-top">
-                    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
-                        <div class="fw-bold">Prijave na turnire</div>
-                        <a href="{{ route('javno.prijave_turnira.index') }}" class="btn btn-sm btn-outline-primary">Otvori prijave na turnire</a>
-                    </div>
+                    <a href="{{ route('javno.prijave_turnira.index') }}"
+                       class="fw-bold link-primary link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover text-decoration-underline">
+                        Prijava na turnire
+                    </a>
                     <ul class="mb-0 mt-2">
                         @foreach($prijaveTurniraKorisnika as $prijava)
                             @php
@@ -99,17 +106,17 @@
                                 <span class="ms-1">|</span>
                                 @if($nacinKotizacije === 'bank')
                                     @if($jePlaceno)
-                                        <span class="badge bg-success">
+                                        <span class="badge bg-success align-middle ms-1">
                                             Plaćeno
                                             @if($iznosKotizacije !== null)
-                                                {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} EUR
+                                                : {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} €
                                             @endif
                                         </span>
                                     @elseif($nijePlaceno && $urlPlacanja)
-                                        <a href="{{ $urlPlacanja }}" class="badge bg-danger text-white text-decoration-none">
+                                        <a href="{{ $urlPlacanja }}" class="badge bg-danger text-white text-decoration-none align-middle ms-1">
                                             Nije plaćeno
                                             @if($iznosKotizacije !== null)
-                                                {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} EUR
+                                                : {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} €
                                             @endif
                                         </a>
                                     @else

@@ -151,6 +151,10 @@
         color: #adb5bd !important;
     }
 
+    .theme-dark .form-text {
+        color: #c3ccd5 !important;
+    }
+
     .theme-dark .text-dark,
     .theme-dark .text-black {
         color: var(--bs-body-color) !important;
@@ -428,6 +432,18 @@
         background-color: var(--bs-secondary-bg-subtle) !important;
         color: var(--bs-body-color) !important;
         border-color: rgba(var(--bs-secondary-rgb), 0.45) !important;
+    }
+
+    .theme-dark .bg-warning,
+    .theme-dark .card-header.bg-warning,
+    .theme-dark .card-header.bg-warning.text-dark,
+    .theme-dark .alert-warning {
+        color: #212529 !important;
+    }
+
+    .theme-dark .table thead.table-warning > tr > *,
+    .theme-dark .table > :not(caption) > thead.table-warning > tr > * {
+        color: #e9ecef !important;
     }
 
     .table thead > tr > *.border-danger,

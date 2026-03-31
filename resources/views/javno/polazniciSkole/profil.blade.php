@@ -310,11 +310,11 @@
                                                                 </select>
                                                             @endif
                                                             @if($isPaid)
-                                                                <button type="submit" form="{{ $statusFormId }}" class="btn btn-outline-secondary btn-sm text-nowrap">
+                                                                <button type="submit" form="{{ $statusFormId }}" class="btn btn-secondary btn-sm text-nowrap">
                                                                     Vrati na neplaćeno
                                                                 </button>
                                                             @else
-                                                                <button type="submit" form="{{ $statusFormId }}" class="btn btn-outline-success btn-sm text-nowrap">
+                                                                <button type="submit" form="{{ $statusFormId }}" class="btn btn-success btn-sm text-nowrap">
                                                                     Potvrdi uplatu
                                                                 </button>
                                                             @endif
@@ -347,7 +347,7 @@
                 <div class="col-12">
                     @if(auth()->check() && (int)auth()->user()->rola === 1)
                         <div class="text-end mb-2">
-                            <button type="button" class="btn btn-sm btn-outline-danger"
+                            <button type="button" class="btn btn-sm btn-danger"
                                     onclick="location.href='{{ route('javno.skola.evidencija.index') }}'">
                                 Otvori evidenciju svih polaznika
                             </button>
@@ -506,7 +506,7 @@
                         @if($mozeUredjivati)
                             <form action="{{ route('admin.skola.polaznici.destroy', $polaznik) }}" method="POST" class="d-inline-block">
                                 @csrf
-                                <button type="submit" class="btn btn-outline-danger"
+                                <button type="submit" class="btn btn-danger"
                                         onclick="return confirm('Da li ste sigurni da želite obrisati polaznika škole?')">
                                     Obriši polaznika
                                 </button>
@@ -526,13 +526,13 @@
                                     </button>
                                 </form>
                             @elseif(!empty($polaznik->prebacen_u_clana_id))
-                                <button class="btn btn-outline-success" type="button"
+                                <button class="btn btn-success" type="button"
                                         onclick="location.href='{{ route('javno.clanovi.prikaz_clana', $polaznik->prebacenClan) }}'">
                                     Profil člana
                                 </button>
                             @endif
                         @endif
-                        <button class="btn btn-outline-secondary" type="button" onclick="location.href='{{ route('javno.skola.polaznici.index') }}'">Popis polaznika</button>
+                        <button class="btn btn-secondary" type="button" onclick="location.href='{{ route('javno.skola.polaznici.index') }}'">Popis polaznika</button>
                     </div>
                 </div>
             </div>

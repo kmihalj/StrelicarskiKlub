@@ -9,9 +9,9 @@
 
     <div class="container-xxl bg-white shadow mb-3">
         <div class="row justify-content-center p-2 shadow bg-danger fw-bolder">
-            <div class="col-lg-12 text-white d-flex justify-content-between align-items-center">
-                <span>Pregled prijave na turnir</span>
-                <a href="{{ route('javno.prijave_turnira.index') }}" class="btn btn-sm btn-outline-light">Povratak</a>
+            <div class="col-lg-12 text-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <span class="mb-0">Pregled prijave na turnir</span>
+                <a href="{{ route('javno.prijave_turnira.index') }}" class="btn btn-sm btn-light">Povratak</a>
             </div>
         </div>
         <div class="row p-3">
@@ -41,7 +41,7 @@
                 @endif
                 @if(!empty($turnir->poziv_pdf_path))
                     <div class="mt-2">
-                        <a href="{{ asset('storage/' . $turnir->poziv_pdf_path) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <a href="{{ asset('storage/' . $turnir->poziv_pdf_path) }}" target="_blank" class="btn btn-sm btn-primary">
                             Poziv na turnir (PDF)
                         </a>
                     </div>
@@ -133,9 +133,9 @@
                             <div class="form-text">*ako se boduje za KUP</div>
                         </div>
 
-                        <div class="col-12 d-flex gap-2">
+                        <div class="col-12 d-flex flex-wrap align-items-center gap-2">
                             <button type="submit" class="btn btn-danger" @disabled(!$mozeUredjivati)>Spremi izmjene</button>
-                            <button type="submit" class="btn btn-outline-danger"
+                            <button type="submit" class="btn btn-danger"
                                     form="odjava-prijava-form"
                                     @disabled(!$mozeUredjivati)
                                     onclick="return confirm('Odjaviti turnir?')">

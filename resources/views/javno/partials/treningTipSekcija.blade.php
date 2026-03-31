@@ -28,7 +28,7 @@
                     </button>
                 @endif
                 @if($imaTablicu)
-                    <button id="pregled-toggle-{{ $sekcijaDomId }}" class="btn btn-sm btn-outline-light"
+                    <button id="pregled-toggle-{{ $sekcijaDomId }}" class="btn btn-sm btn-light"
                             type="button"
                             aria-expanded="false"
                             data-trening-tablica-toggle="1"
@@ -255,14 +255,14 @@
                                 <td>
                                     <div class="d-flex justify-content-between align-items-center gap-2">
                                         <div class="d-flex flex-nowrap gap-1">
-                                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                            <button type="button" class="btn btn-sm btn-danger"
                                                     data-bs-toggle="collapse"
                                                     data-bs-target="#{{ $desktopDetailsId }}"
                                                     aria-expanded="false">
                                                 Pregled
                                             </button>
                                             @if(!empty($editRouteName))
-                                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                                <button type="button" class="btn btn-sm btn-primary"
                                                         onclick="location.href='{{ route($editRouteName, $editRouteParams) }}'">
                                                     Uredi
                                                 </button>
@@ -274,7 +274,7 @@
                                                     @csrf
                                                 </form>
                                                 <button type="submit" form="delete-{{ $collapsePrefix }}"
-                                                        class="btn btn-sm btn-outline-danger"
+                                                        class="btn btn-sm btn-danger"
                                                         onclick="return confirm('&#381;eli&#353; obrisati trening?')">
                                                     Obri&#353;i
                                                 </button>
@@ -388,14 +388,14 @@
 
                             <div class="d-flex justify-content-between align-items-center gap-2 mt-2">
                                 <div class="d-flex flex-wrap gap-1">
-                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                    <button type="button" class="btn btn-sm btn-danger"
                                             data-bs-toggle="collapse"
                                             data-bs-target="#{{ $mobileDetailsId }}"
                                             aria-expanded="false">
                                         Pregled
                                     </button>
                                     @if(!empty($editRouteName))
-                                        <button type="button" class="btn btn-sm btn-outline-primary"
+                                        <button type="button" class="btn btn-sm btn-primary"
                                                 onclick="location.href='{{ route($editRouteName, $editRouteParams) }}'">
                                             Uredi
                                         </button>
@@ -407,7 +407,7 @@
                                             @csrf
                                         </form>
                                         <button type="submit" form="delete-mobile-{{ $collapsePrefix }}"
-                                                class="btn btn-sm btn-outline-danger"
+                                                class="btn btn-sm btn-danger"
                                                 onclick="return confirm('&#381;eli&#353; obrisati trening?')">
                                             Obri&#353;i
                                         </button>

@@ -143,7 +143,7 @@
                             <div class="alert alert-warning mb-0 py-2" id="kotizacija-info-text"></div>
                         </div>
 
-                        <div class="col-12">
+                        <div class="col-12 d-flex flex-wrap align-items-center gap-2">
                             <button type="submit" class="btn btn-danger">Prijavi turnir</button>
                         </div>
                     </form>
@@ -206,17 +206,17 @@
                             <td rowspan="{{ $rowspan }}" class="align-middle">
                                 @if($nacinKotizacije === 'bank')
                                     @if($jePlaceno)
-                                        <span class="badge bg-success">
+                                        <span class="badge bg-success align-middle">
                                             Plaćeno
                                             @if($iznosKotizacije !== null)
-                                                {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} EUR
+                                                : {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} €
                                             @endif
                                         </span>
                                     @elseif($nijePlaceno && $urlPlacanja)
-                                        <a href="{{ $urlPlacanja }}" class="badge bg-danger text-white text-decoration-none">
+                                        <a href="{{ $urlPlacanja }}" class="badge bg-danger text-white text-decoration-none align-middle">
                                             Nije plaćeno
                                             @if($iznosKotizacije !== null)
-                                                {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} EUR
+                                                : {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} €
                                             @endif
                                         </a>
                                     @else
@@ -243,7 +243,7 @@
                                 @endif
                             </td>
                             <td rowspan="{{ $rowspan }}" class="text-end align-middle">
-                                <a href="{{ route('javno.prijave_turnira.show', $prijava) }}" class="btn btn-sm btn-outline-primary">Pregled</a>
+                                <a href="{{ route('javno.prijave_turnira.show', $prijava) }}" class="btn btn-sm btn-primary">Pregled</a>
                             </td>
                         </tr>
                         @if($imaWarning)
@@ -264,9 +264,9 @@
 
     <div class="container-xxl bg-white shadow mb-3">
         <div class="row justify-content-center p-2 shadow bg-danger fw-bolder">
-            <div class="col-lg-12 text-white d-flex justify-content-between align-items-center">
-                <span>Prošli turniri</span>
-                <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#prosli-turniri-collapse" aria-expanded="false" aria-controls="prosli-turniri-collapse">+</button>
+            <div class="col-lg-12 text-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <span class="mb-0">Prošli turniri</span>
+                <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#prosli-turniri-collapse" aria-expanded="false" aria-controls="prosli-turniri-collapse">+</button>
             </div>
         </div>
         <div class="collapse" id="prosli-turniri-collapse">
@@ -314,17 +314,17 @@
                                 <td>
                                     @if($nacinKotizacije === 'bank')
                                         @if($jePlaceno)
-                                            <span class="badge bg-success">
+                                            <span class="badge bg-success align-middle">
                                                 Plaćeno
                                                 @if($iznosKotizacije !== null)
-                                                    {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} EUR
+                                                    : {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} €
                                                 @endif
                                             </span>
                                         @elseif($nijePlaceno && $urlPlacanja)
-                                            <a href="{{ $urlPlacanja }}" class="badge bg-danger text-white text-decoration-none">
+                                            <a href="{{ $urlPlacanja }}" class="badge bg-danger text-white text-decoration-none align-middle">
                                                 Nije plaćeno
                                                 @if($iznosKotizacije !== null)
-                                                    {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} EUR
+                                                    : {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} €
                                                 @endif
                                             </a>
                                         @else

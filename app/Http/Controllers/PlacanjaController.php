@@ -679,9 +679,11 @@ class PlacanjaController extends Controller
 
         $periodLabel = '-';
         if ($charge->period_start !== null && $charge->period_end !== null) {
-            $periodLabel = $charge->period_start->format('d.m.Y.').' - '.$charge->period_end->format('d.m.Y.');
+            $periodLabel = $charge->period_start->isSameDay($charge->period_end)
+                ? $charge->period_start->format('d.m.Y.')
+                : $charge->period_start->format('d.m.Y.').' - '.$charge->period_end->format('d.m.Y.');
         } elseif ($charge->due_date !== null) {
-            $periodLabel = 'Zaduženje: '.$charge->due_date->format('d.m.Y.');
+            $periodLabel = $charge->due_date->format('d.m.Y.');
         }
 
         return [

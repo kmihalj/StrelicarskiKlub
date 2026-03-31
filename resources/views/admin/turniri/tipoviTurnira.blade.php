@@ -54,7 +54,7 @@
                         @csrf
                     </form>
                     <input type="text" form="unos_tipa_turnira" id="naziv_tipa_turnira_za_unos" name="naziv_tipa_turnira_za_unos" class="form-control" placeholder="naziv" aria-label="naziv" aria-describedby="tipoviTurnira_button-addon2">
-                    <button class="btn btn-outline-danger" type="submit" form="unos_tipa_turnira" id="tipoviTurnira_button-addon2">Dodaj</button>
+                    <button class="btn btn-danger" type="submit" form="unos_tipa_turnira" id="tipoviTurnira_button-addon2">Dodaj</button>
                 </div>
             </div>
         </div>

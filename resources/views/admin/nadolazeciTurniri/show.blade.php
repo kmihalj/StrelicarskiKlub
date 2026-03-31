@@ -6,7 +6,7 @@
         <div class="row justify-content-center p-2 shadow bg-danger fw-bolder">
             <div class="col-lg-12 text-white d-flex justify-content-between align-items-center">
                 <span>Prijave - {{ $turnir->naziv }}</span>
-                <a href="{{ route('admin.nadolazeci_turniri.index') }}" class="btn btn-sm btn-outline-light">Povratak</a>
+                <a href="{{ route('admin.nadolazeci_turniri.index') }}" class="btn btn-sm btn-light">Povratak</a>
             </div>
         </div>
         <div class="row p-3">
@@ -26,7 +26,7 @@
                 </div>
                 @if(!empty($turnir->poziv_pdf_path))
                     <div class="mt-2">
-                        <a href="{{ asset('storage/' . $turnir->poziv_pdf_path) }}" target="_blank" class="btn btn-sm btn-outline-primary">PDF poziv</a>
+                        <a href="{{ asset('storage/' . $turnir->poziv_pdf_path) }}" target="_blank" class="btn btn-sm btn-primary">PDF poziv</a>
                     </div>
                 @endif
             </div>
@@ -129,7 +129,7 @@
                                                placeholder="Napomena zašto je član maknut"
                                                required>
                                         <button type="submit"
-                                                class="btn btn-sm btn-outline-danger"
+                                                class="btn btn-sm btn-danger"
                                                 onclick="return confirm('Maknuti člana s turnira?')">Ukloni</button>
                                     </form>
                                 @endif

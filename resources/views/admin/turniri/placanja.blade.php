@@ -185,7 +185,7 @@
 
                             <div class="row mt-3">
                                 <div class="col-12 text-end">
-                                    <button type="submit" class="btn btn-outline-danger btn-sm"
+                                    <button type="submit" class="btn btn-danger btn-sm"
                                             name="delete_option_id" value="{{ $option->id }}"
                                             onclick="return confirm('Ukloniti ovu vrstu plaćanja iz admin popisa? Kod članova i dalje ostaje povijest plaćanja.');">
                                         Ukloni

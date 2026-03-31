@@ -106,7 +106,7 @@
                                 <div class="d-flex flex-wrap justify-content-lg-end align-items-end gap-2">
                                     <span class="fw-semibold">Br. članova: {{ $brojAktivnihClanova }}</span>
                                     @if($jeAdmin)
-                                        <button type="button" class="btn btn-outline-success btn-sm"
+                                        <button type="button" class="btn btn-success btn-sm"
                                                 data-bs-toggle="modal" data-bs-target="#CsvExportClanova_modal">
                                             CSV Export
                                         </button>

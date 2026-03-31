@@ -906,8 +906,8 @@ class PaymentTrackingService
             ->with('paymentOption')
             ->where('clan_id', (int) $clan->id)
             ->where('status', '!=', self::STATUS_DELETED)
-            ->orderByRaw('COALESCE(period_start, due_date, paid_at)')
-            ->orderBy('id')
+            ->orderByRaw('COALESCE(period_start, due_date, created_at) DESC')
+            ->orderByDesc('id')
             ->get();
 
         $today = now()->startOfDay();
@@ -1027,21 +1027,36 @@ class PaymentTrackingService
         }
 
         $currentUnpaidCount = $summary['currentUnpaidCharges']->count();
-        $pastDueCount = $summary['pastDueCharges']->count();
+        $membershipPastDueCount = ($summary['pastDueCharges'] ?? collect())
+            ->filter(fn (ClanPaymentCharge $charge): bool => in_array((string) $charge->source, [self::SOURCE_AUTO, self::SOURCE_OPENING], true))
+            ->count();
+        $dodatneOtvoreneStavke = ($summary['unpaidCharges'] ?? collect())
+            ->filter(fn (ClanPaymentCharge $charge): bool => !in_array((string) $charge->source, [self::SOURCE_AUTO, self::SOURCE_OPENING], true))
+            ->values();
+        $imaDodatnihOtvorenih = $dodatneOtvoreneStavke->isNotEmpty();
 
-        if ($currentUnpaidCount > 0 || $pastDueCount > 0) {
+        $clanarinaParts = [];
+        if ($currentUnpaidCount > 0) {
+            $clanarinaParts[] = 'tekuće razdoblje nije podmireno';
+        }
+        if ($membershipPastDueCount > 0) {
+            $clanarinaParts[] = 'postoje dugovanja iz ranijih razdoblja';
+        }
+
+        if (!empty($clanarinaParts) || $imaDodatnihOtvorenih) {
             $parts = [];
-            if ($currentUnpaidCount > 0) {
-                $parts[] = 'tekuće razdoblje nije podmireno';
+            if (!empty($clanarinaParts)) {
+                $parts[] = implode(', ', $clanarinaParts);
             }
-            if ($pastDueCount > 0) {
-                $parts[] = 'postoje dugovanja iz ranijih razdoblja';
+
+            if ($imaDodatnihOtvorenih) {
+                $parts[] = 'dodatne stavke za plaćanje';
             }
 
             return [
                 'variant' => 'danger',
-                'title' => 'Potrebna uplata članarine',
-                'message' => ucfirst(implode(', ', $parts)).'.',
+                'title' => !empty($clanarinaParts) ? 'Potrebna uplata članarine' : 'Potrebna uplata',
+                'message' => ucfirst(implode('; ', $parts)).'.',
             ];
         }
 
@@ -1070,23 +1085,6 @@ class PaymentTrackingService
                 'variant' => 'warning',
                 'title' => 'Članarina - podupirući član',
                 'message' => implode(' ', $currentSupportingNotes->all()),
-            ];
-        }
-
-        $dodatneOtvoreneStavke = ($summary['unpaidCharges'] ?? collect())
-            ->filter(fn (ClanPaymentCharge $charge): bool => $charge->source !== self::SOURCE_AUTO)
-            ->values();
-        if ($dodatneOtvoreneStavke->isNotEmpty()) {
-            $iznosDodatnihStavki = round((float) $dodatneOtvoreneStavke->sum(
-                fn (ClanPaymentCharge $charge): float => $this->resolvedChargeAmount($charge, true)
-            ), 2);
-            $brojStavki = $dodatneOtvoreneStavke->count();
-
-            return [
-                'variant' => 'warning',
-                'title' => 'Otvorena dodatna plaćanja',
-                'message' => 'Evidentirano je '.$brojStavki.' otvorenih dodatnih stavki u iznosu '
-                    .number_format($iznosDodatnihStavki, 2, ',', '.').' EUR.',
             ];
         }
 

@@ -194,13 +194,13 @@
                                     @endphp
                                     @if($copyMarkup !== null)
                                         <button type="button"
-                                                class="btn btn-outline-success js-copy-media"
+                                                class="btn btn-success js-copy-media"
                                                 title="Kopiraj u Clipboard"
                                                 data-copy-html="{{ base64_encode($copyMarkup) }}">
                                             @include('admin.SVG.clipboard')
                                         </button>
                                     @endif
-                                    <button type="submit" form="brisanjeMedija{{$medij->id}}" class="btn btn-outline-danger" title="Delete">
+                                    <button type="submit" form="brisanjeMedija{{$medij->id}}" class="btn btn-danger" title="Delete">
                                         @include('admin.SVG.obrisi')
                                     </button>
                                 </div>

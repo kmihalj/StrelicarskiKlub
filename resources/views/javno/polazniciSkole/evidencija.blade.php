@@ -61,7 +61,7 @@
                     @if($mozeUredjivati)
                         <button type="submit" class="btn btn-danger me-md-2" form="spremi_evidenciju_dolazaka">Spremi evidenciju</button>
                     @endif
-                    <button type="button" class="btn btn-outline-secondary" onclick="location.href='{{ route('javno.skola.polaznici.index') }}'">Popis polaznika</button>
+                    <button type="button" class="btn btn-secondary" onclick="location.href='{{ route('javno.skola.polaznici.index') }}'">Popis polaznika</button>
                 </div>
 
                 @forelse($polaznici as $polaznik)
@@ -92,7 +92,7 @@
                                 </div>
                                 <div class="text-end mt-2">
                                     <button type="button"
-                                            class="btn btn-outline-secondary btn-sm js-popuni-zadnje"
+                                            class="btn btn-secondary btn-sm js-popuni-zadnje"
                                             data-row-id="{{ $polaznik->id }}"
                                             title="Upiši današnji datum u sljedeće prazno polje">
                                         +
@@ -119,7 +119,7 @@
                     @if($mozeUredjivati)
                         <button type="submit" class="btn btn-danger me-md-2" form="spremi_evidenciju_dolazaka">Spremi evidenciju</button>
                     @endif
-                    <button type="button" class="btn btn-outline-secondary" onclick="location.href='{{ route('javno.skola.polaznici.index') }}'">Popis polaznika</button>
+                    <button type="button" class="btn btn-secondary" onclick="location.href='{{ route('javno.skola.polaznici.index') }}'">Popis polaznika</button>
                 </div>
             </div>
         </div>

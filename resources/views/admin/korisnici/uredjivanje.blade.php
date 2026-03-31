@@ -93,7 +93,7 @@
                         </div>
                         <div class="col-lg-3 d-flex align-items-end">
                             <a id="povezani_clan_link"
-                               class="btn btn-sm btn-outline-danger{{ $inicijalnaPoveznicaKlasa }}"
+                               class="btn btn-sm btn-danger{{ $inicijalnaPoveznicaKlasa }}"
                                href="{{ $inicijalnaPoveznicaHref }}"
                                target="_blank">
                                 Profil povezanog člana
@@ -147,7 +147,7 @@
                         @if((int)auth()->id() !== (int)$user->id)
                             <form action="{{ route('admin.korisnici.destroy', $user) }}" method="POST" class="d-inline-block">
                                 @csrf
-                                <button type="submit" class="btn btn-outline-danger"
+                                <button type="submit" class="btn btn-danger"
                                         onclick="return confirm('Da li ste sigurni da želite obrisati korisnika?')">
                                     Obriši korisnika
                                 </button>
@@ -157,7 +157,7 @@
 
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                         <button class="btn btn-primary me-md-2" type="submit" form="spremi_korisnika">Spremi</button>
-                        <button class="btn btn-outline-secondary" type="button" onclick="location.href='{{ route('admin.korisnici.index') }}'">Popis korisnika</button>
+                        <button class="btn btn-secondary" type="button" onclick="location.href='{{ route('admin.korisnici.index') }}'">Popis korisnika</button>
                     </div>
                 </div>
             </div>
