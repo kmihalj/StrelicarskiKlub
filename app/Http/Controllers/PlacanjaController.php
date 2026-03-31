@@ -2,18 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ClanPaymentCharge;
 use App\Models\Clanovi;
+use App\Models\ClanPaymentCharge;
 use App\Models\PolaznikPaymentCharge;
 use App\Services\PaymentTrackingService;
 use App\Services\SchoolPaymentService;
 use Carbon\Carbon;
-use InvalidArgumentException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use InvalidArgumentException;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
@@ -26,9 +26,7 @@ class PlacanjaController extends Controller
     /**
      * Učitava servise za članarine, školarine i generiranje barkoda uplata.
      */
-    public function __construct(private readonly PaymentTrackingService $paymentTrackingService)
-    {
-    }
+    public function __construct(private readonly PaymentTrackingService $paymentTrackingService) {}
 
     /**
      * Prikazuje admin nadzor plaćanja: setup, filtere, statistiku i tablice dugovanja/uplata.
@@ -43,8 +41,8 @@ class PlacanjaController extends Controller
      */
     public function exportCsv(Request $request): StreamedResponse
     {
-        $scope = trim((string)$request->query('scope', 'rows'));
-        if (!in_array($scope, ['rows', 'debtors', 'persons'], true)) {
+        $scope = trim((string) $request->query('scope', 'rows'));
+        if (! in_array($scope, ['rows', 'debtors', 'persons'], true)) {
             $scope = 'rows';
         }
 
@@ -73,7 +71,7 @@ class PlacanjaController extends Controller
             default => 'placanja_stavke',
         };
 
-        $filename = $filenamePrefix . '_' . now()->format('Ymd_His') . '.csv';
+        $filename = $filenamePrefix.'_'.now()->format('Ymd_His').'.csv';
 
         return response()->streamDownload(function () use ($rows, $headers, $scope) {
             $output = fopen('php://output', 'wb');
@@ -89,11 +87,12 @@ class PlacanjaController extends Controller
                     fputcsv($output, [
                         $row['person_name'] ?? '',
                         (($row['entity_type'] ?? '') === 'school' ? 'Polaznik škole' : 'Član'),
-                        number_format((float)($row['open_bank'] ?? 0), 2, ',', '.'),
-                        number_format((float)($row['open_cash'] ?? 0), 2, ',', '.'),
-                        number_format((float)($row['open_total'] ?? 0), 2, ',', '.'),
-                        (int)($row['items_count'] ?? 0),
+                        number_format((float) ($row['open_bank'] ?? 0), 2, ',', '.'),
+                        number_format((float) ($row['open_cash'] ?? 0), 2, ',', '.'),
+                        number_format((float) ($row['open_total'] ?? 0), 2, ',', '.'),
+                        (int) ($row['items_count'] ?? 0),
                     ], ';');
+
                     continue;
                 }
 
@@ -101,12 +100,13 @@ class PlacanjaController extends Controller
                     fputcsv($output, [
                         $row['person_name'] ?? '',
                         (($row['entity_type'] ?? '') === 'school' ? 'Polaznik škole' : 'Član'),
-                        number_format((float)($row['paid_total'] ?? 0), 2, ',', '.'),
-                        number_format((float)($row['open_total'] ?? 0), 2, ',', '.'),
-                        number_format((float)($row['paid_bank'] ?? 0), 2, ',', '.'),
-                        number_format((float)($row['paid_cash'] ?? 0), 2, ',', '.'),
-                        (int)($row['items_count'] ?? 0),
+                        number_format((float) ($row['paid_total'] ?? 0), 2, ',', '.'),
+                        number_format((float) ($row['open_total'] ?? 0), 2, ',', '.'),
+                        number_format((float) ($row['paid_bank'] ?? 0), 2, ',', '.'),
+                        number_format((float) ($row['paid_cash'] ?? 0), 2, ',', '.'),
+                        (int) ($row['items_count'] ?? 0),
                     ], ';');
+
                     continue;
                 }
 
@@ -118,7 +118,7 @@ class PlacanjaController extends Controller
                     $row['title'] ?? '',
                     $row['period_label'] ?? '',
                     (($row['channel'] ?? '') === PaymentTrackingService::COLLECTION_CASH ? 'Gotovina' : 'Račun'),
-                    number_format((float)($row['amount'] ?? 0), 2, ',', '.'),
+                    number_format((float) ($row['amount'] ?? 0), 2, ',', '.'),
                     $row['status_label'] ?? '',
                 ], ';');
             }
@@ -142,7 +142,7 @@ class PlacanjaController extends Controller
             ]);
 
             try {
-                $this->paymentTrackingService->archiveOption((int)$deleteValidated['delete_option_id']);
+                $this->paymentTrackingService->archiveOption((int) $deleteValidated['delete_option_id']);
             } catch (RuntimeException|InvalidArgumentException $exception) {
                 return redirect()
                     ->route('admin.placanja.index', ['open_payment_setup' => 1])
@@ -177,7 +177,7 @@ class PlacanjaController extends Controller
         $validated['payment_tracking_enabled'] = $request->boolean('payment_tracking_enabled');
 
         try {
-            $this->paymentTrackingService->updateSetup($validated, (int)auth()->id());
+            $this->paymentTrackingService->updateSetup($validated, (int) auth()->id());
         } catch (InvalidArgumentException $exception) {
             return redirect()
                 ->route('admin.placanja.index', ['open_payment_setup' => 1])
@@ -204,7 +204,7 @@ class PlacanjaController extends Controller
             'start_date.date' => 'Datum početka praćenja nije ispravan.',
         ]);
 
-        $this->paymentTrackingService->assignProfileToClan($clan, $validated, (int)auth()->id());
+        $this->paymentTrackingService->assignProfileToClan($clan, $validated, (int) auth()->id());
 
         return redirect()
             ->route('admin.clanovi.prikaz_clana', ['clan' => $clan, 'open_payments' => 1])
@@ -236,7 +236,7 @@ class PlacanjaController extends Controller
 
         $validated['enabled'] = $request->boolean('enabled');
 
-        if (($validated['period_type'] ?? '') !== 'exempt' && empty(trim((string)($validated['amount'] ?? '')))) {
+        if (($validated['period_type'] ?? '') !== 'exempt' && empty(trim((string) ($validated['amount'] ?? '')))) {
             return redirect()
                 ->route('admin.placanja.index', ['open_payment_setup' => 1])
                 ->with('error', 'Za novu vrstu plaćanja potrebno je unijeti početni iznos.')
@@ -244,7 +244,7 @@ class PlacanjaController extends Controller
         }
 
         try {
-            $this->paymentTrackingService->createOption($validated, (int)auth()->id());
+            $this->paymentTrackingService->createOption($validated, (int) auth()->id());
         } catch (InvalidArgumentException $exception) {
             return redirect()
                 ->route('admin.placanja.index', ['open_payment_setup' => 1])
@@ -274,7 +274,7 @@ class PlacanjaController extends Controller
         ]);
 
         try {
-            $this->paymentTrackingService->createManualCharge($clan, $validated, (int)auth()->id());
+            $this->paymentTrackingService->createManualCharge($clan, $validated, (int) auth()->id());
         } catch (InvalidArgumentException $exception) {
             return redirect()
                 ->route('admin.clanovi.prikaz_clana', ['clan' => $clan, 'open_payments' => 1])
@@ -291,7 +291,7 @@ class PlacanjaController extends Controller
      */
     public function updateChargeStatus(Request $request, Clanovi $clan, ClanPaymentCharge $charge): RedirectResponse
     {
-        if ((int)$charge->clan_id !== (int)$clan->id) {
+        if ((int) $charge->clan_id !== (int) $clan->id) {
             abort(404);
         }
 
@@ -305,7 +305,7 @@ class PlacanjaController extends Controller
             'amount.max' => 'Iznos je predugačak.',
         ]);
 
-        $isPaid = (bool)($validated['is_paid'] ?? false);
+        $isPaid = (bool) ($validated['is_paid'] ?? false);
         $paidAt = is_string($validated['paid_at'] ?? null) ? $validated['paid_at'] : null;
         $paymentVariant = is_string($validated['payment_variant'] ?? null)
             ? trim($validated['payment_variant'])
@@ -316,14 +316,14 @@ class PlacanjaController extends Controller
 
         if ($isPaid && $amount !== null && $amount !== '') {
             $normalizedAmount = str_replace([' ', ','], ['', '.'], $amount);
-            if (!is_numeric($normalizedAmount) || (float)$normalizedAmount <= 0) {
+            if (! is_numeric($normalizedAmount) || (float) $normalizedAmount <= 0) {
                 return redirect()
                     ->route('admin.clanovi.prikaz_clana', ['clan' => $clan, 'open_payments' => 1])
                     ->with('error', 'Iznos uplate mora biti broj veći od 0.');
             }
         }
 
-        $this->paymentTrackingService->updateChargeStatus($charge, $isPaid, $paidAt, (int)auth()->id(), $paymentVariant, $amount);
+        $this->paymentTrackingService->updateChargeStatus($charge, $isPaid, $paidAt, (int) auth()->id(), $paymentVariant, $amount);
 
         return redirect()
             ->route('admin.clanovi.prikaz_clana', ['clan' => $clan, 'open_payments' => 1])
@@ -335,11 +335,11 @@ class PlacanjaController extends Controller
      */
     public function updatePreferredVariant(Request $request, Clanovi $clan, ClanPaymentCharge $charge): RedirectResponse|JsonResponse
     {
-        if (!auth()->check() || !auth()->user()->mozePregledavatiClana((int)$clan->id)) {
+        if (! auth()->check() || ! auth()->user()->mozePregledavatiClana((int) $clan->id)) {
             abort(403);
         }
 
-        if ((int)$charge->clan_id !== (int)$clan->id) {
+        if ((int) $charge->clan_id !== (int) $clan->id) {
             abort(404);
         }
 
@@ -370,12 +370,12 @@ class PlacanjaController extends Controller
      */
     public function destroyCharge(Clanovi $clan, ClanPaymentCharge $charge): RedirectResponse
     {
-        if ((int)$charge->clan_id !== (int)$clan->id) {
+        if ((int) $charge->clan_id !== (int) $clan->id) {
             abort(404);
         }
 
         try {
-            $this->paymentTrackingService->deleteCharge($charge, (int)auth()->id());
+            $this->paymentTrackingService->deleteCharge($charge, (int) auth()->id());
         } catch (InvalidArgumentException $exception) {
             return redirect()
                 ->route('admin.clanovi.prikaz_clana', ['clan' => $clan, 'open_payments' => 1])
@@ -392,25 +392,25 @@ class PlacanjaController extends Controller
      */
     public function showMemberPayments(Request $request, Clanovi $clan): View|JsonResponse
     {
-        if (!auth()->check() || !auth()->user()->mozePregledavatiClana((int)$clan->id)) {
+        if (! auth()->check() || ! auth()->user()->mozePregledavatiClana((int) $clan->id)) {
             abort(403);
         }
 
         $summary = $this->paymentTrackingService->memberSummary($clan);
-        if (!($summary['enabled'] ?? false)) {
+        if (! ($summary['enabled'] ?? false)) {
             abort(404);
         }
 
         $notice = $this->paymentTrackingService->noticeForClan($clan);
         $unpaidCharges = $summary['unpaidCharges'] ?? collect();
-        $selectedChargeId = (int)$request->query('charge', 0);
+        $selectedChargeId = (int) $request->query('charge', 0);
         $nextCharge = $unpaidCharges->first(
-            fn ($charge): bool => (int)$charge->id === $selectedChargeId
+            fn ($charge): bool => (int) $charge->id === $selectedChargeId
         );
-        if (!$nextCharge instanceof ClanPaymentCharge) {
+        if (! $nextCharge instanceof ClanPaymentCharge) {
             $nextCharge = $summary['nextUnpaidCharge'] ?? null;
         }
-        $selectedChargeId = $nextCharge instanceof ClanPaymentCharge ? (int)$nextCharge->id : null;
+        $selectedChargeId = $nextCharge instanceof ClanPaymentCharge ? (int) $nextCharge->id : null;
 
         $uiPayload = $this->memberPaymentsUiPayload($clan, $nextCharge);
 
@@ -424,7 +424,7 @@ class PlacanjaController extends Controller
             'paymentNotice' => $notice,
             'nextCharge' => $nextCharge,
             'paymentHubData' => $uiPayload['paymentHubData'] ?? null,
-            'nextChargeIsCashCollection' => (bool)($uiPayload['isCashCollection'] ?? false),
+            'nextChargeIsCashCollection' => (bool) ($uiPayload['isCashCollection'] ?? false),
             'paymentInfoClanakId' => $this->paymentTrackingService->paymentInfoArticleId(),
             'nextChargeVariants' => $uiPayload['nextChargeVariants'] ?? [],
             'nextChargeSelectedVariant' => $uiPayload['nextChargeSelectedVariant'] ?? null,
@@ -456,10 +456,10 @@ class PlacanjaController extends Controller
             : null;
 
         return [
-            'selectedChargeId' => $nextCharge instanceof ClanPaymentCharge ? (int)$nextCharge->id : null,
+            'selectedChargeId' => $nextCharge instanceof ClanPaymentCharge ? (int) $nextCharge->id : null,
             'nextCharge' => $nextCharge instanceof ClanPaymentCharge ? [
-                'id' => (int)$nextCharge->id,
-                'title' => (string)$nextCharge->title,
+                'id' => (int) $nextCharge->id,
+                'title' => (string) $nextCharge->title,
             ] : null,
             'isCashCollection' => $nextCharge instanceof ClanPaymentCharge
                 && $this->paymentTrackingService->isCashCollectionForCharge($nextCharge),
@@ -479,12 +479,12 @@ class PlacanjaController extends Controller
         $paymentSetup = $this->paymentTrackingService->setupViewData();
         $schoolPaymentEnabled = app(SchoolPaymentService::class)->isEnabled();
 
-        $periodPreset = (string)$request->query('period_preset', 'current_season');
-        $statusFilter = (string)$request->query('status', 'all');
-        $targetFilter = (string)$request->query('target', 'all');
-        $channelFilter = (string)$request->query('channel', 'all');
-        $modelTypeFilter = (string)$request->query('model_type', 'all');
-        $rowsLimit = (int)$request->query('rows_limit', 500);
+        $periodPreset = (string) $request->query('period_preset', 'current_season');
+        $statusFilter = (string) $request->query('status', 'all');
+        $targetFilter = (string) $request->query('target', 'all');
+        $channelFilter = (string) $request->query('channel', 'all');
+        $modelTypeFilter = (string) $request->query('model_type', 'all');
+        $rowsLimit = (int) $request->query('rows_limit', 500);
         if ($rowsLimit < 50) {
             $rowsLimit = 50;
         } elseif ($rowsLimit > 1000) {
@@ -538,19 +538,20 @@ class PlacanjaController extends Controller
                 return false;
             }
 
-            $referenceDate = (string)($row['reference_date'] ?? '');
+            $referenceDate = (string) ($row['reference_date'] ?? '');
             if ($dateFrom !== null && ($referenceDate === '' || $referenceDate < $dateFrom)) {
                 return false;
             }
 
-            return !($dateTo !== null && ($referenceDate === '' || $referenceDate > $dateTo));
+            return ! ($dateTo !== null && ($referenceDate === '' || $referenceDate > $dateTo));
         })->values();
 
         $sortedRows = $filteredRows
             ->sortByDesc(function (array $row): string {
-                $dateKey = (string)($row['reference_date'] ?? '0000-00-00');
-                $idKey = str_pad((string)($row['id'] ?? 0), 10, '0', STR_PAD_LEFT);
-                return $dateKey . '-' . $idKey;
+                $dateKey = (string) ($row['reference_date'] ?? '0000-00-00');
+                $idKey = str_pad((string) ($row['id'] ?? 0), 10, '0', STR_PAD_LEFT);
+
+                return $dateKey.'-'.$idKey;
             })
             ->values();
 
@@ -560,33 +561,34 @@ class PlacanjaController extends Controller
 
         $totalPaid = round($sortedRows
             ->filter(fn (array $row): bool => ($row['status'] ?? '') === PaymentTrackingService::STATUS_PAID)
-            ->sum(fn (array $row): float => (float)($row['amount'] ?? 0)), 2);
+            ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2);
         $totalOpen = round($sortedRows
             ->filter(fn (array $row): bool => ($row['status'] ?? '') === PaymentTrackingService::STATUS_OPEN)
-            ->sum(fn (array $row): float => (float)($row['amount'] ?? 0)), 2);
+            ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2);
         $totalPaidBank = round($sortedRows
             ->filter(fn (array $row): bool => ($row['status'] ?? '') === PaymentTrackingService::STATUS_PAID && ($row['channel'] ?? '') === PaymentTrackingService::COLLECTION_BANK)
-            ->sum(fn (array $row): float => (float)($row['amount'] ?? 0)), 2);
+            ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2);
         $totalPaidCash = round($sortedRows
             ->filter(fn (array $row): bool => ($row['status'] ?? '') === PaymentTrackingService::STATUS_PAID && ($row['channel'] ?? '') === PaymentTrackingService::COLLECTION_CASH)
-            ->sum(fn (array $row): float => (float)($row['amount'] ?? 0)), 2);
+            ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2);
 
         $debtorsSummary = $sortedRows
             ->filter(fn (array $row): bool => ($row['status'] ?? '') === PaymentTrackingService::STATUS_OPEN)
-            ->groupBy(fn (array $row): string => (string)($row['person_key'] ?? 'unknown'))
+            ->groupBy(fn (array $row): string => (string) ($row['person_key'] ?? 'unknown'))
             ->map(function (Collection $rows): array {
                 $first = $rows->first();
+
                 return [
-                    'person_name' => (string)($first['person_name'] ?? ''),
-                    'entity_type' => (string)($first['entity_type'] ?? ''),
-                    'profile_url' => (string)($first['profile_url'] ?? ''),
-                    'open_total' => round($rows->sum(fn (array $row): float => (float)($row['amount'] ?? 0)), 2),
+                    'person_name' => (string) ($first['person_name'] ?? ''),
+                    'entity_type' => (string) ($first['entity_type'] ?? ''),
+                    'profile_url' => (string) ($first['profile_url'] ?? ''),
+                    'open_total' => round($rows->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2),
                     'open_bank' => round($rows
                         ->filter(fn (array $row): bool => ($row['channel'] ?? '') === PaymentTrackingService::COLLECTION_BANK)
-                        ->sum(fn (array $row): float => (float)($row['amount'] ?? 0)), 2),
+                        ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2),
                     'open_cash' => round($rows
                         ->filter(fn (array $row): bool => ($row['channel'] ?? '') === PaymentTrackingService::COLLECTION_CASH)
-                        ->sum(fn (array $row): float => (float)($row['amount'] ?? 0)), 2),
+                        ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2),
                     'items_count' => $rows->count(),
                 ];
             })
@@ -594,24 +596,24 @@ class PlacanjaController extends Controller
             ->values();
 
         $personsSummary = $sortedRows
-            ->groupBy(fn (array $row): string => (string)($row['person_key'] ?? 'unknown'))
+            ->groupBy(fn (array $row): string => (string) ($row['person_key'] ?? 'unknown'))
             ->map(function (Collection $rows): array {
                 $first = $rows->first();
                 $paidRows = $rows->filter(fn (array $row): bool => ($row['status'] ?? '') === PaymentTrackingService::STATUS_PAID);
                 $openRows = $rows->filter(fn (array $row): bool => ($row['status'] ?? '') === PaymentTrackingService::STATUS_OPEN);
 
                 return [
-                    'person_name' => (string)($first['person_name'] ?? ''),
-                    'entity_type' => (string)($first['entity_type'] ?? ''),
-                    'profile_url' => (string)($first['profile_url'] ?? ''),
-                    'paid_total' => round($paidRows->sum(fn (array $row): float => (float)($row['amount'] ?? 0)), 2),
-                    'open_total' => round($openRows->sum(fn (array $row): float => (float)($row['amount'] ?? 0)), 2),
+                    'person_name' => (string) ($first['person_name'] ?? ''),
+                    'entity_type' => (string) ($first['entity_type'] ?? ''),
+                    'profile_url' => (string) ($first['profile_url'] ?? ''),
+                    'paid_total' => round($paidRows->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2),
+                    'open_total' => round($openRows->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2),
                     'paid_bank' => round($paidRows
                         ->filter(fn (array $row): bool => ($row['channel'] ?? '') === PaymentTrackingService::COLLECTION_BANK)
-                        ->sum(fn (array $row): float => (float)($row['amount'] ?? 0)), 2),
+                        ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2),
                     'paid_cash' => round($paidRows
                         ->filter(fn (array $row): bool => ($row['channel'] ?? '') === PaymentTrackingService::COLLECTION_CASH)
-                        ->sum(fn (array $row): float => (float)($row['amount'] ?? 0)), 2),
+                        ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2),
                     'items_count' => $rows->count(),
                 ];
             })
@@ -654,9 +656,9 @@ class PlacanjaController extends Controller
         $charge->loadMissing(['clan', 'paymentOption']);
 
         $clan = $charge->clan;
-        $personName = trim(($clan->Prezime ?? '') . ' ' . ($clan->Ime ?? ''));
+        $personName = trim(($clan->Prezime ?? '').' '.($clan->Ime ?? ''));
         if ($personName === '') {
-            $personName = 'Član #' . (int)$charge->clan_id;
+            $personName = 'Član #'.(int) $charge->clan_id;
         }
 
         $periodStart = $charge->period_start?->format('Y-m-d');
@@ -665,8 +667,9 @@ class PlacanjaController extends Controller
         $referenceDate = $paidAt ?? $dueDate ?? $periodStart ?? $charge->created_at?->format('Y-m-d');
 
         $modelType = match ($charge->source) {
-            PaymentTrackingService::SOURCE_AUTO => (string)($charge->paymentOption?->period_type ?? 'auto'),
+            PaymentTrackingService::SOURCE_AUTO => (string) ($charge->paymentOption?->period_type ?? 'auto'),
             PaymentTrackingService::SOURCE_OPENING => 'opening',
+            PaymentTrackingService::SOURCE_TOURNAMENT_FEE => 'tournament',
             default => 'manual',
         };
 
@@ -676,30 +679,34 @@ class PlacanjaController extends Controller
 
         $periodLabel = '-';
         if ($charge->period_start !== null && $charge->period_end !== null) {
-            $periodLabel = $charge->period_start->format('d.m.Y.') . ' - ' . $charge->period_end->format('d.m.Y.');
+            $periodLabel = $charge->period_start->format('d.m.Y.').' - '.$charge->period_end->format('d.m.Y.');
         } elseif ($charge->due_date !== null) {
-            $periodLabel = 'Zaduženje: ' . $charge->due_date->format('d.m.Y.');
+            $periodLabel = 'Zaduženje: '.$charge->due_date->format('d.m.Y.');
         }
 
         return [
-            'id' => (int)$charge->id,
+            'id' => (int) $charge->id,
             'entity_type' => 'member',
-            'person_key' => 'member:' . (int)$charge->clan_id,
+            'person_key' => 'member:'.(int) $charge->clan_id,
             'person_name' => $personName,
-            'profile_url' => route('javno.clanovi.prikaz_clana', ['clan' => (int)$charge->clan_id, 'open_payments' => 1]),
-            'title' => (string)$charge->title,
-            'model_name' => (string)($charge->paymentOption?->name ?? ($charge->source === PaymentTrackingService::SOURCE_OPENING ? 'Početno dugovanje' : 'Dodatno plaćanje')),
+            'profile_url' => route('javno.clanovi.prikaz_clana', ['clan' => (int) $charge->clan_id, 'open_payments' => 1]),
+            'title' => (string) $charge->title,
+            'model_name' => (string) ($charge->paymentOption?->name ?? match ($charge->source) {
+                PaymentTrackingService::SOURCE_OPENING => 'Početno dugovanje',
+                PaymentTrackingService::SOURCE_TOURNAMENT_FEE => 'Kotizacija turnira',
+                default => 'Dodatno plaćanje',
+            }),
             'model_type' => $modelType,
             'channel' => $channel,
-            'amount' => round((float)$charge->amount, 2),
-            'status' => (string)$charge->status,
+            'amount' => round((float) $charge->amount, 2),
+            'status' => (string) $charge->status,
             'status_label' => $charge->status === PaymentTrackingService::STATUS_PAID ? 'Plaćeno' : 'Otvoreno',
             'period_label' => $periodLabel,
             'reference_date' => $referenceDate,
             'reference_date_label' => $referenceDate ? Carbon::parse($referenceDate)->format('d.m.Y.') : '-',
             'paid_at' => $paidAt,
             'due_date' => $dueDate,
-            'source' => (string)$charge->source,
+            'source' => (string) $charge->source,
         ];
     }
 
@@ -710,36 +717,36 @@ class PlacanjaController extends Controller
     {
         $charge->loadMissing('polaznik');
         $polaznik = $charge->polaznik;
-        $personName = trim(($polaznik->Prezime ?? '') . ' ' . ($polaznik->Ime ?? ''));
+        $personName = trim(($polaznik->Prezime ?? '').' '.($polaznik->Ime ?? ''));
         if ($personName === '') {
-            $personName = 'Polaznik #' . (int)$charge->polaznik_skole_id;
+            $personName = 'Polaznik #'.(int) $charge->polaznik_skole_id;
         }
 
         $paidAt = $charge->paid_at?->format('Y-m-d');
         $referenceDate = $paidAt ?? $charge->created_at?->format('Y-m-d');
         $periodLabel = $charge->due_training_count !== null
-            ? 'Nakon ' . (int)$charge->due_training_count . ' treninga'
+            ? 'Nakon '.(int) $charge->due_training_count.' treninga'
             : 'Odmah';
 
         return [
-            'id' => (int)$charge->id,
+            'id' => (int) $charge->id,
             'entity_type' => 'school',
-            'person_key' => 'school:' . (int)$charge->polaznik_skole_id,
+            'person_key' => 'school:'.(int) $charge->polaznik_skole_id,
             'person_name' => $personName,
-            'profile_url' => route('javno.skola.polaznici.show', ['polaznik' => (int)$charge->polaznik_skole_id, 'open_payments' => 1]),
-            'title' => (string)$charge->title,
+            'profile_url' => route('javno.skola.polaznici.show', ['polaznik' => (int) $charge->polaznik_skole_id, 'open_payments' => 1]),
+            'title' => (string) $charge->title,
             'model_name' => 'Školarina',
             'model_type' => 'school',
             'channel' => PaymentTrackingService::COLLECTION_CASH,
-            'amount' => round((float)$charge->amount, 2),
-            'status' => (string)$charge->status,
+            'amount' => round((float) $charge->amount, 2),
+            'status' => (string) $charge->status,
             'status_label' => $charge->status === SchoolPaymentService::STATUS_PAID ? 'Plaćeno' : 'Otvoreno',
             'period_label' => $periodLabel,
             'reference_date' => $referenceDate,
             'reference_date_label' => $referenceDate ? Carbon::parse($referenceDate)->format('d.m.Y.') : '-',
             'paid_at' => $paidAt,
             'due_date' => null,
-            'source' => (string)$charge->source,
+            'source' => (string) $charge->source,
         ];
     }
 
@@ -760,8 +767,8 @@ class PlacanjaController extends Controller
             $from = $today->copy()->startOfYear()->toDateString();
             $to = $today->copy()->endOfYear()->toDateString();
         } elseif ($normalizedPreset === 'current_season') {
-            $year = (int)$today->format('Y');
-            $month = (int)$today->format('n');
+            $year = (int) $today->format('Y');
+            $month = (int) $today->format('n');
             if ($month >= 10) {
                 $from = Carbon::createMidnightDate($year, 10, 1)->toDateString();
                 $to = Carbon::create($year + 1, 3, 31)->toDateString();
@@ -800,7 +807,7 @@ class PlacanjaController extends Controller
      */
     private function normalizeFilterDate(mixed $value): ?string
     {
-        $candidate = trim((string)$value);
+        $candidate = trim((string) $value);
         if ($candidate === '') {
             return null;
         }

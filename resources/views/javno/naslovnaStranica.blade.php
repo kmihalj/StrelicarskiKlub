@@ -210,14 +210,18 @@
                 @endif
 
                 @if(isset($statusLijecnickiDjeca))
-                    @foreach($statusLijecnickiDjeca as $statusLijecnickiDijete)
-                        @include('javno.naslovnaRoditeljLijecnickiStatus', ['statusLijecnickiDijete' => $statusLijecnickiDijete])
-                    @endforeach
+                    <div class="d-none d-lg-block">
+                        @foreach($statusLijecnickiDjeca as $statusLijecnickiDijete)
+                            @include('javno.naslovnaRoditeljLijecnickiStatus', ['statusLijecnickiDijete' => $statusLijecnickiDijete])
+                        @endforeach
+                    </div>
                 @endif
                 @if(isset($statusSkolaDjeca))
-                    @foreach($statusSkolaDjeca as $statusSkolaDijete)
-                        @include('javno.naslovnaRoditeljSkolaStatus', ['statusSkolaDijete' => $statusSkolaDijete])
-                    @endforeach
+                    <div class="d-none d-lg-block">
+                        @foreach($statusSkolaDjeca as $statusSkolaDijete)
+                            @include('javno.naslovnaRoditeljSkolaStatus', ['statusSkolaDijete' => $statusSkolaDijete])
+                        @endforeach
+                    </div>
                 @endif
                 <div class="d-lg-none">
                     @include('javno.partials.klupskiZid', [
@@ -231,6 +235,20 @@
                             'statusLijecnickiKorisnika' => $statusLijecnickiKorisnika,
                             'statusSkolaKorisnika' => $statusSkolaKorisnika ?? null,
                         ])
+                    </div>
+                @endif
+                @if(isset($statusLijecnickiDjeca))
+                    <div class="d-lg-none">
+                        @foreach($statusLijecnickiDjeca as $statusLijecnickiDijete)
+                            @include('javno.naslovnaRoditeljLijecnickiStatus', ['statusLijecnickiDijete' => $statusLijecnickiDijete])
+                        @endforeach
+                    </div>
+                @endif
+                @if(isset($statusSkolaDjeca))
+                    <div class="d-lg-none">
+                        @foreach($statusSkolaDjeca as $statusSkolaDijete)
+                            @include('javno.naslovnaRoditeljSkolaStatus', ['statusSkolaDijete' => $statusSkolaDijete])
+                        @endforeach
                     </div>
                 @endif
                 <div class="row justify-content-center p-2 shadow bg-danger fw-bolder">

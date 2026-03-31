@@ -1,16 +1,18 @@
 <?php
 
+use App\Http\Controllers\AdminThemeModePolicyController;
 use App\Http\Controllers\ClanciController;
 use App\Http\Controllers\ClanoviController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\JavnoController;
-use App\Http\Controllers\KorisniciController;
-use App\Http\Controllers\KlupskiZidController;
 use App\Http\Controllers\KlubController;
-use App\Http\Controllers\AdminThemeModePolicyController;
+use App\Http\Controllers\KlupskiZidController;
+use App\Http\Controllers\KorisniciController;
+use App\Http\Controllers\NadolazeciTurniriController;
 use App\Http\Controllers\PlacanjaController;
 use App\Http\Controllers\PolazniciSkoleController;
-use App\Http\Controllers\TipoviTurniraController;
 use App\Http\Controllers\ThemeController;
+use App\Http\Controllers\TipoviTurniraController;
 use App\Http\Controllers\TreninziController;
 use App\Http\Controllers\TurniriController;
 use App\Http\Controllers\UserThemePreferenceController;
@@ -32,7 +34,7 @@ use Illuminate\Support\Facades\Route;
 Route::match(['get', 'post', 'put', 'patch', 'delete', 'options'], '/', [JavnoController::class, 'naslovnaStranica'])->name('javno.naslovnaStranica');
 Route::get('/naslovna', [JavnoController::class, 'naslovnaStranica'])->name('javno.naslovna');
 
-//Auth::routes(['register' => false]);
+// Auth::routes(['register' => false]);
 Auth::routes();
 
 Route::get('/logout', function (Request $request) {
@@ -45,7 +47,7 @@ Route::get('/logout', function (Request $request) {
     return redirect('/');
 })->name('logout.get');
 
-Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+Route::get('/home', [HomeController::class, 'index'])->name('home');
 
 Route::prefix('admin/')->group(function () {
     Route::post('clanovi', [ClanoviController::class, 'store'])->name('admin.clanovi.spremanje_clana')->middleware(['auth', 'admin']);
@@ -101,6 +103,12 @@ Route::prefix('admin/')->group(function () {
     Route::post('turniri/urediTurnir', [TurniriController::class, 'urediTurnirForma'])->name('admin.rezultati.urediTurnir')->middleware(['auth', 'admin']);
     Route::post('turniri/urediTurnir/spremi', [TurniriController::class, 'updateTurnir'])->name('admin.rezultati.updateTurnir')->middleware(['auth', 'admin']);
     Route::post('turniri/turnir/{turnir}/obrisi', [TurniriController::class, 'obrisiTurnir'])->name('admin.rezultati.obrisiTurnir')->middleware(['auth', 'admin']);
+    Route::get('nadolazeci-turniri', [NadolazeciTurniriController::class, 'adminIndex'])->name('admin.nadolazeci_turniri.index')->middleware(['auth', 'admin']);
+    Route::post('nadolazeci-turniri', [NadolazeciTurniriController::class, 'adminStore'])->name('admin.nadolazeci_turniri.store')->middleware(['auth', 'admin']);
+    Route::post('nadolazeci-turniri/{turnir}/update', [NadolazeciTurniriController::class, 'adminUpdate'])->name('admin.nadolazeci_turniri.update')->middleware(['auth', 'admin']);
+    Route::post('nadolazeci-turniri/{turnir}/obrisi', [NadolazeciTurniriController::class, 'adminDestroy'])->name('admin.nadolazeci_turniri.destroy')->middleware(['auth', 'admin']);
+    Route::get('nadolazeci-turniri/{turnir}', [NadolazeciTurniriController::class, 'adminShow'])->name('admin.nadolazeci_turniri.show')->middleware(['auth', 'admin']);
+    Route::post('nadolazeci-turniri/{turnir}/prijave/{prijava}/makni', [NadolazeciTurniriController::class, 'adminUkloniPrijavu'])->name('admin.nadolazeci_turniri.prijave.ukloni')->middleware(['auth', 'admin']);
     Route::post('rezultati/unos/{turnir}/obrisi', [TurniriController::class, 'brisanjeRezultata'])->name('admin.rezultati.brisanjeRezultata')->middleware(['auth', 'admin']);
     Route::post('rezultati/unos/{turnir}/timovi/aktivno', [TurniriController::class, 'postaviTimoveAktivno'])->name('admin.rezultati.timovi.aktivno')->middleware(['auth', 'admin']);
     Route::post('rezultati/unos/tim/spremi', [TurniriController::class, 'spremiTimskiRezultat'])->name('admin.rezultati.timovi.spremi')->middleware(['auth', 'admin']);
@@ -146,6 +154,13 @@ Route::middleware(['auth', 'admin_member_or_school'])->group(function () {
     Route::get('skola/polaznici', [PolazniciSkoleController::class, 'index'])->name('javno.skola.polaznici.index');
     Route::get('skola/polaznici/{polaznik}', [PolazniciSkoleController::class, 'show'])->name('javno.skola.polaznici.show');
     Route::get('skola/polaznici/{polaznik}/dokumenti/{dokument}/pregled', [PolazniciSkoleController::class, 'preuzmiDokument'])->name('javno.skola.polaznici.preuzmi_dokument');
+});
+Route::middleware(['auth', 'admin_or_member'])->group(function () {
+    Route::get('korisnik/prijave-turnira', [NadolazeciTurniriController::class, 'userIndex'])->name('javno.prijave_turnira.index');
+    Route::post('korisnik/prijave-turnira', [NadolazeciTurniriController::class, 'userStore'])->name('javno.prijave_turnira.store');
+    Route::get('korisnik/prijave-turnira/{prijava}', [NadolazeciTurniriController::class, 'userShow'])->name('javno.prijave_turnira.show');
+    Route::post('korisnik/prijave-turnira/{prijava}/update', [NadolazeciTurniriController::class, 'userUpdate'])->name('javno.prijave_turnira.update');
+    Route::post('korisnik/prijave-turnira/{prijava}/odjava', [NadolazeciTurniriController::class, 'userOdjava'])->name('javno.prijave_turnira.odjava');
 });
 Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('skola/evidencija-dolazaka', [PolazniciSkoleController::class, 'evidencijaDolasaka'])->name('javno.skola.evidencija.index');

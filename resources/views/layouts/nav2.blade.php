@@ -38,6 +38,7 @@
                             </span>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="{{ route('admin.turniri.naslovna') }}">Podešenja</a></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.nadolazeci_turniri.index') }}">Nadolazeći turniri</a></li>
                                 <li><a class="dropdown-item" href="{{ route('admin.placanja.index') }}">Plaćanja</a></li>
                                 <li><a class="dropdown-item" href="{{ route('admin.klub.naslovna') }}">Klub</a></li>
                                 <li><a class="dropdown-item" href="{{ route('admin.clanci.popisClanaka') }}">Članci</a></li>
@@ -60,6 +61,9 @@
                                 <li><a class="dropdown-item" href="{{ route('register') }}">{{ __('Registracija') }}</a></li>
                             @endif
                         @else
+                            @if($authUser->imaPravoAdminOrMember())
+                                <li><a class="dropdown-item" href="{{ route('javno.prijave_turnira.index') }}">Prijave na turnire</a></li>
+                            @endif
                             @if($povezaniClanId > 0)
                                 <li><a class="dropdown-item" href="{{ route('javno.clanovi.prikaz_clana', $povezaniClanId) }}">Profil</a></li>
                             @endif

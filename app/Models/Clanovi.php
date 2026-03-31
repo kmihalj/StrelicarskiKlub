@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 /**
  * @method static orderBy(string $string)
  * @method static find(mixed $get)
+ *
  * @property mixed $Prezime
  * @property mixed $Ime
  * @property mixed $datum_rodjenja
@@ -24,7 +25,6 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  */
 class Clanovi extends Model
 {
-
     protected $fillable = ['Ime', 'Prezime', 'slika_link', 'datum_rodjenja', 'br_telefona', 'email', 'clan_od', 'datum_pocetka_clanstva', 'aktivan', 'spol', 'oib', 'broj_licence', 'lijecnicki_do', 'lijecnicki_dokument'];
 
     protected $casts = [
@@ -141,6 +141,15 @@ class Clanovi extends Model
     public function paymentCharges(): HasMany
     {
         return $this->hasMany(ClanPaymentCharge::class, 'clan_id', 'id');
+    }
+
+    /**
+     * Vraća prijave člana na nadolazeće turnire.
+     */
+    /** @noinspection PhpUnused */
+    public function prijaveTurnira(): HasMany
+    {
+        return $this->hasMany(PrijavaTurnira::class, 'clan_id', 'id');
     }
 
     /**

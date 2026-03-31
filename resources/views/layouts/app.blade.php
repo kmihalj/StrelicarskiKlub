@@ -38,7 +38,9 @@
 <div id="app" class="m-0 p-0" style="margin:0; padding:0;">
     @include('layouts.nav2')
     @php
-        $isAdminSetupPage = request()->routeIs('admin.turniri.*') || request()->routeIs('admin.placanja.*');
+        $isAdminSetupPage = request()->routeIs('admin.turniri.*')
+            || request()->routeIs('admin.placanja.*')
+            || request()->routeIs('admin.nadolazeci_turniri.*');
         $mainContainerClass = $isAdminSetupPage ? 'container-xxl' : 'container-fluid';
     @endphp
     <main class="{{ $mainContainerClass }} py-4"

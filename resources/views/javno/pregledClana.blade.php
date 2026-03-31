@@ -163,6 +163,12 @@
                             </div>
                         @elseif($jeAdmin)
                             <div class="text-end d-flex justify-content-end gap-2">
+                                @if($jeRoditeljPregled && ($mozeVidjetiPlacanja ?? false))
+                                    <button type="button" class="btn btn-sm btn-outline-primary"
+                                            onclick="location.href='{{ route('javno.clanovi.placanja', $clan) }}'">
+                                        Plaćanja
+                                    </button>
+                                @endif
                                 @if($paymentProfileConfigured ?? false)
                                     <button type="button" class="btn btn-sm btn-outline-primary"
                                             onclick="location.href='{{ route('admin.clanovi.prikaz_clana', ['clan' => $clan, 'open_payments' => 1]) }}'">
@@ -180,10 +186,10 @@
                             </div>
                         @elseif($jeRoditeljPregled)
                             <div class="text-end d-flex justify-content-end gap-2">
-                                @if($paymentProfileConfigured ?? false)
+                                @if($mozeVidjetiPlacanja ?? false)
                                     <button type="button" class="btn btn-sm btn-outline-primary"
                                             onclick="location.href='{{ route('javno.clanovi.placanja', $clan) }}'">
-                                        Pregled plaćanja
+                                        Plaćanja
                                     </button>
                                 @endif
                                 <button type="button" class="btn btn-sm btn-danger"
@@ -198,7 +204,7 @@
         </div>
     </div>
 
-    @if(($paymentProfileConfigured ?? false) && !empty($paymentNotice))
+    @if(!empty($paymentNotice))
         <div class="container-xxl shadow mt-3 bg-white">
             <div class="row p-3">
                 <div class="col-12">
@@ -212,6 +218,124 @@
     @endif
 
     @auth
+        @if(($prijaveTurniraClana ?? collect())->count() > 0)
+            <div class="container-xxl shadow mt-3 bg-white">
+                <div class="row justify-content-center p-2 shadow bg-danger fw-bolder">
+                    <div class="col-lg-12 text-white">Prijave na turnire</div>
+                </div>
+                <div class="row p-3">
+                    <div class="col-12 table-responsive">
+                        <table class="table table-hover align-middle mb-0 border">
+                            <thead class="table-warning">
+                            <tr>
+                                <th>Datum</th>
+                                <th>Naziv</th>
+                                <th>Mjesto</th>
+                                <th>Smjena</th>
+                                <th>Kategorija</th>
+                                <th>Stil</th>
+                                <th>Tip turnira</th>
+                                <th>Kotizacija</th>
+                                <th></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @foreach($prijaveTurniraClana as $prijavaTurnira)
+                                @php
+                                    $turnirId = (int)($prijavaTurnira->nadolazeci_turnir_id ?? 0);
+                                    $prijavljeniClanovi = collect(($prijavljeniClanoviPoTurniruClana ?? [])[$turnirId] ?? []);
+                                    $warning = ($lijecnickiUpozorenjaTurniraClana ?? [])[(int) $prijavaTurnira->id] ?? null;
+                                    $imaWarning = !empty($warning);
+                                    $rowspan = $imaWarning ? 3 : 2;
+                                    $charge = $prijavaTurnira->paymentCharge;
+                                    $nacinKotizacije = $prijavaTurnira->turnir?->kotizacija_nacin;
+                                    $iznosKotizacije = $prijavaTurnira->turnir?->kotizacija_iznos;
+                                    $jePlaceno = $charge && $charge->status === \App\Services\PaymentTrackingService::STATUS_PAID;
+                                    $nijePlaceno = $charge && $charge->status === \App\Services\PaymentTrackingService::STATUS_OPEN;
+                                    $urlPlacanja = null;
+                                    if ($nijePlaceno) {
+                                        $urlPlacanja = route('javno.clanovi.placanja', [
+                                            'clan' => (int)$clan->id,
+                                            'charge' => (int)$charge->id,
+                                        ]);
+                                    }
+                                @endphp
+                                <tr @class(['table-danger' => $imaWarning])>
+                                    <td rowspan="{{ $rowspan }}" class="align-middle">{{ $prijavaTurnira->turnir?->datum?->format('d.m.Y.') ?? '-' }}</td>
+                                    <td rowspan="{{ $rowspan }}" class="align-middle">{{ $prijavaTurnira->turnir?->naziv ?? '-' }}</td>
+                                    <td>{{ $prijavaTurnira->turnir?->mjesto ?? '-' }}</td>
+                                    <td>{{ $prijavaTurnira->smjena ?: 'nebitno' }}</td>
+                                    <td>{{ $prijavaTurnira->kategorija?->naziv ?? '-' }}</td>
+                                    <td>{{ $prijavaTurnira->stil?->naziv ?? '-' }}</td>
+                                    <td>{{ $prijavaTurnira->turnir?->tipTurnira?->naziv ?? '-' }}</td>
+                                    <td rowspan="{{ $rowspan }}" class="align-middle">
+                                        @if($nacinKotizacije === 'bank')
+                                            @if($jePlaceno)
+                                                <span class="badge bg-success">
+                                                    Plaćeno
+                                                    @if($iznosKotizacije !== null)
+                                                        {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} EUR
+                                                    @endif
+                                                </span>
+                                            @elseif($nijePlaceno && $urlPlacanja)
+                                                <a href="{{ $urlPlacanja }}" class="badge bg-danger text-white text-decoration-none">
+                                                    Nije plaćeno
+                                                    @if($iznosKotizacije !== null)
+                                                        {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} EUR
+                                                    @endif
+                                                </a>
+                                            @else
+                                                <span class="badge bg-secondary">
+                                                    Plaćanje preko računa kluba
+                                                    @if($iznosKotizacije !== null)
+                                                        {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} EUR
+                                                    @else
+                                                        - iznos nije definiran
+                                                    @endif
+                                                </span>
+                                            @endif
+                                        @elseif($nacinKotizacije === 'cash')
+                                            <span class="badge bg-secondary">
+                                                Gotovina
+                                                @if($iznosKotizacije !== null)
+                                                    {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} EUR
+                                                @else
+                                                    - iznos nije definiran
+                                                @endif
+                                            </span>
+                                        @else
+                                            <span class="badge bg-secondary">Nije još definirano</span>
+                                        @endif
+                                    </td>
+                                    <td rowspan="{{ $rowspan }}" class="text-end align-middle">
+                                        <a href="{{ route('javno.prijave_turnira.show', $prijavaTurnira) }}" class="btn btn-sm btn-outline-primary">Pregled</a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="5" class="small">
+                                        Prijavljeni članovi:
+                                        @if($prijavljeniClanovi->count() > 0)
+                                            @foreach($prijavljeniClanovi as $prijavljeniClan)
+                                                <a href="{{ $prijavljeniClan['url'] }}" class="link-primary text-decoration-underline">{{ $prijavljeniClan['naziv'] }}</a>@if(!$loop->last), @endif
+                                            @endforeach
+                                        @else
+                                            nema prijava
+                                        @endif
+                                    </td>
+                                </tr>
+                                @if($imaWarning)
+                                    <tr class="table-danger">
+                                        <td colspan="5" class="small text-danger py-1">{{ $warning }}</td>
+                                    </tr>
+                                @endif
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         @if($mozeVidjetiDokumenteClana ?? false)
             <div class="mb-3">
                 <div class="container-xxl shadow mt-3">
