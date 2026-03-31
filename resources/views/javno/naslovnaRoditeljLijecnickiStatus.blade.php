@@ -95,53 +95,62 @@
                                     ]);
                                 }
                                 $warning = $lijecnickiUpozorenjaTurniraKorisnika[(int) ($prijava->id ?? 0)] ?? null;
+                                $warningKratko = null;
+                                if (!empty($warning)) {
+                                    if (preg_match('/(\d{2}\.\d{2}\.\d{4}\.)/u', (string)$warning, $matches) === 1) {
+                                        $warningKratko = 'Liječnički ističe '.$matches[1];
+                                    } else {
+                                        $warningKratko = 'Liječnički nije važeći';
+                                    }
+                                }
                             @endphp
                             <li class="mb-1">
-                                <a href="{{ route('javno.prijave_turnira.show', $prijava) }}" class="link-primary text-decoration-underline">
-                                    {{ $prijava->turnir?->datumRasponLabel() ?? '-' }}; {{ $prijava->turnir?->naziv ?? '-' }};
-                                    {{ $prijava->turnir?->mjesto ?? '-' }}
-                                </a>
-                                <span class="ms-1">|</span>
-                                @if($nacinKotizacije === 'bank')
-                                    @if($jePlaceno)
-                                        <span class="badge bg-success align-middle ms-1">
-                                            Plaćeno
-                                            @if($iznosKotizacije !== null)
-                                                : {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} €
-                                            @endif
-                                        </span>
-                                    @elseif($nijePlaceno && $urlPlacanja)
-                                        <a href="{{ $urlPlacanja }}" class="badge bg-danger text-white text-decoration-none align-middle ms-1">
-                                            Nije plaćeno
-                                            @if($iznosKotizacije !== null)
-                                                : {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} €
-                                            @endif
-                                        </a>
-                                    @else
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <a href="{{ route('javno.prijave_turnira.show', $prijava) }}" class="link-primary text-decoration-underline">
+                                        {{ $prijava->turnir?->datumRasponLabel() ?? '-' }}; {{ $prijava->turnir?->naziv ?? '-' }};
+                                        {{ $prijava->turnir?->mjesto ?? '-' }}
+                                    </a>
+                                    @if($nacinKotizacije === 'bank')
+                                        @if($jePlaceno)
+                                            <span class="badge bg-success align-middle">
+                                                Plaćeno
+                                                @if($iznosKotizacije !== null)
+                                                    : {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} €
+                                                @endif
+                                            </span>
+                                        @elseif($nijePlaceno && $urlPlacanja)
+                                            <a href="{{ $urlPlacanja }}" class="badge bg-danger text-white text-decoration-none align-middle">
+                                                Nije plaćeno
+                                                @if($iznosKotizacije !== null)
+                                                    : {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} €
+                                                @endif
+                                            </a>
+                                        @else
+                                            <span class="badge bg-secondary">
+                                                Plaćanje preko računa kluba
+                                                @if($iznosKotizacije !== null)
+                                                    {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} EUR
+                                                @else
+                                                    - iznos nije definiran
+                                                @endif
+                                            </span>
+                                        @endif
+                                    @elseif($nacinKotizacije === 'cash')
                                         <span class="badge bg-secondary">
-                                            Plaćanje preko računa kluba
+                                            Gotovina
                                             @if($iznosKotizacije !== null)
                                                 {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} EUR
                                             @else
                                                 - iznos nije definiran
                                             @endif
                                         </span>
+                                    @else
+                                        <span class="badge bg-secondary">Nije još definirano</span>
                                     @endif
-                                @elseif($nacinKotizacije === 'cash')
-                                    <span class="badge bg-secondary">
-                                        Gotovina
-                                        @if($iznosKotizacije !== null)
-                                            {{ number_format((float)$iznosKotizacije, 2, ',', '.') }} EUR
-                                        @else
-                                            - iznos nije definiran
-                                        @endif
-                                    </span>
-                                @else
-                                    <span class="badge bg-secondary">Nije još definirano</span>
-                                @endif
-                                @if(!empty($warning))
-                                    <div class="alert alert-danger py-1 px-2 mt-1 mb-1 small">{{ $warning }}</div>
-                                @endif
+                                    @if(!empty($warningKratko))
+                                        <span class="small text-danger">{{ $warningKratko }}</span>
+                                    @endif
+                                </div>
                                 @if($prijavljeniClanovi->count() > 0)
                                     <div class="small mt-1">
                                         Prijavljeni članovi:

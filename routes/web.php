@@ -108,6 +108,7 @@ Route::prefix('admin/')->group(function () {
     Route::post('nadolazeci-turniri/{turnir}/update', [NadolazeciTurniriController::class, 'adminUpdate'])->name('admin.nadolazeci_turniri.update')->middleware(['auth', 'admin']);
     Route::post('nadolazeci-turniri/{turnir}/obrisi', [NadolazeciTurniriController::class, 'adminDestroy'])->name('admin.nadolazeci_turniri.destroy')->middleware(['auth', 'admin']);
     Route::get('nadolazeci-turniri/{turnir}', [NadolazeciTurniriController::class, 'adminShow'])->name('admin.nadolazeci_turniri.show')->middleware(['auth', 'admin']);
+    Route::get('nadolazeci-turniri/{turnir}/export/csv', [NadolazeciTurniriController::class, 'adminExportCsv'])->name('admin.nadolazeci_turniri.export_csv')->middleware(['auth', 'admin']);
     Route::post('nadolazeci-turniri/{turnir}/prijave/{prijava}/makni', [NadolazeciTurniriController::class, 'adminUkloniPrijavu'])->name('admin.nadolazeci_turniri.prijave.ukloni')->middleware(['auth', 'admin']);
     Route::post('rezultati/unos/{turnir}/obrisi', [TurniriController::class, 'brisanjeRezultata'])->name('admin.rezultati.brisanjeRezultata')->middleware(['auth', 'admin']);
     Route::post('rezultati/unos/{turnir}/timovi/aktivno', [TurniriController::class, 'postaviTimoveAktivno'])->name('admin.rezultati.timovi.aktivno')->middleware(['auth', 'admin']);

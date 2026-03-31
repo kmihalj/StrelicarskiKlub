@@ -19,6 +19,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
 /**
@@ -31,6 +32,32 @@ class NadolazeciTurniriController extends Controller
     private const VIDLJIVOST_DANA_ZA_PRIJAVU = 60;
 
     private const SMJENE = ['jutarnja', 'popodnevna', 'nebitno'];
+
+    private const CSV_EXPORT_POLJA_PRIJAVA = [
+        'ime' => 'Ime',
+        'prezime' => 'Prezime',
+        'datum_rodjenja' => 'Datum rođenja',
+        'broj_licence' => 'Br. licence',
+        'lijecnicki_do' => 'Trajanje liječničkog',
+        'stil' => 'Stil',
+        'kategorija' => 'Kategorija',
+        'oib' => 'OIB',
+        'smjena' => 'Smjena',
+        'kup' => 'KUP',
+    ];
+
+    private const CSV_EXPORT_ZADANA_POLJA_PRIJAVA = [
+        'ime',
+        'prezime',
+        'datum_rodjenja',
+        'broj_licence',
+        'lijecnicki_do',
+        'stil',
+        'kategorija',
+        'oib',
+        'smjena',
+        'kup',
+    ];
 
     /**
      * Prikazuje administratorski popis nadolazećih turnira i formu za unos/izmjenu.
@@ -162,6 +189,49 @@ class NadolazeciTurniriController extends Controller
             'turnir' => $turnir,
             'prijave' => $prijave,
             'uklonjenePrijave' => $uklonjenePrijave,
+            'csvPoljaPrijava' => self::CSV_EXPORT_POLJA_PRIJAVA,
+            'csvZadanaPoljaPrijava' => self::CSV_EXPORT_ZADANA_POLJA_PRIJAVA,
+        ]);
+    }
+
+    /**
+     * Izvozi CSV aktivnih prijava za odabrani turnir uz odabir stupaca.
+     */
+    public function adminExportCsv(Request $request, NadolazeciTurnir $turnir): StreamedResponse
+    {
+        $odabranaPolja = $this->odabranaCsvPoljaPrijava($request);
+
+        $prijave = PrijavaTurnira::query()
+            ->with(['clan', 'kategorija', 'stil'])
+            ->where('nadolazeci_turnir_id', (int) $turnir->id)
+            ->where('status', PrijavaTurnira::STATUS_ACTIVE)
+            ->orderBy('id')
+            ->get();
+
+        $zaglavlja = $this->csvZaglavljaPrijava($odabranaPolja);
+        $nazivDatoteke = 'turnir_prijave_'.Str::slug((string) $turnir->naziv, '_').'_'.now()->format('Ymd_His').'.csv';
+
+        return response()->streamDownload(function () use ($prijave, $odabranaPolja, $zaglavlja) {
+            $izlaz = fopen('php://output', 'wb');
+            if ($izlaz === false) {
+                return;
+            }
+
+            fwrite($izlaz, "\xEF\xBB\xBF");
+            fputcsv($izlaz, $zaglavlja, ';');
+
+            foreach ($prijave as $prijava) {
+                $red = [];
+                foreach ($odabranaPolja as $polje) {
+                    $red[] = $this->vrijednostPoljaPrijaveZaCsv($polje, $prijava);
+                }
+
+                fputcsv($izlaz, $red, ';');
+            }
+
+            fclose($izlaz);
+        }, $nazivDatoteke, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 
@@ -1183,5 +1253,100 @@ class NadolazeciTurniriController extends Controller
         }
 
         return round((float) $tekst, 2);
+    }
+
+    /**
+     * Vraća odabrana CSV polja za export prijava turnira.
+     *
+     * @return array<int, string>
+     */
+    private function odabranaCsvPoljaPrijava(Request $request): array
+    {
+        $trazenaPolja = array_map('strval', (array) $request->query('fields', []));
+        $odabranaPolja = [];
+
+        foreach (array_keys(self::CSV_EXPORT_POLJA_PRIJAVA) as $polje) {
+            if (in_array($polje, $trazenaPolja, true)) {
+                $odabranaPolja[] = $polje;
+            }
+        }
+
+        if (count($odabranaPolja) === 0) {
+            return self::CSV_EXPORT_ZADANA_POLJA_PRIJAVA;
+        }
+
+        return $odabranaPolja;
+    }
+
+    /**
+     * Vraća zaglavlja CSV datoteke za export prijava turnira.
+     *
+     * @param  array<int, string>  $odabranaPolja
+     * @return array<int, string>
+     */
+    private function csvZaglavljaPrijava(array $odabranaPolja): array
+    {
+        $zaglavlja = [];
+        foreach ($odabranaPolja as $polje) {
+            $zaglavlja[] = self::CSV_EXPORT_POLJA_PRIJAVA[$polje] ?? $polje;
+        }
+
+        return $zaglavlja;
+    }
+
+    /**
+     * Vraća jednu vrijednost odabranog polja za CSV red prijave turnira.
+     */
+    private function vrijednostPoljaPrijaveZaCsv(string $polje, PrijavaTurnira $prijava): string
+    {
+        $clan = $prijava->clan;
+
+        return match ($polje) {
+            'ime' => trim((string) ($clan?->Ime ?? '')),
+            'prezime' => trim((string) ($clan?->Prezime ?? '')),
+            'datum_rodjenja' => $this->formatirajDatumZaCsv($clan?->datum_rodjenja ?? null),
+            'broj_licence' => $this->formatirajTekstualnoPoljeZaCsv($clan?->broj_licence ?? null),
+            'lijecnicki_do' => $this->formatirajDatumZaCsv($clan?->lijecnicki_do ?? null),
+            'stil' => trim((string) ($prijava->stil?->naziv ?? '')),
+            'kategorija' => trim((string) ($prijava->kategorija?->naziv ?? '')),
+            'oib' => $this->formatirajTekstualnoPoljeZaCsv($clan?->oib ?? null),
+            'smjena' => $prijava->smjena === 'nebitno' ? '' : trim((string) ($prijava->smjena ?? '')),
+            'kup' => $prijava->sudjelujem_u_kupu ? 'DA' : '',
+            default => '',
+        };
+    }
+
+    /**
+     * Formatira datum u d.m.Y. oblik za CSV.
+     */
+    private function formatirajDatumZaCsv(mixed $vrijednost): string
+    {
+        if ($vrijednost instanceof Carbon) {
+            return $vrijednost->format('d.m.Y.');
+        }
+
+        $tekst = trim((string) $vrijednost);
+        if ($tekst === '') {
+            return '';
+        }
+
+        try {
+            return Carbon::parse($tekst)->format('d.m.Y.');
+        } catch (Throwable) {
+            return '';
+        }
+    }
+
+    /**
+     * Formatira tekstualno polje kao tekst za CSV (sprječava gubitak vodećih nula).
+     */
+    private function formatirajTekstualnoPoljeZaCsv(mixed $vrijednost): string
+    {
+        $tekst = trim((string) $vrijednost);
+        if ($tekst === '') {
+            return '';
+        }
+
+        return "\t".$tekst;
     }
 }

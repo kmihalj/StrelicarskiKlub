@@ -177,10 +177,13 @@
                                         return null;
                                     }
 
-                                    return trim((string)$clan->Prezime . ' ' . (string)$clan->Ime);
+                                    return [
+                                        'naziv' => trim((string)$clan->Ime . ' ' . (string)$clan->Prezime),
+                                        'url' => route('javno.clanovi.prikaz_clana', (int)$clan->id),
+                                    ];
                                 })
                                 ->filter()
-                                ->sort()
+                                ->sortBy('naziv')
                                 ->values();
                             $datumTurnira = $turnir->datum?->copy()->startOfDay();
                             $lijecnickiIsticuClanovima = collect($turnir->prijave ?? [])
@@ -200,17 +203,20 @@
                                         return null;
                                     }
 
-                                    return trim((string)$clan->Prezime . ' ' . (string)$clan->Ime)
-                                        . ' - '
-                                        . $vrijediDo->format('d.m.Y.');
+                                    return [
+                                        'naziv' => trim((string)$clan->Ime . ' ' . (string)$clan->Prezime),
+                                        'datum' => $vrijediDo->format('d.m.Y.'),
+                                        'url' => route('javno.clanovi.prikaz_clana', (int)$clan->id),
+                                    ];
                                 })
                                 ->filter()
-                                ->sort()
+                                ->sortBy('naziv')
                                 ->values();
+                            $rowspan = $lijecnickiIsticuClanovima->isNotEmpty() ? 3 : 2;
                         @endphp
                         <tr>
-                            <td rowspan="3" class="align-middle">{{ $turnir->datumRasponLabel() }}</td>
-                            <td rowspan="3" class="align-middle text-break">
+                            <td rowspan="{{ $rowspan }}" class="align-middle">{{ $turnir->datumRasponLabel() }}</td>
+                            <td rowspan="{{ $rowspan }}" class="align-middle text-break">
                                 <div class="fw-semibold">{{ $turnir->naziv }}</div>
                                 @if($turnir->organizator)
                                     <div class="small text-muted">{{ $turnir->organizator }}</div>
@@ -262,7 +268,7 @@
                                     -
                                 @endif
                             </td>
-                            <td rowspan="3" class="text-end align-middle text-nowrap">
+                            <td rowspan="{{ $rowspan }}" class="text-end align-middle text-nowrap">
                                 <div class="d-inline-flex align-items-center justify-content-end flex-nowrap gap-1">
                                     <a href="{{ route('admin.nadolazeci_turniri.show', $turnir) }}" class="btn btn-sm btn-primary">Prijave</a>
                                     <a href="{{ route('admin.nadolazeci_turniri.index', ['uredi' => $turnir->id]) }}" class="btn btn-sm btn-success">Uredi</a>
@@ -278,21 +284,26 @@
                             <td colspan="6" class="small text-start align-middle">
                                 Prijavljeni članovi:
                                 @if($prijavljeniClanovi->count() > 0)
-                                    {{ $prijavljeniClanovi->implode(', ') }}
+                                    @foreach($prijavljeniClanovi as $prijavljeniClan)
+                                        <a href="{{ $prijavljeniClan['url'] }}" class="link-primary text-decoration-underline">{{ $prijavljeniClan['naziv'] }}</a>@if(!$loop->last), @endif
+                                    @endforeach
                                 @else
                                     nema prijava
                                 @endif
                             </td>
                         </tr>
-                        <tr>
-                            <td colspan="6" class="small text-start align-middle">
-                                @if($lijecnickiIsticuClanovima->count() > 0)
-                                    <span class="text-danger">Liječnički ističe članovima: {{ $lijecnickiIsticuClanovima->implode(', ') }}</span>
-                                @else
-                                    <span class="text-muted">Liječnički je važeći za sve prijavljene članove.</span>
-                                @endif
-                            </td>
-                        </tr>
+                        @if($lijecnickiIsticuClanovima->isNotEmpty())
+                            <tr>
+                                <td colspan="6" class="small text-start align-middle">
+                                    <span class="text-danger">
+                                        Liječnički ističe članovima:
+                                        @foreach($lijecnickiIsticuClanovima as $clanLijecnicki)
+                                            <a href="{{ $clanLijecnicki['url'] }}" class="link-danger text-decoration-underline">{{ $clanLijecnicki['naziv'] }}</a> - {{ $clanLijecnicki['datum'] }}@if(!$loop->last), @endif
+                                        @endforeach
+                                    </span>
+                                </td>
+                            </tr>
+                        @endif
                     @empty
                         <tr>
                             <td colspan="9" class="text-center">Nema unesenih nadolazećih turnira.</td>
@@ -335,10 +346,13 @@
                                         return null;
                                     }
 
-                                    return trim((string)$clan->Prezime . ' ' . (string)$clan->Ime);
+                                    return [
+                                        'naziv' => trim((string)$clan->Ime . ' ' . (string)$clan->Prezime),
+                                        'url' => route('javno.clanovi.prikaz_clana', (int)$clan->id),
+                                    ];
                                 })
                                 ->filter()
-                                ->sort()
+                                ->sortBy('naziv')
                                 ->values();
                         @endphp
                         <tr>
@@ -392,7 +406,9 @@
                             <td colspan="5" class="small text-start align-middle">
                                 Prijavljeni članovi:
                                 @if($prijavljeniClanovi->count() > 0)
-                                    {{ $prijavljeniClanovi->implode(', ') }}
+                                    @foreach($prijavljeniClanovi as $prijavljeniClan)
+                                        <a href="{{ $prijavljeniClan['url'] }}" class="link-primary text-decoration-underline">{{ $prijavljeniClan['naziv'] }}</a>@if(!$loop->last), @endif
+                                    @endforeach
                                 @else
                                     nema prijava
                                 @endif

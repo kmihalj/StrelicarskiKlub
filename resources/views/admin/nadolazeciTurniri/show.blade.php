@@ -38,6 +38,25 @@
 
     <div class="container-xxl bg-white shadow mb-3">
         <div class="row p-3">
+            <div class="col-12 mb-3">
+                <div class="border rounded p-3">
+                    <div class="fw-semibold mb-2">CSV export prijava</div>
+                    <form action="{{ route('admin.nadolazeci_turniri.export_csv', $turnir) }}" method="GET" class="row g-2 align-items-end">
+                        @foreach($csvPoljaPrijava as $polje => $nazivPolja)
+                            <div class="col-6 col-md-4 col-lg-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="fields[]" value="{{ $polje }}" id="csv-polje-{{ $polje }}"
+                                        @checked(in_array($polje, $csvZadanaPoljaPrijava, true))>
+                                    <label class="form-check-label" for="csv-polje-{{ $polje }}">{{ $nazivPolja }}</label>
+                                </div>
+                            </div>
+                        @endforeach
+                        <div class="col-12 d-flex justify-content-end">
+                            <button type="submit" class="btn btn-sm btn-success">Preuzmi CSV (aktivne prijave)</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
             <div class="col-12 table-responsive">
                 <table class="table table-hover align-middle mb-0 border">
                     <thead class="table-warning">
@@ -49,7 +68,6 @@
                         <th>KUP</th>
                         <th>Smjena</th>
                         <th>Kotizacija</th>
-                        <th>Napomena</th>
                         <th></th>
                     </tr>
                     </thead>
@@ -67,15 +85,15 @@
                             $lijecnickiWarning = null;
                             if ($clan && $turnirDatum) {
                                 if (empty($clan->lijecnicki_do)) {
-                                    $lijecnickiWarning = 'Član nema evidentiran važeći liječnički pregled. Potrebno je obaviti pregled prije turnira i dostaviti dokument klubu.';
+                                    $lijecnickiWarning = 'Liječnički nije evidentiran.';
                                 } else {
                                     try {
                                         $lijecnickiDo = \Carbon\Carbon::parse((string) $clan->lijecnicki_do)->endOfDay();
                                         if ($lijecnickiDo->lt($turnirDatum->copy()->startOfDay())) {
-                                            $lijecnickiWarning = 'Liječnički pregled ističe '.$lijecnickiDo->format('d.m.Y.').'. - prije turnira. Potrebno je obaviti novi pregled i dostaviti dokument klubu.';
+                                            $lijecnickiWarning = 'Liječnički ističe '.$lijecnickiDo->format('d.m.Y.');
                                         }
                                     } catch (\Throwable) {
-                                        $lijecnickiWarning = 'Liječnički pregled člana nije valjano evidentiran. Potrebno je provjeriti dokumentaciju prije turnira.';
+                                        $lijecnickiWarning = 'Liječnički datum nije valjan.';
                                     }
                                 }
                             }
@@ -87,7 +105,13 @@
                         <tr>
                             <td><span class="badge {{ $statusClass }}">{{ $statusLabel }}</span></td>
                             <td>
-                                <div class="fw-semibold">{{ $prijava->clan?->Prezime }} {{ $prijava->clan?->Ime }}</div>
+                                @if($prijava->clan)
+                                    <a href="{{ route('javno.clanovi.prikaz_clana', $prijava->clan) }}" class="fw-semibold link-primary text-decoration-underline">
+                                        {{ $prijava->clan->Ime }} {{ $prijava->clan->Prezime }}
+                                    </a>
+                                @else
+                                    <div class="fw-semibold">-</div>
+                                @endif
                                 @if($lijecnickiWarning)
                                     <div class="small text-danger">{{ $lijecnickiWarning }}</div>
                                 @endif
@@ -112,35 +136,31 @@
                                     -
                                 @endif
                             </td>
-                            <td>
-                                @if($prijava->napomena_admin)
-                                    <span class="small">{{ $prijava->napomena_admin }}</span>
-                                @else
-                                    -
-                                @endif
-                            </td>
                             <td class="text-end">
                                 @if($prijava->status === \App\Models\PrijavaTurnira::STATUS_ACTIVE)
-                                    <form action="{{ route('admin.nadolazeci_turniri.prijave.ukloni', [$turnir, $prijava]) }}"
-                                          method="POST"
-                                          class="d-flex flex-wrap flex-lg-nowrap justify-content-end align-items-center gap-2">
-                                        @csrf
-                                        <input type="text"
-                                               class="form-control form-control-sm"
-                                               style="max-width: 320px;"
-                                               name="napomena_admin"
-                                               placeholder="Napomena zašto je član maknut"
-                                               required>
-                                        <button type="submit"
-                                                class="btn btn-sm btn-danger"
-                                                onclick="return confirm('Maknuti člana s turnira?')">Ukloni</button>
-                                    </form>
+                                    <div class="d-inline-flex flex-column align-items-end gap-1">
+                                        <form action="{{ route('admin.nadolazeci_turniri.prijave.ukloni', [$turnir, $prijava]) }}"
+                                              method="POST"
+                                              class="d-flex flex-wrap flex-lg-nowrap justify-content-end align-items-center gap-2">
+                                            @csrf
+                                            <input type="text"
+                                                   class="form-control form-control-sm"
+                                                   style="max-width: 320px;"
+                                                   name="napomena_admin"
+                                                   placeholder="Napomena zašto je član maknut"
+                                                   required>
+                                            <button type="submit"
+                                                    class="btn btn-sm btn-danger"
+                                                    onclick="return confirm('Maknuti člana s turnira?')">Ukloni</button>
+                                        </form>
+                                        <span class="small text-muted">Uklanjanje člana sa turnira od strane administratora.</span>
+                                    </div>
                                 @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center">Nema prijava za ovaj turnir.</td>
+                            <td colspan="8" class="text-center">Nema prijava za ovaj turnir.</td>
                         </tr>
                     @endforelse
                     </tbody>
@@ -163,7 +183,6 @@
                         <th>KUP</th>
                         <th>Smjena</th>
                         <th>Kotizacija</th>
-                        <th>Napomena</th>
                         <th>Uklonjeno</th>
                     </tr>
                     </thead>
@@ -179,7 +198,13 @@
                         <tr>
                             <td><span class="badge bg-danger">Maknuta</span></td>
                             <td>
-                                <div class="fw-semibold">{{ $prijava->clan?->Prezime }} {{ $prijava->clan?->Ime }}</div>
+                                @if($prijava->clan)
+                                    <a href="{{ route('javno.clanovi.prikaz_clana', $prijava->clan) }}" class="fw-semibold link-primary text-decoration-underline">
+                                        {{ $prijava->clan->Ime }} {{ $prijava->clan->Prezime }}
+                                    </a>
+                                @else
+                                    <div class="fw-semibold">-</div>
+                                @endif
                             </td>
                             <td>{{ $prijava->kategorija?->naziv ?? '-' }}</td>
                             <td>{{ $prijava->stil?->naziv ?? '-' }}</td>
@@ -202,17 +227,16 @@
                                 @endif
                             </td>
                             <td>
+                                <div>{{ $prijava->removed_at?->format('d.m.Y. H:i') ?? '-' }}</div>
                                 @if($prijava->napomena_admin)
-                                    <span class="small">{{ $prijava->napomena_admin }}</span>
-                                @else
-                                    -
+                                    <div class="small">{{ $prijava->napomena_admin }}</div>
+                                    <div class="small text-muted">Uklanjanje člana sa turnira od strane administratora.</div>
                                 @endif
                             </td>
-                            <td>{{ $prijava->removed_at?->format('d.m.Y. H:i') ?? '-' }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center">Nema uklonjenih članova.</td>
+                            <td colspan="8" class="text-center">Nema uklonjenih članova.</td>
                         </tr>
                     @endforelse
                     </tbody>
