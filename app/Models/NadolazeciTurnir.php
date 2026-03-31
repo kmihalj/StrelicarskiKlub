@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +20,8 @@ class NadolazeciTurnir extends Model
         'organizator',
         'mjesto',
         'datum',
+        'datum_do',
+        'napomena',
         'tipovi_turnira_id',
         'boduje_za_kup',
         'ima_smjene',
@@ -35,6 +38,7 @@ class NadolazeciTurnir extends Model
 
     protected $casts = [
         'datum' => 'date',
+        'datum_do' => 'date',
         'boduje_za_kup' => 'boolean',
         'ima_smjene' => 'boolean',
         'prijave_otvorene_do' => 'date',
@@ -107,5 +111,43 @@ class NadolazeciTurnir extends Model
         return $this->kotizacija_nacin === 'bank'
             && $this->kotizacija_iznos !== null
             && (float) $this->kotizacija_iznos > 0;
+    }
+
+    /**
+     * Formatira datum turnira za prikaz, uključujući raspon za višednevne turnire.
+     */
+    public function datumRasponLabel(): string
+    {
+        if (! $this->datum instanceof CarbonInterface) {
+            return '-';
+        }
+
+        $start = $this->datum;
+        $end = $this->datum_do instanceof CarbonInterface ? $this->datum_do : null;
+        if (! $end instanceof CarbonInterface || $end->lt($start) || $end->isSameDay($start)) {
+            return $start->format('d.m.Y.');
+        }
+
+        if ($start->isSameMonth($end) && $start->isSameYear($end)) {
+            return $start->format('d').'.-'.$end->format('d.m.Y.');
+        }
+
+        if ($start->isSameYear($end)) {
+            return $start->format('d.m.').'-'.$end->format('d.m.Y.');
+        }
+
+        return $start->format('d.m.Y.').'-'.$end->format('d.m.Y.');
+    }
+
+    /**
+     * Vraća krajnji datum turnira (datum_do ako postoji, inače datum početka).
+     */
+    public function datumKraja(): ?Carbon
+    {
+        if ($this->datum_do instanceof Carbon) {
+            return $this->datum_do;
+        }
+
+        return $this->datum instanceof Carbon ? $this->datum : null;
     }
 }

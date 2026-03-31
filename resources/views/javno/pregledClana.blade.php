@@ -292,7 +292,7 @@
                                     }
                                 @endphp
                                 <tr @class(['table-danger' => $imaWarning])>
-                                    <td rowspan="{{ $rowspan }}" class="align-middle">{{ $prijavaTurnira->turnir?->datum?->format('d.m.Y.') ?? '-' }}</td>
+                                    <td rowspan="{{ $rowspan }}" class="align-middle">{{ $prijavaTurnira->turnir?->datumRasponLabel() ?? '-' }}</td>
                                     <td rowspan="{{ $rowspan }}" class="align-middle">{{ $prijavaTurnira->turnir?->naziv ?? '-' }}</td>
                                     <td>{{ $prijavaTurnira->turnir?->mjesto ?? '-' }}</td>
                                     <td>{{ $prijavaTurnira->smjena ?: 'nebitno' }}</td>

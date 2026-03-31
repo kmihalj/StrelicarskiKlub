@@ -98,7 +98,7 @@
                             @endphp
                             <li class="mb-1">
                                 <a href="{{ route('javno.prijave_turnira.show', $prijava) }}" class="link-primary text-decoration-underline">
-                                    {{ $prijava->turnir?->datum?->format('d.m.Y.') ?? '-' }}; {{ $prijava->turnir?->naziv ?? '-' }};
+                                    {{ $prijava->turnir?->datumRasponLabel() ?? '-' }}; {{ $prijava->turnir?->naziv ?? '-' }};
                                     {{ $prijava->turnir?->mjesto ?? '-' }}
                                 </a>
                                 <span class="ms-1">|</span>

@@ -34,11 +34,22 @@
                         <input type="text" class="form-control" name="mjesto"
                                value="{{ old('mjesto', $urediTurnir->mjesto ?? '') }}" required>
                     </div>
+                    <div class="col-lg-12">
+                        <label class="form-label fw-semibold mb-1">Napomena</label>
+                        <input type="text" class="form-control" name="napomena"
+                               value="{{ old('napomena', $urediTurnir->napomena ?? '') }}"
+                               placeholder="Npr. Turnir traje dva dana...">
+                    </div>
 
-                    <div class="col-lg-3">
+                    <div class="col-lg-2">
                         <label class="form-label fw-semibold mb-1">Datum</label>
                         <input type="date" class="form-control" name="datum"
                                value="{{ old('datum', isset($urediTurnir?->datum) ? $urediTurnir->datum->format('Y-m-d') : '') }}" required>
+                    </div>
+                    <div class="col-lg-2">
+                        <label class="form-label fw-semibold mb-1">Datum do</label>
+                        <input type="date" class="form-control" name="datum_do"
+                               value="{{ old('datum_do', isset($urediTurnir?->datum_do) ? $urediTurnir->datum_do->format('Y-m-d') : '') }}">
                     </div>
                     <div class="col-lg-3">
                         <label class="form-label fw-semibold mb-1">Tip turnira</label>
@@ -52,7 +63,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-lg-3">
+                    <div class="col-lg-2">
                         <label class="form-label fw-semibold mb-1">Rok prijava do</label>
                         <input type="date" class="form-control" name="prijave_otvorene_do"
                                value="{{ old('prijave_otvorene_do', isset($urediTurnir?->prijave_otvorene_do) ? $urediTurnir->prijave_otvorene_do->format('Y-m-d') : '') }}">
@@ -198,11 +209,14 @@
                                 ->values();
                         @endphp
                         <tr>
-                            <td rowspan="3" class="align-middle">{{ $turnir->datum?->format('d.m.Y.') }}</td>
+                            <td rowspan="3" class="align-middle">{{ $turnir->datumRasponLabel() }}</td>
                             <td rowspan="3" class="align-middle">
                                 <div class="fw-semibold">{{ $turnir->naziv }}</div>
                                 @if($turnir->organizator)
                                     <div class="small text-muted">{{ $turnir->organizator }}</div>
+                                @endif
+                                @if(!empty($turnir->napomena))
+                                    <div class="small text-warning-emphasis">{{ $turnir->napomena }}</div>
                                 @endif
                             </td>
                             <td>{{ $turnir->mjesto }}</td>
@@ -326,11 +340,14 @@
                                 ->values();
                         @endphp
                         <tr>
-                            <td rowspan="2" class="align-middle">{{ $turnir->datum?->format('d.m.Y.') }}</td>
+                            <td rowspan="2" class="align-middle">{{ $turnir->datumRasponLabel() }}</td>
                             <td rowspan="2" class="align-middle">
                                 <div class="fw-semibold">{{ $turnir->naziv }}</div>
                                 @if($turnir->organizator)
                                     <div class="small text-muted">{{ $turnir->organizator }}</div>
+                                @endif
+                                @if(!empty($turnir->napomena))
+                                    <div class="small text-warning-emphasis">{{ $turnir->napomena }}</div>
                                 @endif
                             </td>
                             <td>{{ $turnir->mjesto }}</td>

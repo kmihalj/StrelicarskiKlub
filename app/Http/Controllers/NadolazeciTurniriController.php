@@ -54,14 +54,14 @@ class NadolazeciTurniriController extends Controller
             ]);
 
         $nadolazeciTurniri = (clone $baseQuery)
-            ->whereDate('datum', '>=', $danas)
+            ->whereRaw('DATE(COALESCE(datum_do, datum)) >= ?', [$danas])
             ->orderBy('datum')
             ->orderBy('id')
             ->paginate(20, ['*'], 'upcoming_page')
             ->withQueryString();
 
         $prosliTurniri = (clone $baseQuery)
-            ->whereDate('datum', '<', $danas)
+            ->whereRaw('DATE(COALESCE(datum_do, datum)) < ?', [$danas])
             ->orderByDesc('datum')
             ->orderByDesc('id')
             ->paginate(20, ['*'], 'past_page')
@@ -703,6 +703,8 @@ class NadolazeciTurniriController extends Controller
             'organizator' => ['nullable', 'string', 'max:191'],
             'mjesto' => ['required', 'string', 'max:191'],
             'datum' => ['required', 'date'],
+            'datum_do' => ['nullable', 'date', 'after_or_equal:datum'],
+            'napomena' => ['nullable', 'string', 'max:500'],
             'tipovi_turnira_id' => ['required', 'integer', 'exists:tipovi_turniras,id'],
             'prijave_otvorene_do' => ['nullable', 'date'],
             'is_zakljucan' => ['nullable', 'boolean'],
@@ -775,6 +777,10 @@ class NadolazeciTurniriController extends Controller
         $turnir->organizator = $this->normalizirajTekst($validated['organizator'] ?? null);
         $turnir->mjesto = trim((string) $validated['mjesto']);
         $turnir->datum = Carbon::parse((string) $validated['datum'])->toDateString();
+        $turnir->datum_do = ! empty($validated['datum_do'])
+            ? Carbon::parse((string) $validated['datum_do'])->toDateString()
+            : null;
+        $turnir->napomena = $this->normalizirajTekst($validated['napomena'] ?? null);
         $turnir->tipovi_turnira_id = (int) $validated['tipovi_turnira_id'];
         $turnir->boduje_za_kup = false;
         $turnir->ima_smjene = false;
@@ -870,7 +876,7 @@ class NadolazeciTurniriController extends Controller
         }
 
         $charge->title = 'Kotizacija - '.$turnir->naziv;
-        $charge->description = 'Kotizacija za turnir '.$turnir->naziv.' ('.$turnir->mjesto.', '.$turnir->datum?->format('d.m.Y.').')';
+        $charge->description = 'Kotizacija za turnir '.$turnir->naziv.' ('.$turnir->mjesto.', '.$turnir->datumRasponLabel().')';
         $charge->amount = round((float) $turnir->kotizacija_iznos, 2);
         $charge->due_date = $turnir->kotizacija_rok_uplate?->toDateString();
         $charge->period_start = $charge->due_date;
@@ -942,7 +948,7 @@ class NadolazeciTurniriController extends Controller
     private function opisKotizacijeZaHub(Clanovi $clan, NadolazeciTurnir $turnir): string
     {
         $imePrezime = trim((string) $clan->Ime.' '.(string) $clan->Prezime);
-        $datum = $turnir->datum?->format('d.m.Y.') ?? '-';
+        $datum = $turnir->datumRasponLabel();
 
         return 'Kotizacija za: '.$imePrezime.'; za turnir: '.$turnir->naziv
             .' u '.$turnir->mjesto.' dana '.$datum;

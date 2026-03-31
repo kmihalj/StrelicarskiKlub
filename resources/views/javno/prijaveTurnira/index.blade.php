@@ -45,7 +45,7 @@
                                         @php
                                             $locked = $turnir->prijaveZakljucane();
                                             $tipTurnira = $turnir->tipTurnira?->naziv ?? '-';
-                                            $label = $turnir->datum?->format('d.m.Y.') . ' - ' . $turnir->naziv . ' (' . $turnir->mjesto . ') - tip turnira: ' . $tipTurnira;
+                                            $label = $turnir->datumRasponLabel() . ' - ' . $turnir->naziv . ' (' . $turnir->mjesto . ') - tip turnira: ' . $tipTurnira;
                                         @endphp
                                         <option value="{{ $turnir->id }}"
                                                 data-label="{{ $label }}"
@@ -77,7 +77,7 @@
                                         @php
                                             $locked = $turnir->prijaveZakljucane();
                                             $tipTurnira = $turnir->tipTurnira?->naziv ?? '-';
-                                            $label = $turnir->datum?->format('d.m.Y.') . ' - ' . $turnir->naziv . ' (' . $turnir->mjesto . ') - tip turnira: ' . $tipTurnira;
+                                            $label = $turnir->datumRasponLabel() . ' - ' . $turnir->naziv . ' (' . $turnir->mjesto . ') - tip turnira: ' . $tipTurnira;
                                         @endphp
                                         <option value="{{ $turnir->id }}"
                                                 data-label="{{ $label }}"
@@ -195,7 +195,7 @@
                             $rowspan = $imaWarning ? 2 : 1;
                         @endphp
                         <tr @class(['table-danger' => $imaWarning])>
-                            <td rowspan="{{ $rowspan }}" class="align-middle">{{ $prijava->turnir?->datum?->format('d.m.Y.') ?? '-' }}</td>
+                            <td rowspan="{{ $rowspan }}" class="align-middle">{{ $prijava->turnir?->datumRasponLabel() ?? '-' }}</td>
                             <td rowspan="{{ $rowspan }}" class="align-middle">{{ $prijava->clan?->Prezime }} {{ $prijava->clan?->Ime }}</td>
                             <td rowspan="{{ $rowspan }}" class="align-middle">{{ $prijava->turnir?->naziv ?? '-' }}</td>
                             <td>{{ $prijava->turnir?->mjesto ?? '-' }}</td>
@@ -303,7 +303,7 @@
                                 }
                             @endphp
                             <tr>
-                                <td>{{ $prijava->turnir?->datum?->format('d.m.Y.') ?? '-' }}</td>
+                                <td>{{ $prijava->turnir?->datumRasponLabel() ?? '-' }}</td>
                                 <td>{{ $prijava->clan?->Prezime }} {{ $prijava->clan?->Ime }}</td>
                                 <td>{{ $prijava->turnir?->naziv ?? '-' }}</td>
                                 <td>{{ $prijava->turnir?->mjesto ?? '-' }}</td>

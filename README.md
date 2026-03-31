@@ -122,7 +122,36 @@ npm run build
 - **Roditelj**: vlastiti račun + pregled povezane djece.
 - **Polaznik škole**: profil škole, dolasci i školarina prema ovlastima.
 
-## 7. Napomena
+## 7. Import nadolazećih turnira (archery.hr)
+
+Za uvoz kalendara koristi se Artisan komanda:
+
+```bash
+php artisan turniri:import-archery
+```
+
+Najčešći primjeri:
+
+```bash
+# samo pregled bez upisa u bazu
+php artisan turniri:import-archery --year=2026 --dry-run
+
+# uvoz samo nadolazećih turnira za 2026 (default: prošli se preskaču)
+php artisan turniri:import-archery --year=2026
+
+# uvoz samo novih zapisa (postojeće ne ažurira)
+php artisan turniri:import-archery --year=2026 --skip-existing
+
+# po potrebi uključi i prošle turnire
+php artisan turniri:import-archery --year=2026 --include-past
+```
+
+Napomene:
+- Komanda ne dodaje nove tipove turnira; mapira discipline na postojeće tipove iz baze.
+- Ako disciplina nije prepoznata, turnir se preskače i ispisuje se u izvještaju (`Preskočeno (nepoznata disciplina)` + popis turnira).
+- Za višednevne zapise (npr. `07. i 08.03.2026.`) sprema se `datum` + `datum_do`, a prikaz u prijavama je kao raspon (`07.-08.03.2026.`).
+
+## 8. Napomena
 
 Detaljan korisnički priručnik:
 

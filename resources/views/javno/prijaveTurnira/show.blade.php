@@ -18,8 +18,11 @@
             <div class="col-lg-8">
                 <div><span class="fw-semibold">Član:</span> {{ $clan->Prezime }} {{ $clan->Ime }}</div>
                 <div><span class="fw-semibold">Turnir:</span> {{ $turnir->naziv }}</div>
-                <div><span class="fw-semibold">Datum i mjesto:</span> {{ $turnir->datum?->format('d.m.Y.') ?? '-' }}, {{ $turnir->mjesto }}</div>
+                <div><span class="fw-semibold">Datum i mjesto:</span> {{ $turnir->datumRasponLabel() }}, {{ $turnir->mjesto }}</div>
                 <div><span class="fw-semibold">Tip turnira:</span> {{ $turnir->tipTurnira->naziv ?? '-' }}</div>
+                @if(!empty($turnir->napomena))
+                    <div><span class="fw-semibold">Napomena:</span> {{ $turnir->napomena }}</div>
+                @endif
                 <div><span class="fw-semibold">Status prijave:</span>
                     @if($prijava->status === \App\Models\PrijavaTurnira::STATUS_ACTIVE)
                         <span class="badge bg-success">Aktivna</span>

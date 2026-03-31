@@ -11,10 +11,13 @@
         </div>
         <div class="row p-3">
             <div class="col-lg-8">
-                <div><span class="fw-semibold">Datum:</span> {{ $turnir->datum?->format('d.m.Y.') ?? '-' }}</div>
+                <div><span class="fw-semibold">Datum:</span> {{ $turnir->datumRasponLabel() }}</div>
                 <div><span class="fw-semibold">Organizator:</span> {{ $turnir->organizator ?: '-' }}</div>
                 <div><span class="fw-semibold">Mjesto:</span> {{ $turnir->mjesto }}</div>
                 <div><span class="fw-semibold">Tip turnira:</span> {{ $turnir->tipTurnira->naziv ?? '-' }}</div>
+                @if(!empty($turnir->napomena))
+                    <div><span class="fw-semibold">Napomena:</span> {{ $turnir->napomena }}</div>
+                @endif
             </div>
             <div class="col-lg-4 text-lg-end">
                 <div>
