@@ -107,7 +107,7 @@
                             <li class="mb-1">
                                 <div class="d-flex flex-wrap align-items-center gap-2">
                                     <a href="{{ route('javno.prijave_turnira.show', $prijava) }}" class="link-primary text-decoration-underline">
-                                        {{ $prijava->turnir?->datumRasponLabel() ?? '-' }}; {{ $prijava->turnir?->naziv ?? '-' }};
+                                        {{ $prijava->datumTurniraZaPrikazLabel() }}; {{ $prijava->turnir?->naziv ?? '-' }};
                                         {{ $prijava->turnir?->mjesto ?? '-' }}
                                     </a>
                                     @if($nacinKotizacije === 'bank')

@@ -42,14 +42,23 @@
                     </div>
                     <div class="col-lg-2 mb-2 align-self-end">
                         <div class="form-check form-switch ">
-                            <input class="form-check-input" type="checkbox" form="uredjivanjeTurnira" id="eliminacije" name="eliminacije" aria-label="eliminacije"
-                                   @if($uredi_turnir->eliminacije) value=true checked
-                                   @else
-                                       value=false
-                                   @endif
-                                   >
-                            <label class="form-check-label" for="aktivan">Eliminacije</label>
+                            @if($urediTurnirEliminacijeDisabled ?? false)
+                                <input type="hidden" form="uredjivanjeTurnira" name="eliminacije" value="1">
+                            @endif
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   form="uredjivanjeTurnira"
+                                   id="eliminacije"
+                                   name="eliminacije"
+                                   value="1"
+                                   aria-label="eliminacije"
+                                   @checked($uredi_turnir->eliminacije)
+                                   @disabled($urediTurnirEliminacijeDisabled ?? false)>
+                            <label class="form-check-label" for="eliminacije">Eliminacije</label>
                         </div>
+                        @if($urediTurnirEliminacijeDisabled ?? false)
+                            <div class="small text-danger mt-1">Nije moguće isključiti jer postoje unesene eliminacije.</div>
+                        @endif
                     </div>
                 </div>
             </div>

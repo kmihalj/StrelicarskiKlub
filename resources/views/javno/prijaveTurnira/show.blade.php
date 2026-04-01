@@ -18,7 +18,8 @@
             <div class="col-lg-8">
                 <div><span class="fw-semibold">Član:</span> {{ $clan->Prezime }} {{ $clan->Ime }}</div>
                 <div><span class="fw-semibold">Turnir:</span> {{ $turnir->naziv }}</div>
-                <div><span class="fw-semibold">Datum i mjesto:</span> {{ $turnir->datumRasponLabel() }}, {{ $turnir->mjesto }}</div>
+                <div><span class="fw-semibold">Datum i mjesto:</span> {{ $prijava->datumTurniraZaPrikazLabel() }}, {{ $turnir->mjesto }}</div>
+                <div><span class="fw-semibold">Smjena / dan:</span> {{ $prijava->terminPrijaveLabel() }}</div>
                 <div><span class="fw-semibold">Tip turnira:</span> {{ $turnir->tipTurnira->naziv ?? '-' }}</div>
                 @if(!empty($turnir->napomena))
                     <div><span class="fw-semibold">Napomena:</span> {{ $turnir->napomena }}</div>
@@ -110,18 +111,34 @@
                             </select>
                         </div>
 
-                        <div class="col-lg-4">
-                            <label for="smjena" class="form-label fw-semibold mb-1">Smjena</label>
-                            <select class="form-select" id="smjena" name="smjena" @disabled(!$mozeUredjivati)>
-                                @foreach($smjene as $smjenaOpcija)
-                                    <option value="{{ $smjenaOpcija }}"
-                                        @selected(old('smjena', $prijava->smjena ?: 'nebitno') === $smjenaOpcija)>
-                                        {{ ucfirst($smjenaOpcija) }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            <div class="form-text">*ako ima smjena</div>
-                        </div>
+                        @if($turnirJeVisednevni)
+                            <div class="col-lg-4">
+                                <label for="odabrani_dan" class="form-label fw-semibold mb-1">Odabir dana</label>
+                                <select class="form-select" id="odabrani_dan" name="odabrani_dan" @disabled(!$mozeUredjivati)>
+                                    <option value="">Nije bitno</option>
+                                    @foreach($odabirDanaOpcije as $opcijaDana)
+                                        <option value="{{ $opcijaDana['value'] }}"
+                                            @selected(old('odabrani_dan', $prijava->odabrani_dan?->toDateString()) === $opcijaDana['value'])>
+                                            {{ $opcijaDana['label'] }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <div class="form-text">*dan može ovisiti o kategoriji i stilu, provjerite poziv...</div>
+                            </div>
+                        @else
+                            <div class="col-lg-4">
+                                <label for="smjena" class="form-label fw-semibold mb-1">Smjena</label>
+                                <select class="form-select" id="smjena" name="smjena" @disabled(!$mozeUredjivati)>
+                                    @foreach($smjene as $smjenaOpcija)
+                                        <option value="{{ $smjenaOpcija }}"
+                                            @selected(old('smjena', $prijava->smjena ?: 'nebitno') === $smjenaOpcija)>
+                                            {{ ucfirst($smjenaOpcija) }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <div class="form-text">*ako ima smjena</div>
+                            </div>
+                        @endif
 
                         <div class="col-12">
                             <div class="form-check">

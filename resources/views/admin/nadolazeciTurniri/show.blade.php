@@ -2,11 +2,22 @@
 @extends('layouts.app')
 
 @section('content')
+    @php
+        $turnirJeProsao = $turnir->datum?->copy()->startOfDay()?->lte(now()->startOfDay()) ?? false;
+    @endphp
     <div class="container-xxl bg-white shadow mb-3">
         <div class="row justify-content-center p-2 shadow bg-danger fw-bolder">
             <div class="col-lg-12 text-white d-flex justify-content-between align-items-center">
                 <span>Prijave - {{ $turnir->naziv }}</span>
-                <a href="{{ route('admin.nadolazeci_turniri.index') }}" class="btn btn-sm btn-light">Povratak</a>
+                <div class="d-inline-flex align-items-center gap-2">
+                    @if($turnirJeProsao)
+                        <form action="{{ route('admin.nadolazeci_turniri.kreiraj_rezultate', $turnir) }}" method="POST" class="m-0">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-warning">Kreiraj rezultate</button>
+                        </form>
+                    @endif
+                    <a href="{{ route('admin.nadolazeci_turniri.index') }}" class="btn btn-sm btn-light">Povratak</a>
+                </div>
             </div>
         </div>
         <div class="row p-3">
@@ -66,7 +77,7 @@
                         <th>Kategorija</th>
                         <th>Stil</th>
                         <th>KUP</th>
-                        <th>Smjena</th>
+                        <th>Smjena / dan</th>
                         <th>Kotizacija</th>
                         <th></th>
                     </tr>
@@ -119,7 +130,7 @@
                             <td>{{ $prijava->kategorija?->naziv ?? '-' }}</td>
                             <td>{{ $prijava->stil?->naziv ?? '-' }}</td>
                             <td>{{ $prijava->sudjelujem_u_kupu ? 'Da' : 'Ne' }}</td>
-                            <td>{{ $prijava->smjena ?: '-' }}</td>
+                            <td>{{ $prijava->terminPrijaveLabel() }}</td>
                             <td>
                                 @if($charge)
                                     @if($charge->status === \App\Services\PaymentTrackingService::STATUS_PAID)
@@ -181,7 +192,7 @@
                         <th>Kategorija</th>
                         <th>Stil</th>
                         <th>KUP</th>
-                        <th>Smjena</th>
+                        <th>Smjena / dan</th>
                         <th>Kotizacija</th>
                         <th>Uklonjeno</th>
                     </tr>
@@ -209,7 +220,7 @@
                             <td>{{ $prijava->kategorija?->naziv ?? '-' }}</td>
                             <td>{{ $prijava->stil?->naziv ?? '-' }}</td>
                             <td>{{ $prijava->sudjelujem_u_kupu ? 'Da' : 'Ne' }}</td>
-                            <td>{{ $prijava->smjena ?: '-' }}</td>
+                            <td>{{ $prijava->terminPrijaveLabel() }}</td>
                             <td>
                                 @if($charge)
                                     @if($charge->status === \App\Services\PaymentTrackingService::STATUS_PAID)

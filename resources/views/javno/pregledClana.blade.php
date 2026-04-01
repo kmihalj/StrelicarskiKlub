@@ -262,7 +262,7 @@
                                 <th>Datum</th>
                                 <th>Naziv</th>
                                 <th>Mjesto</th>
-                                <th>Smjena</th>
+                                <th>Smjena / dan</th>
                                 <th>Kategorija</th>
                                 <th>Stil</th>
                                 <th>Tip turnira</th>
@@ -292,10 +292,10 @@
                                     }
                                 @endphp
                                 <tr @class(['table-danger' => $imaWarning])>
-                                    <td rowspan="{{ $rowspan }}" class="align-middle">{{ $prijavaTurnira->turnir?->datumRasponLabel() ?? '-' }}</td>
+                                    <td rowspan="{{ $rowspan }}" class="align-middle">{{ $prijavaTurnira->datumTurniraZaPrikazLabel() }}</td>
                                     <td rowspan="{{ $rowspan }}" class="align-middle">{{ $prijavaTurnira->turnir?->naziv ?? '-' }}</td>
                                     <td>{{ $prijavaTurnira->turnir?->mjesto ?? '-' }}</td>
-                                    <td>{{ $prijavaTurnira->smjena ?: 'nebitno' }}</td>
+                                    <td>{{ $prijavaTurnira->terminPrijaveLabel() }}</td>
                                     <td>{{ $prijavaTurnira->kategorija?->naziv ?? '-' }}</td>
                                     <td>{{ $prijavaTurnira->stil?->naziv ?? '-' }}</td>
                                     <td>{{ $prijavaTurnira->turnir?->tipTurnira?->naziv ?? '-' }}</td>

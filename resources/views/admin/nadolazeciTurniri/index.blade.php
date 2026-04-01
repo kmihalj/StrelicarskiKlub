@@ -7,12 +7,22 @@
         $formaRuta = $jeUredjivanje
             ? route('admin.nadolazeci_turniri.update', $urediTurnir)
             : route('admin.nadolazeci_turniri.store');
+        $tekucaGodina = (int) now()->year;
+        $sljedecaGodina = $tekucaGodina + 1;
+        $archeryImportReport = session('archery_import_report');
+        $trebaOtvoritiImportModal = is_array($archeryImportReport) && array_key_exists('output', $archeryImportReport);
     @endphp
 
     <div class="container-xxl bg-white shadow mb-3">
         <div class="row justify-content-center p-2 shadow bg-danger fw-bolder">
-            <div class="col-lg-12 text-white">
-                {{ $jeUredjivanje ? 'Uredi nadolazeći turnir' : 'Novi nadolazeći turnir' }}
+            <div class="col-lg-12 text-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <span>{{ $jeUredjivanje ? 'Uredi nadolazeći turnir' : 'Novi nadolazeći turnir' }}</span>
+                <form action="{{ route('admin.nadolazeci_turniri.import_archery') }}" method="POST" class="m-0">
+                    @csrf
+                    <button type="submit" class="btn btn-sm btn-light">
+                        Uvezi turnire sa archery.hr ({{ $tekucaGodina }} i {{ $sljedecaGodina }})
+                    </button>
+                </form>
             </div>
         </div>
         <div class="row p-3">
@@ -186,17 +196,32 @@
                                 ->sortBy('naziv')
                                 ->values();
                             $datumTurnira = $turnir->datum?->copy()->startOfDay();
-                            $lijecnickiIsticuClanovima = collect($turnir->prijave ?? [])
+                            $lijecnickiUpozorenjaClanovima = collect($turnir->prijave ?? [])
                                 ->map(function ($prijava) use ($datumTurnira) {
                                     $clan = $prijava->clan;
-                                    if (!$clan || !$datumTurnira || empty($clan->lijecnicki_do)) {
+                                    if (!$clan || !$datumTurnira) {
                                         return null;
+                                    }
+
+                                    $naziv = trim((string)$clan->Ime . ' ' . (string)$clan->Prezime);
+                                    $url = route('javno.clanovi.prikaz_clana', (int)$clan->id);
+
+                                    if (empty($clan->lijecnicki_do)) {
+                                        return [
+                                            'naziv' => $naziv,
+                                            'tip' => 'neevidentiran',
+                                            'url' => $url,
+                                        ];
                                     }
 
                                     try {
                                         $vrijediDo = \Carbon\Carbon::parse((string)$clan->lijecnicki_do)->endOfDay();
                                     } catch (\Throwable) {
-                                        return null;
+                                        return [
+                                            'naziv' => $naziv,
+                                            'tip' => 'neevidentiran',
+                                            'url' => $url,
+                                        ];
                                     }
 
                                     if (!$vrijediDo->lt($datumTurnira)) {
@@ -204,15 +229,24 @@
                                     }
 
                                     return [
-                                        'naziv' => trim((string)$clan->Ime . ' ' . (string)$clan->Prezime),
-                                        'datum' => $vrijediDo->format('d.m.Y.'),
-                                        'url' => route('javno.clanovi.prikaz_clana', (int)$clan->id),
+                                        'naziv' => $naziv,
+                                        'tip' => 'nevazeci',
+                                        'url' => $url,
                                     ];
                                 })
                                 ->filter()
                                 ->sortBy('naziv')
                                 ->values();
-                            $rowspan = $lijecnickiIsticuClanovima->isNotEmpty() ? 3 : 2;
+                            $lijecnickiImaNevazece = $lijecnickiUpozorenjaClanovima
+                                ->contains(fn ($clan) => ($clan['tip'] ?? null) === 'nevazeci');
+                            $lijecnickiImaNeevidentirane = $lijecnickiUpozorenjaClanovima
+                                ->contains(fn ($clan) => ($clan['tip'] ?? null) === 'neevidentiran');
+                            $lijecnickiNaslov = $lijecnickiImaNevazece && $lijecnickiImaNeevidentirane
+                                ? 'Liječnički nije važeći/evidentiran:'
+                                : ($lijecnickiImaNevazece
+                                    ? 'Liječnički nije važeći:'
+                                    : 'Liječnički nije evidentiran:');
+                            $rowspan = $lijecnickiUpozorenjaClanovima->isNotEmpty() ? 3 : 2;
                         @endphp
                         <tr>
                             <td rowspan="{{ $rowspan }}" class="align-middle">{{ $turnir->datumRasponLabel() }}</td>
@@ -292,13 +326,13 @@
                                 @endif
                             </td>
                         </tr>
-                        @if($lijecnickiIsticuClanovima->isNotEmpty())
+                        @if($lijecnickiUpozorenjaClanovima->isNotEmpty())
                             <tr>
                                 <td colspan="6" class="small text-start align-middle">
                                     <span class="text-danger">
-                                        Liječnički ističe članovima:
-                                        @foreach($lijecnickiIsticuClanovima as $clanLijecnicki)
-                                            <a href="{{ $clanLijecnicki['url'] }}" class="link-danger text-decoration-underline">{{ $clanLijecnicki['naziv'] }}</a> - {{ $clanLijecnicki['datum'] }}@if(!$loop->last), @endif
+                                        {{ $lijecnickiNaslov }}
+                                        @foreach($lijecnickiUpozorenjaClanovima as $clanLijecnicki)
+                                            <a href="{{ $clanLijecnicki['url'] }}" class="link-danger text-decoration-underline">{{ $clanLijecnicki['naziv'] }}</a>@if(!$loop->last), @endif
                                         @endforeach
                                     </span>
                                 </td>
@@ -398,6 +432,10 @@
                             <td rowspan="2" class="text-end align-middle text-nowrap">
                                 <div class="d-inline-flex align-items-center justify-content-end flex-nowrap gap-1">
                                     <a href="{{ route('admin.nadolazeci_turniri.show', $turnir) }}" class="btn btn-sm btn-primary">Prijave</a>
+                                    <form action="{{ route('admin.nadolazeci_turniri.kreiraj_rezultate', $turnir) }}" method="POST" class="m-0">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-warning">Kreiraj rezultate</button>
+                                    </form>
                                     <a href="{{ route('admin.nadolazeci_turniri.index', ['uredi' => $turnir->id]) }}" class="btn btn-sm btn-success">Uredi</a>
                                 </div>
                             </td>
@@ -425,4 +463,59 @@
         </div>
     </div>
     @include('layouts.paginationBlok', ['paginator' => $prosliTurniri])
+
+    <div class="modal fade" id="archeryImportReportModal" tabindex="-1" aria-labelledby="archeryImportReportTitle" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-danger">
+                    <h5 class="modal-title text-white" id="archeryImportReportTitle">Izvještaj importa turnira</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Zatvori"></button>
+                </div>
+                <div class="modal-body">
+                    @if(is_array($archeryImportReport))
+                        @php
+                            $importOk = (bool) ($archeryImportReport['ok'] ?? false);
+                            $importOutput = trim((string) ($archeryImportReport['output'] ?? ''));
+                            $importYears = $archeryImportReport['years'] ?? [];
+                            $importYearsText = is_array($importYears) ? implode(', ', array_map('strval', $importYears)) : '';
+                        @endphp
+                        <div class="alert {{ $importOk ? 'alert-success' : 'alert-danger' }} py-2">
+                            <div class="fw-semibold mb-1">
+                                {{ $importOk ? 'Import je uspješno završen.' : 'Import je završio s greškom.' }}
+                            </div>
+                            <div class="small mb-0">
+                                Godine: {{ $importYearsText !== '' ? $importYearsText : '-' }}
+                                @if(!empty($archeryImportReport['generated_at']))
+                                    , vrijeme: {{ $archeryImportReport['generated_at'] }}
+                                @endif
+                            </div>
+                        </div>
+                        <pre class="small mb-0" style="white-space: pre-wrap; word-break: break-word;">{{ $importOutput !== '' ? $importOutput : 'Nema izlaza komande.' }}</pre>
+                    @else
+                        <p class="mb-0">Nema dostupnog izvještaja importa.</p>
+                    @endif
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Zatvori</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if($trebaOtvoritiImportModal)
+        <button type="button"
+                id="archeryImportReportAutoOpen"
+                class="d-none"
+                data-bs-toggle="modal"
+                data-bs-target="#archeryImportReportModal"
+                aria-hidden="true"></button>
+        <script>
+            window.addEventListener('load', function () {
+                const trigger = document.getElementById('archeryImportReportAutoOpen');
+                if (trigger instanceof HTMLButtonElement) {
+                    trigger.click();
+                }
+            });
+        </script>
+    @endif
 @endsection

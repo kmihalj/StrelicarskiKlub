@@ -5,15 +5,41 @@
     <div class="container-xxl">
         {{-- Zaglavlje ekrana: kontekst trenutnog turnira + brzi povratak na popis turnira. --}}
         <div class="row justify-content-center p-2 mb-3 shadow bg-danger fw-bolder">
-            <div class="col-lg-12 text-white">
-                <span class="align-middle" onclick="location.href='{{ route('javno.rezultati.prikaz_turnira', $turnir) }}'">Unos rezultata - {{ date('d.m.Y.', strtotime( $turnir->datum  )) }} - {{ $turnir->naziv  }} - {{ $turnir->lokacija  }} - {{ $turnir->tipTurnira->naziv }} @if($turnir->eliminacije)
+            <div class="col-lg-12 text-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <span class="align-middle" onclick="location.href='{{ route('javno.rezultati.prikaz_turnira', $turnir) }}'" style="cursor: pointer;">
+                    Unos rezultata - {{ date('d.m.Y.', strtotime( $turnir->datum  )) }} - {{ $turnir->naziv  }} - {{ $turnir->lokacija  }} - {{ $turnir->tipTurnira->naziv }}
+                    @if($turnir->eliminacije)
                         - eliminacije
-                    @endif </span>
-                <span class="float-end align-middle">
-                <button class="btn btn-warning" style="--bs-btn-padding-y: .1rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .70rem;" onclick="location.href='{{ route('admin.rezultati.popisTurnira') }}'">Popis turnira</button>
-                    </span>
-
+                    @endif
+                </span>
+                <div class="d-inline-flex align-items-center gap-3">
+                    @auth
+                        @if(auth()->user()->rola <= 1)
+                            <form action="{{ route('admin.rezultati.postaviEliminacije', $turnir) }}" method="POST" class="m-0">
+                                @csrf
+                                <input type="hidden" name="eliminacije" value="{{ ($eliminacijeZakljucane ?? false) ? ($turnir->eliminacije ? '1' : '0') : '0' }}">
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           id="eliminacije_toggle_header"
+                                           name="eliminacije"
+                                           value="1"
+                                           @checked($turnir->eliminacije)
+                                           @disabled($eliminacijeZakljucane ?? false)
+                                           onchange="this.form.submit()">
+                                    <label class="form-check-label small" for="eliminacije_toggle_header">Eliminacije</label>
+                                </div>
+                            </form>
+                        @endif
+                    @endauth
+                    <button class="btn btn-warning" style="--bs-btn-padding-y: .1rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .70rem;" onclick="location.href='{{ route('admin.rezultati.popisTurnira') }}'">Popis turnira</button>
+                </div>
             </div>
+            @if($eliminacijeZakljucane ?? false)
+                <div class="col-12 text-warning small mt-1">
+                    Eliminacije su zaključane jer postoji barem jedan rezultat s unešenim plasmanom nakon eliminacija.
+                </div>
+            @endif
         </div>
     </div>
 

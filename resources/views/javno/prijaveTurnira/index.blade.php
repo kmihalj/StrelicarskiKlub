@@ -46,6 +46,7 @@
                                             $locked = $turnir->prijaveZakljucane();
                                             $tipTurnira = $turnir->tipTurnira?->naziv ?? '-';
                                             $label = $turnir->datumRasponLabel() . ' - ' . $turnir->naziv . ' (' . $turnir->mjesto . ') - tip turnira: ' . $tipTurnira;
+                                            $visednevni = $turnir->datum && $turnir->datum_do && $turnir->datum_do->gt($turnir->datum);
                                         @endphp
                                         <option value="{{ $turnir->id }}"
                                                 data-label="{{ $label }}"
@@ -53,6 +54,9 @@
                                                 data-kotizacija-nacin="{{ $turnir->kotizacija_nacin ?? 'undefined' }}"
                                                 data-kotizacija-iznos="{{ $turnir->kotizacija_iznos ?? '' }}"
                                                 data-kotizacija-rok="{{ $turnir->kotizacija_rok_uplate?->format('d.m.Y.') ?? '' }}"
+                                                data-datum="{{ $turnir->datum?->toDateString() ?? '' }}"
+                                                data-datum-do="{{ $turnir->datum_do?->toDateString() ?? '' }}"
+                                                data-visednevni="{{ $visednevni ? '1' : '0' }}"
                                             @selected((int) old('nadolazeci_turnir_id') === (int) $turnir->id)
                                             @disabled($locked)>
                                             {{ $label }}@if($locked) - zaključano @endif
@@ -78,6 +82,7 @@
                                             $locked = $turnir->prijaveZakljucane();
                                             $tipTurnira = $turnir->tipTurnira?->naziv ?? '-';
                                             $label = $turnir->datumRasponLabel() . ' - ' . $turnir->naziv . ' (' . $turnir->mjesto . ') - tip turnira: ' . $tipTurnira;
+                                            $visednevni = $turnir->datum && $turnir->datum_do && $turnir->datum_do->gt($turnir->datum);
                                         @endphp
                                         <option value="{{ $turnir->id }}"
                                                 data-label="{{ $label }}"
@@ -85,6 +90,9 @@
                                                 data-kotizacija-nacin="{{ $turnir->kotizacija_nacin ?? 'undefined' }}"
                                                 data-kotizacija-iznos="{{ $turnir->kotizacija_iznos ?? '' }}"
                                                 data-kotizacija-rok="{{ $turnir->kotizacija_rok_uplate?->format('d.m.Y.') ?? '' }}"
+                                                data-datum="{{ $turnir->datum?->toDateString() ?? '' }}"
+                                                data-datum-do="{{ $turnir->datum_do?->toDateString() ?? '' }}"
+                                                data-visednevni="{{ $visednevni ? '1' : '0' }}"
                                             @selected((int) old('nadolazeci_turnir_id') === (int) $turnir->id)
                                             @disabled($locked)>
                                             {{ $label }}@if($locked) - zaključano @endif
@@ -96,7 +104,8 @@
 
                         <div class="col-lg-4">
                             <label for="kategorija_id" class="form-label fw-semibold mb-1">Kategorija</label>
-                            <select class="form-select" id="kategorija_id" name="kategorija_id" required></select>
+                            <select class="form-select" id="kategorija_id" name="kategorija_id"
+                                    data-old-value="{{ old('kategorija_id', '') }}" required></select>
                         </div>
                         <div class="col-lg-4">
                             <label for="stil_id" class="form-label fw-semibold mb-1">Stil luka</label>
@@ -109,7 +118,7 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-lg-4">
+                        <div class="col-lg-4" id="smjena-wrap">
                             <label for="smjena" class="form-label fw-semibold mb-1">Smjena</label>
                             <select class="form-select" id="smjena" name="smjena">
                                 @foreach($smjeneOpcije as $smjenaOpcija)
@@ -119,6 +128,11 @@
                                 @endforeach
                             </select>
                             <div class="form-text">*ako ima smjena</div>
+                        </div>
+                        <div class="col-lg-4 d-none" id="odabrani-dan-wrap">
+                            <label for="odabrani_dan" class="form-label fw-semibold mb-1">Odabir dana</label>
+                            <select class="form-select" id="odabrani_dan" name="odabrani_dan" data-old-value="{{ old('odabrani_dan', '') }}"></select>
+                            <div class="form-text">*dan može ovisiti o kategoriji i stilu, provjerite poziv...</div>
                         </div>
 
                         <div class="col-12">
@@ -165,7 +179,7 @@
                         <th>Član</th>
                         <th>Naziv</th>
                         <th>Mjesto</th>
-                        <th>Smjena</th>
+                        <th>Smjena / dan</th>
                         <th>Kategorija</th>
                         <th>Stil</th>
                         <th>Tip turnira</th>
@@ -195,11 +209,11 @@
                             $rowspan = $imaWarning ? 2 : 1;
                         @endphp
                         <tr @class(['table-danger' => $imaWarning])>
-                            <td rowspan="{{ $rowspan }}" class="align-middle">{{ $prijava->turnir?->datumRasponLabel() ?? '-' }}</td>
+                            <td rowspan="{{ $rowspan }}" class="align-middle">{{ $prijava->datumTurniraZaPrikazLabel() }}</td>
                             <td rowspan="{{ $rowspan }}" class="align-middle">{{ $prijava->clan?->Prezime }} {{ $prijava->clan?->Ime }}</td>
                             <td rowspan="{{ $rowspan }}" class="align-middle">{{ $prijava->turnir?->naziv ?? '-' }}</td>
                             <td>{{ $prijava->turnir?->mjesto ?? '-' }}</td>
-                            <td>{{ $prijava->smjena ?: 'nebitno' }}</td>
+                            <td>{{ $prijava->terminPrijaveLabel() }}</td>
                             <td>{{ $prijava->kategorija?->naziv ?? '-' }}</td>
                             <td>{{ $prijava->stil?->naziv ?? '-' }}</td>
                             <td>{{ $prijava->turnir?->tipTurnira?->naziv ?? '-' }}</td>
@@ -279,7 +293,7 @@
                             <th>Član</th>
                             <th>Naziv</th>
                             <th>Mjesto</th>
-                            <th>Smjena</th>
+                            <th>Smjena / dan</th>
                             <th>Kategorija</th>
                             <th>Stil</th>
                             <th>Tip turnira</th>
@@ -303,11 +317,11 @@
                                 }
                             @endphp
                             <tr>
-                                <td>{{ $prijava->turnir?->datumRasponLabel() ?? '-' }}</td>
+                                <td>{{ $prijava->datumTurniraZaPrikazLabel() }}</td>
                                 <td>{{ $prijava->clan?->Prezime }} {{ $prijava->clan?->Ime }}</td>
                                 <td>{{ $prijava->turnir?->naziv ?? '-' }}</td>
                                 <td>{{ $prijava->turnir?->mjesto ?? '-' }}</td>
-                                <td>{{ $prijava->smjena ?: 'nebitno' }}</td>
+                                <td>{{ $prijava->terminPrijaveLabel() }}</td>
                                 <td>{{ $prijava->kategorija?->naziv ?? '-' }}</td>
                                 <td>{{ $prijava->stil?->naziv ?? '-' }}</td>
                                 <td>{{ $prijava->turnir?->tipTurnira?->naziv ?? '-' }}</td>
@@ -373,6 +387,12 @@
             const turnirSelect = turnirSelectElement instanceof HTMLSelectElement ? turnirSelectElement : null;
             const kategorijaSelectElement = document.getElementById('kategorija_id');
             const kategorijaSelect = kategorijaSelectElement instanceof HTMLSelectElement ? kategorijaSelectElement : null;
+            const smjenaWrap = document.getElementById('smjena-wrap');
+            const smjenaSelectElement = document.getElementById('smjena');
+            const smjenaSelect = smjenaSelectElement instanceof HTMLSelectElement ? smjenaSelectElement : null;
+            const odabraniDanWrap = document.getElementById('odabrani-dan-wrap');
+            const odabraniDanSelectElement = document.getElementById('odabrani_dan');
+            const odabraniDanSelect = odabraniDanSelectElement instanceof HTMLSelectElement ? odabraniDanSelectElement : null;
             const kotizacijaInfoWrap = document.getElementById('kotizacija-info-wrap');
             const kotizacijaInfoText = document.getElementById('kotizacija-info-text');
             const prijavljeniClanoviWrap = document.getElementById('prijavljeni-clanovi-wrap');
@@ -383,8 +403,15 @@
             }
 
             const kategorijePoClanu = @json($kategorijePoClanu);
+            const clanoviMetaZaKategoriju = @json($clanoviMetaZaKategoriju ?? []);
             const aktivnoPoClanuTurniru = @json($aktivnoPoClanuTurniru);
             const prijavljeniPoTurniru = @json($prijavljeniPoTurniru ?? []);
+            const oldKategorijaId = String(kategorijaSelect.dataset.oldValue || '');
+            const oldOdabraniDan = odabraniDanSelect instanceof HTMLSelectElement
+                ? String(odabraniDanSelect.dataset.oldValue || '')
+                : '';
+            let inicijalnaKategorijaPrimijenjena = false;
+            let inicijalniOdabraniDanPrimijenjen = false;
 
             function currentClanId() {
                 if (clanSelect) {
@@ -396,10 +423,133 @@
                 return '';
             }
 
-            function updateKategorije() {
+            function selectedTurnirOption() {
+                if (turnirSelect.selectedOptions.length === 0) {
+                    return null;
+                }
+
+                const option = turnirSelect.selectedOptions[0];
+
+                return option instanceof HTMLOptionElement ? option : null;
+            }
+
+            function parseIsoDate(value) {
+                const tekst = String(value || '').trim();
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(tekst)) {
+                    return null;
+                }
+
+                const [godina, mjesec, dan] = tekst.split('-').map(Number);
+                const datum = new Date(godina, mjesec - 1, dan);
+                if (Number.isNaN(datum.getTime())) {
+                    return null;
+                }
+
+                return datum;
+            }
+
+            function formatDateLabel(value) {
+                const datum = parseIsoDate(value);
+                if (!(datum instanceof Date)) {
+                    return '';
+                }
+
+                const dan = String(datum.getDate()).padStart(2, '0');
+                const mjesec = String(datum.getMonth() + 1).padStart(2, '0');
+                const godina = String(datum.getFullYear());
+
+                return `${dan}.${mjesec}.${godina}.`;
+            }
+
+            function referentniDatumZaDob() {
+                const selected = selectedTurnirOption();
+                if (selected && selected.value !== '') {
+                    const datumTurnira = parseIsoDate(selected.dataset.datum || '');
+                    if (datumTurnira instanceof Date) {
+                        return datumTurnira;
+                    }
+                }
+
+                return new Date();
+            }
+
+            function izracunajDob(datumRodjenja, referentniDatum) {
+                const rodjenje = parseIsoDate(datumRodjenja);
+                if (!(rodjenje instanceof Date) || !(referentniDatum instanceof Date)) {
+                    return null;
+                }
+
+                let dob = referentniDatum.getFullYear() - rodjenje.getFullYear();
+                const jeRodendanProsao =
+                    referentniDatum.getMonth() > rodjenje.getMonth()
+                    || (
+                        referentniDatum.getMonth() === rodjenje.getMonth()
+                        && referentniDatum.getDate() >= rodjenje.getDate()
+                    );
+                if (!jeRodendanProsao) {
+                    dob -= 1;
+                }
+
+                return dob >= 0 ? dob : null;
+            }
+
+            function ciljnaKategorijaOznaka(clanId) {
+                const meta = clanoviMetaZaKategoriju[clanId];
+                if (typeof meta !== 'object' || meta === null) {
+                    return '';
+                }
+
+                const spol = String(meta.spol || '');
+                const dob = izracunajDob(meta.datum_rodjenja, referentniDatumZaDob());
+                if (dob === null) {
+                    return '';
+                }
+
+                if (spol === 'M') {
+                    if (dob <= 12) return 'U13M';
+                    if (dob <= 14) return 'U15M';
+                    if (dob <= 18) return 'U18M';
+                    if (dob <= 21) return 'U21M';
+                    if (dob <= 50) return 'M';
+
+                    return 'M50+';
+                }
+
+                if (spol === 'Z') {
+                    if (dob <= 12) return 'U13W';
+                    if (dob <= 14) return 'U15W';
+                    if (dob <= 18) return 'U18W';
+                    if (dob <= 21) return 'U21W';
+                    if (dob <= 50) return 'W';
+
+                    return 'W50+';
+                }
+
+                return '';
+            }
+
+            function preporucenaKategorijaId(clanId, kategorije) {
+                const trazenaOznaka = ciljnaKategorijaOznaka(clanId);
+                if (trazenaOznaka === '' || !Array.isArray(kategorije)) {
+                    return '';
+                }
+
+                const trazeniKod = `(${trazenaOznaka})`.toUpperCase();
+                for (const kategorija of kategorije) {
+                    const naziv = String(kategorija?.naziv || '').toUpperCase();
+                    if (naziv.includes(trazeniKod)) {
+                        return String(kategorija?.id || '');
+                    }
+                }
+
+                return '';
+            }
+
+            function updateKategorije(forceAutoSelection = false) {
                 const clanId = currentClanId();
                 const kategorije = Array.isArray(kategorijePoClanu[clanId]) ? kategorijePoClanu[clanId] : [];
-                const oldValue = kategorijaSelect.value;
+                const oldValue = forceAutoSelection ? '' : String(kategorijaSelect.value || '');
+                const preporucenaId = preporucenaKategorijaId(clanId, kategorije);
                 kategorijaSelect.innerHTML = '';
 
                 const defaultOption = document.createElement('option');
@@ -407,15 +557,29 @@
                 defaultOption.textContent = 'Odaberi kategoriju';
                 kategorijaSelect.appendChild(defaultOption);
 
+                let odabrano = false;
                 kategorije.forEach((kategorija) => {
                     const option = document.createElement('option');
                     option.value = String(kategorija.id || '');
                     option.textContent = String(kategorija.naziv || '');
-                    if (oldValue && oldValue === option.value) {
+                    if (oldValue !== '' && oldValue === option.value) {
                         option.selected = true;
+                        odabrano = true;
+                    } else if (!inicijalnaKategorijaPrimijenjena && oldKategorijaId !== '' && oldKategorijaId === option.value) {
+                        option.selected = true;
+                        odabrano = true;
+                    } else if (oldValue === '' && preporucenaId !== '' && preporucenaId === option.value) {
+                        option.selected = true;
+                        odabrano = true;
                     }
                     kategorijaSelect.appendChild(option);
                 });
+
+                if (!odabrano) {
+                    defaultOption.selected = true;
+                }
+
+                inicijalnaKategorijaPrimijenjena = true;
             }
 
             function formatTurnirOption(option, alreadyRegistered) {
@@ -455,12 +619,77 @@
                 }
             }
 
+            function postaviDostupneDaneZaTurnir() {
+                if (!(smjenaWrap instanceof HTMLElement) || !(smjenaSelect instanceof HTMLSelectElement)
+                    || !(odabraniDanWrap instanceof HTMLElement) || !(odabraniDanSelect instanceof HTMLSelectElement)) {
+                    return;
+                }
+
+                const selected = selectedTurnirOption();
+                const imaTurnir = selected instanceof HTMLOptionElement && selected.value !== '';
+                const jeVisednevni = imaTurnir && selected.dataset.visednevni === '1';
+
+                if (!jeVisednevni) {
+                    smjenaWrap.classList.remove('d-none');
+                    smjenaSelect.disabled = false;
+                    odabraniDanWrap.classList.add('d-none');
+                    odabraniDanSelect.disabled = true;
+                    odabraniDanSelect.innerHTML = '';
+
+                    return;
+                }
+
+                smjenaWrap.classList.add('d-none');
+                smjenaSelect.disabled = true;
+                odabraniDanWrap.classList.remove('d-none');
+                odabraniDanSelect.disabled = false;
+
+                const start = String(selected.dataset.datum || '');
+                const end = String(selected.dataset.datumDo || '');
+                const previousValue = String(odabraniDanSelect.value || '');
+                odabraniDanSelect.innerHTML = '';
+
+                const nebitnoOption = document.createElement('option');
+                nebitnoOption.value = '';
+                nebitnoOption.textContent = 'Nije bitno';
+                odabraniDanSelect.appendChild(nebitnoOption);
+
+                const vrijednosti = [];
+                if (start !== '') {
+                    vrijednosti.push(start);
+                }
+                if (end !== '' && end !== start) {
+                    vrijednosti.push(end);
+                }
+
+                let odabrano = false;
+                vrijednosti.forEach((vrijednost) => {
+                    const option = document.createElement('option');
+                    option.value = vrijednost;
+                    option.textContent = formatDateLabel(vrijednost) || vrijednost;
+                    if (previousValue !== '' && previousValue === option.value) {
+                        option.selected = true;
+                        odabrano = true;
+                    } else if (!inicijalniOdabraniDanPrimijenjen && oldOdabraniDan !== '' && oldOdabraniDan === option.value) {
+                        option.selected = true;
+                        odabrano = true;
+                    }
+                    odabraniDanSelect.appendChild(option);
+                });
+
+                if (!odabrano) {
+                    nebitnoOption.selected = true;
+                }
+
+                inicijalniOdabraniDanPrimijenjen = true;
+            }
+
             function updatePrijavljeniClanovi() {
                 if (!prijavljeniClanoviWrap || !prijavljeniClanoviList) {
                     return;
                 }
 
-                const selected = turnirSelect.selectedOptions.length > 0 ? turnirSelect.selectedOptions[0] : null;
+                const selected = selectedTurnirOption();
                 const hasTurnir = selected instanceof HTMLOptionElement && selected.value !== '';
                 if (!hasTurnir) {
                     prijavljeniClanoviWrap.classList.add('d-none');
@@ -538,20 +767,24 @@
 
             if (clanSelect) {
                 clanSelect.addEventListener('change', () => {
-                    updateKategorije();
                     updateTurniri();
+                    postaviDostupneDaneZaTurnir();
+                    updateKategorije(true);
                     updatePrijavljeniClanovi();
                     updateKotizacijaInfo();
                 });
             }
 
             turnirSelect.addEventListener('change', () => {
+                postaviDostupneDaneZaTurnir();
+                updateKategorije(true);
                 updatePrijavljeniClanovi();
                 updateKotizacijaInfo();
             });
 
-            updateKategorije();
             updateTurniri();
+            postaviDostupneDaneZaTurnir();
+            updateKategorije(true);
             updatePrijavljeniClanovi();
             updateKotizacijaInfo();
         })();

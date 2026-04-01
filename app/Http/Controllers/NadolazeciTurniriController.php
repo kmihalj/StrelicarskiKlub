@@ -7,15 +7,21 @@ use App\Models\ClanPaymentCharge;
 use App\Models\Kategorije;
 use App\Models\NadolazeciTurnir;
 use App\Models\PrijavaTurnira;
+use App\Models\RezultatiOpci;
+use App\Models\RezultatiPoTipuTurnira;
 use App\Models\Stilovi;
 use App\Models\TipoviTurnira;
+use App\Models\Turniri;
 use App\Models\User;
 use App\Services\PaymentTrackingService;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -33,6 +39,8 @@ class NadolazeciTurniriController extends Controller
 
     private const SMJENE = ['jutarnja', 'popodnevna', 'nebitno'];
 
+    private const STIL_REDOSLIJED_KODOVA = ['CU', 'RB', 'BB', 'TB', 'LB'];
+
     private const CSV_EXPORT_POLJA_PRIJAVA = [
         'ime' => 'Ime',
         'prezime' => 'Prezime',
@@ -42,7 +50,7 @@ class NadolazeciTurniriController extends Controller
         'stil' => 'Stil',
         'kategorija' => 'Kategorija',
         'oib' => 'OIB',
-        'smjena' => 'Smjena',
+        'smjena' => 'Smjena / dan',
         'kup' => 'KUP',
     ];
 
@@ -65,6 +73,7 @@ class NadolazeciTurniriController extends Controller
     public function adminIndex(Request $request): View
     {
         $danas = now()->startOfDay()->toDateString();
+        $this->obrisiProsleTurnireBezAktivnihPrijava($danas);
 
         $baseQuery = NadolazeciTurnir::query()
             ->with('tipTurnira')
@@ -81,14 +90,14 @@ class NadolazeciTurniriController extends Controller
             ]);
 
         $nadolazeciTurniri = (clone $baseQuery)
-            ->whereRaw('DATE(COALESCE(datum_do, datum)) >= ?', [$danas])
+            ->whereDate('datum', '>', $danas)
             ->orderBy('datum')
             ->orderBy('id')
             ->paginate(20, ['*'], 'upcoming_page')
             ->withQueryString();
 
         $prosliTurniri = (clone $baseQuery)
-            ->whereRaw('DATE(COALESCE(datum_do, datum)) < ?', [$danas])
+            ->whereDate('datum', '<=', $danas)
             ->orderByDesc('datum')
             ->orderByDesc('id')
             ->paginate(20, ['*'], 'past_page')
@@ -107,6 +116,42 @@ class NadolazeciTurniriController extends Controller
             'tipoviTurnira' => $tipoviTurnira,
             'urediTurnir' => $urediTurnir,
         ]);
+    }
+
+    /**
+     * Pokreće import nadolazećih turnira s archery.hr za tekuću i sljedeću godinu.
+     */
+    public function adminImportArchery(): RedirectResponse
+    {
+        $tekucaGodina = (int) now()->year;
+        $sljedecaGodina = $tekucaGodina + 1;
+        $report = [
+            'ok' => false,
+            'exit_code' => 1,
+            'years' => [$tekucaGodina, $sljedecaGodina],
+            'generated_at' => now()->format('d.m.Y. H:i:s'),
+            'output' => '',
+        ];
+
+        try {
+            $exitCode = Artisan::call('turniri:import-archery', [
+                '--year' => [$tekucaGodina, $sljedecaGodina],
+            ]);
+            $output = trim((string) Artisan::output());
+            if ($output === '') {
+                $output = 'Komanda nije vratila dodatni izlaz.';
+            }
+
+            $report['ok'] = $exitCode === 0;
+            $report['exit_code'] = (int) $exitCode;
+            $report['output'] = $output;
+        } catch (Throwable $e) {
+            $report['output'] = 'Greška pri pokretanju importa: '.$e->getMessage();
+        }
+
+        return redirect()
+            ->route('admin.nadolazeci_turniri.index')
+            ->with('archery_import_report', $report);
     }
 
     /**
@@ -170,6 +215,7 @@ class NadolazeciTurniriController extends Controller
                 'clan',
                 'kategorija',
                 'stil',
+                'turnir',
                 'prijavioUser',
                 'paymentCharge',
             ])
@@ -195,6 +241,109 @@ class NadolazeciTurniriController extends Controller
     }
 
     /**
+     * Iz prošlog nadolazećeg turnira kreira turnir rezultata i početne retke prijavljenih članova.
+     */
+    public function adminKreirajRezultate(NadolazeciTurnir $turnir): RedirectResponse
+    {
+        $turnir->loadMissing([
+            'tipTurnira.polja',
+            'prijave' => fn ($query) => $query
+                ->where('status', PrijavaTurnira::STATUS_ACTIVE)
+                ->with(['clan', 'kategorija', 'stil'])
+                ->orderBy('id'),
+        ]);
+
+        $datumPocetka = $turnir->datum?->copy()->startOfDay();
+        if (! $datumPocetka instanceof CarbonInterface || $datumPocetka->gt(now()->startOfDay())) {
+            return redirect()
+                ->route('admin.nadolazeci_turniri.show', $turnir)
+                ->with('error', 'Rezultate je moguće kreirati samo za turnire kojima je datum početka danas ili ranije.');
+        }
+
+        if (! $turnir->tipTurnira instanceof TipoviTurnira) {
+            return redirect()
+                ->route('admin.nadolazeci_turniri.show', $turnir)
+                ->with('error', 'Nadolazeći turnir nema valjan tip turnira.');
+        }
+
+        $rezultatiTurnirId = 0;
+        $dodaniOpci = 0;
+        $dodanaPolja = 0;
+
+        try {
+            DB::transaction(function () use ($turnir, &$rezultatiTurnirId, &$dodaniOpci, &$dodanaPolja): void {
+                $rezultatiTurnir = $this->pronadiIliKreirajRezultatskiTurnir($turnir);
+                $rezultatiTurnir->loadMissing('tipTurnira.polja');
+
+                $poljaTipa = collect($rezultatiTurnir->tipTurnira?->polja ?? [])
+                    ->sortBy('id')
+                    ->values();
+
+                $sortiranePrijave = $this->sortirajPrijaveZaKreiranjeRezultata($turnir->prijave ?? collect());
+
+                foreach ($sortiranePrijave as $prijava) {
+                    $clan = $prijava->clan;
+                    $kategorija = $prijava->kategorija;
+                    $stil = $prijava->stil;
+
+                    if (! ($clan instanceof Clanovi) || ! ($kategorija instanceof Kategorije) || ! ($stil instanceof Stilovi)) {
+                        continue;
+                    }
+
+                    $rezultatOpci = RezultatiOpci::query()->firstOrCreate([
+                        'turnir_id' => (int) $rezultatiTurnir->id,
+                        'clan_id' => (int) $clan->id,
+                        'kategorija_id' => (int) $kategorija->id,
+                        'stil_id' => (int) $stil->id,
+                    ], [
+                        'plasman' => 0,
+                        'plasman_nakon_eliminacija' => null,
+                        'bez_eliminacija' => false,
+                    ]);
+
+                    if ($rezultatOpci->wasRecentlyCreated) {
+                        $dodaniOpci++;
+                    }
+
+                    foreach ($poljaTipa as $poljeTipa) {
+                        $rezultatPoTipu = RezultatiPoTipuTurnira::query()->firstOrCreate([
+                            'turnir_id' => (int) $rezultatiTurnir->id,
+                            'clan_id' => (int) $clan->id,
+                            'kategorija_id' => (int) $kategorija->id,
+                            'stil_id' => (int) $stil->id,
+                            'polje_za_tipove_turnira_id' => (int) $poljeTipa->id,
+                        ], [
+                            'rezultat' => 0,
+                        ]);
+
+                        if ($rezultatPoTipu->wasRecentlyCreated) {
+                            $dodanaPolja++;
+                        }
+                    }
+                }
+
+                $rezultatiTurnirId = (int) $rezultatiTurnir->id;
+            });
+        } catch (Throwable $e) {
+            report($e);
+
+            return redirect()
+                ->route('admin.nadolazeci_turniri.show', $turnir)
+                ->with('error', 'Kreiranje rezultata nije uspjelo.');
+        }
+
+        if ($rezultatiTurnirId <= 0) {
+            return redirect()
+                ->route('admin.nadolazeci_turniri.show', $turnir)
+                ->with('error', 'Kreiranje rezultata nije uspjelo.');
+        }
+
+        return redirect()
+            ->route('admin.rezultati.unosRezultata', $rezultatiTurnirId)
+            ->with('success', 'Kreiran je unos rezultata. Dodano: '.$dodaniOpci.' članova i '.$dodanaPolja.' polja.');
+    }
+
+    /**
      * Izvozi CSV aktivnih prijava za odabrani turnir uz odabir stupaca.
      */
     public function adminExportCsv(Request $request, NadolazeciTurnir $turnir): StreamedResponse
@@ -202,7 +351,7 @@ class NadolazeciTurniriController extends Controller
         $odabranaPolja = $this->odabranaCsvPoljaPrijava($request);
 
         $prijave = PrijavaTurnira::query()
-            ->with(['clan', 'kategorija', 'stil'])
+            ->with(['clan', 'kategorija', 'stil', 'turnir'])
             ->where('nadolazeci_turnir_id', (int) $turnir->id)
             ->where('status', PrijavaTurnira::STATUS_ACTIVE)
             ->orderBy('id')
@@ -288,7 +437,7 @@ class NadolazeciTurniriController extends Controller
 
         $dostupniTurniri = NadolazeciTurnir::query()
             ->with('tipTurnira')
-            ->whereDate('datum', '>=', $danas->toDateString())
+            ->whereDate('datum', '>', $danas->toDateString())
             ->whereDate('datum', '<=', $maxDatum->toDateString())
             ->orderBy('datum')
             ->orderBy('id')
@@ -316,7 +465,7 @@ class NadolazeciTurniriController extends Controller
             ->filter(function (PrijavaTurnira $prijava) use ($danas): bool {
                 $datum = $prijava->turnir?->datum;
 
-                return $datum !== null && $datum->copy()->startOfDay()->gte($danas);
+                return $datum !== null && $datum->copy()->startOfDay()->gt($danas);
             })
             ->values();
 
@@ -324,7 +473,7 @@ class NadolazeciTurniriController extends Controller
             ->filter(function (PrijavaTurnira $prijava) use ($danas): bool {
                 $datum = $prijava->turnir?->datum;
 
-                return $datum !== null && $datum->copy()->startOfDay()->lt($danas);
+                return $datum !== null && $datum->copy()->startOfDay()->lte($danas);
             })
             ->values();
 
@@ -380,12 +529,10 @@ class NadolazeciTurniriController extends Controller
                 ->all();
         }
 
-        $stilovi = Stilovi::query()
-            ->where('id', '!=', self::STANDARDNI_LUK_STIL_ID)
-            ->orderBy('naziv')
-            ->get(['id', 'naziv']);
+        $stilovi = $this->stiloviZaPrijavu();
 
         $kategorijePoClanu = $this->kategorijePoClanu($clanoviZaPrijavu);
+        $clanoviMetaZaKategoriju = $this->clanoviMetaZaKategoriju($clanoviZaPrijavu);
         $lijecnickiUpozorenja = $this->lijecnickiUpozorenjaZaPrijave($aktivnePrijave);
         $prikaziOdabirClana = $korisnik->jeRoditelj();
         $zadaniClanId = $this->zadaniClanIdZaPrijavu($korisnik, $clanoviZaPrijavu);
@@ -398,6 +545,7 @@ class NadolazeciTurniriController extends Controller
             'aktivnoPoClanuTurniru' => $aktivnoPoClanuTurniru,
             'stilovi' => $stilovi,
             'kategorijePoClanu' => $kategorijePoClanu,
+            'clanoviMetaZaKategoriju' => $clanoviMetaZaKategoriju,
             'smjeneOpcije' => self::SMJENE,
             'lijecnickiUpozorenja' => $lijecnickiUpozorenja,
             'daniVidljivosti' => self::VIDLJIVOST_DANA_ZA_PRIJAVU,
@@ -419,6 +567,7 @@ class NadolazeciTurniriController extends Controller
             'stil_id' => ['required', 'integer', 'exists:stilovis,id'],
             'sudjelujem_u_kupu' => ['nullable', 'boolean'],
             'smjena' => ['nullable', 'in:jutarnja,popodnevna,nebitno'],
+            'odabrani_dan' => ['nullable', 'date'],
         ]);
 
         $korisnik = auth()->user();
@@ -454,7 +603,11 @@ class NadolazeciTurniriController extends Controller
                 ->with('error', 'Odabrana kategorija ne odgovara spolu člana.');
         }
 
-        $smjena = $this->normalizirajSmjenu($validated['smjena'] ?? null);
+        $terminPrijave = $this->odrediTerminPrijave(
+            $turnir,
+            $validated['smjena'] ?? null,
+            $validated['odabrani_dan'] ?? null
+        );
 
         $prijava = PrijavaTurnira::query()->firstOrNew([
             'nadolazeci_turnir_id' => (int) $turnir->id,
@@ -482,7 +635,8 @@ class NadolazeciTurniriController extends Controller
         $prijava->kategorija_id = (int) $kategorija->id;
         $prijava->stil_id = (int) $stil->id;
         $prijava->sudjelujem_u_kupu = $request->boolean('sudjelujem_u_kupu');
-        $prijava->smjena = $smjena;
+        $prijava->smjena = $terminPrijave['smjena'];
+        $prijava->odabrani_dan = $terminPrijave['odabrani_dan'];
         $prijava->status = PrijavaTurnira::STATUS_ACTIVE;
         $prijava->napomena_admin = null;
         $prijava->removed_by = null;
@@ -525,11 +679,10 @@ class NadolazeciTurniriController extends Controller
         }
 
         $kategorije = $this->kategorijeZaClana($clan);
-        $stilovi = Stilovi::query()
-            ->where('id', '!=', self::STANDARDNI_LUK_STIL_ID)
-            ->orderBy('naziv')
-            ->get(['id', 'naziv']);
+        $stilovi = $this->stiloviZaPrijavu();
         $smjene = self::SMJENE;
+        $turnirJeVisednevni = $this->turnirJeVisednevni($turnir);
+        $odabirDanaOpcije = $this->odabirDanaOpcijeZaTurnir($turnir);
         $zakljucano = $turnir->prijaveZakljucane();
         $lijecnickoUpozorenje = $this->lijecnickoUpozorenje($clan, $turnir);
         $prijavljeniClanoviTurnira = PrijavaTurnira::query()
@@ -564,6 +717,8 @@ class NadolazeciTurniriController extends Controller
             'kategorije' => $kategorije,
             'stilovi' => $stilovi,
             'smjene' => $smjene,
+            'turnirJeVisednevni' => $turnirJeVisednevni,
+            'odabirDanaOpcije' => $odabirDanaOpcije,
             'zakljucano' => $zakljucano,
             'lijecnickoUpozorenje' => $lijecnickoUpozorenje,
             'prijavljeniClanoviTurnira' => $prijavljeniClanoviTurnira,
@@ -608,6 +763,7 @@ class NadolazeciTurniriController extends Controller
             'stil_id' => ['required', 'integer', 'exists:stilovis,id'],
             'sudjelujem_u_kupu' => ['nullable', 'boolean'],
             'smjena' => ['nullable', 'in:jutarnja,popodnevna,nebitno'],
+            'odabrani_dan' => ['nullable', 'date'],
         ]);
 
         $kategorija = Kategorije::query()->findOrFail((int) $validated['kategorija_id']);
@@ -618,12 +774,17 @@ class NadolazeciTurniriController extends Controller
                 ->with('error', 'Odabrana kategorija ne odgovara spolu člana.');
         }
 
-        $smjena = $this->normalizirajSmjenu($validated['smjena'] ?? null);
+        $terminPrijave = $this->odrediTerminPrijave(
+            $turnir,
+            $validated['smjena'] ?? null,
+            $validated['odabrani_dan'] ?? null
+        );
 
         $prijava->kategorija_id = (int) $kategorija->id;
         $prijava->stil_id = (int) $stil->id;
         $prijava->sudjelujem_u_kupu = $request->boolean('sudjelujem_u_kupu');
-        $prijava->smjena = $smjena;
+        $prijava->smjena = $terminPrijave['smjena'];
+        $prijava->odabrani_dan = $terminPrijave['odabrani_dan'];
         $prijava->save();
 
         $this->syncKotizacijaZaPrijavu($prijava, $turnir, (int) $korisnik->id);
@@ -690,7 +851,7 @@ class NadolazeciTurniriController extends Controller
             ->whereIn('clan_id', $clanIds)
             ->where('status', PrijavaTurnira::STATUS_ACTIVE)
             ->whereHas('turnir', function ($query): void {
-                $query->whereDate('datum', '>=', now()->startOfDay()->toDateString());
+                $query->whereDate('datum', '>', now()->startOfDay()->toDateString());
             })
             ->get()
             ->sortBy(function (PrijavaTurnira $prijava): array {
@@ -722,7 +883,7 @@ class NadolazeciTurniriController extends Controller
             $vlastitiClan = Clanovi::query()
                 ->where('id', (int) $korisnik->clan_id)
                 ->where('aktivan', true)
-                ->first(['id', 'Ime', 'Prezime', 'spol', 'lijecnicki_do']);
+                ->first(['id', 'Ime', 'Prezime', 'spol', 'datum_rodjenja', 'lijecnicki_do']);
             if ($vlastitiClan instanceof Clanovi) {
                 $clanovi->push($vlastitiClan);
             }
@@ -732,7 +893,7 @@ class NadolazeciTurniriController extends Controller
             $korisnik->loadMissing([
                 'djecaClanovi' => fn ($query) => $query
                     ->where('aktivan', true)
-                    ->select(['clanovis.id', 'Ime', 'Prezime', 'spol', 'lijecnicki_do']),
+                    ->select(['clanovis.id', 'Ime', 'Prezime', 'spol', 'datum_rodjenja', 'lijecnicki_do']),
             ]);
 
             foreach ($korisnik->djecaClanovi as $dijeteClan) {
@@ -908,6 +1069,71 @@ class NadolazeciTurniriController extends Controller
     }
 
     /**
+     * Vraća postojeći turnir rezultata po ključnim podacima ili kreira novi zapis iz nadolazećeg turnira.
+     */
+    private function pronadiIliKreirajRezultatskiTurnir(NadolazeciTurnir $nadolazeciTurnir): Turniri
+    {
+        $datumTurnira = $nadolazeciTurnir->datum?->toDateString();
+        if (! is_string($datumTurnira) || trim($datumTurnira) === '') {
+            throw new \RuntimeException('Nedostaje datum nadolazećeg turnira.');
+        }
+
+        $postojeci = Turniri::query()
+            ->whereDate('datum', $datumTurnira)
+            ->where('naziv', (string) $nadolazeciTurnir->naziv)
+            ->where('lokacija', (string) $nadolazeciTurnir->mjesto)
+            ->where('tipovi_turnira_id', (int) $nadolazeciTurnir->tipovi_turnira_id)
+            ->first();
+        if ($postojeci instanceof Turniri) {
+            return $postojeci;
+        }
+
+        $turnir = new Turniri();
+        $turnir->datum = $datumTurnira;
+        $turnir->naziv = (string) $nadolazeciTurnir->naziv;
+        $turnir->lokacija = (string) $nadolazeciTurnir->mjesto;
+        $turnir->tipovi_turnira_id = (int) $nadolazeciTurnir->tipovi_turnira_id;
+        $turnir->eliminacije = false;
+        $turnir->save();
+
+        return $turnir;
+    }
+
+    /**
+     * Sortira prijave za inicijalni unos rezultata: stil (CU/RB/BB/TB/LB), kategorija, prezime i ime.
+     */
+    private function sortirajPrijaveZaKreiranjeRezultata(Collection $prijave): Collection
+    {
+        return $prijave
+            ->filter(function ($prijava): bool {
+                if (! $prijava instanceof PrijavaTurnira) {
+                    return false;
+                }
+
+                return $prijava->status === PrijavaTurnira::STATUS_ACTIVE
+                    && $prijava->clan instanceof Clanovi
+                    && $prijava->kategorija instanceof Kategorije
+                    && $prijava->stil instanceof Stilovi;
+            })
+            ->sortBy(function (PrijavaTurnira $prijava): array {
+                $stilNaziv = (string) ($prijava->stil?->naziv ?? '');
+                $kategorijaNaziv = (string) ($prijava->kategorija?->naziv ?? '');
+                $prezime = (string) ($prijava->clan?->Prezime ?? '');
+                $ime = (string) ($prijava->clan?->Ime ?? '');
+
+                return [
+                    $this->prioritetStila($stilNaziv),
+                    Str::ascii(mb_strtolower($stilNaziv, 'UTF-8')),
+                    Str::ascii(mb_strtolower($kategorijaNaziv, 'UTF-8')),
+                    Str::ascii(mb_strtolower($prezime, 'UTF-8')),
+                    Str::ascii(mb_strtolower($ime, 'UTF-8')),
+                    (int) $prijava->id,
+                ];
+            })
+            ->values();
+    }
+
+    /**
      * Kreira ili ažurira zaduženje kotizacije za jednu prijavu.
      */
     private function syncKotizacijaZaPrijavu(PrijavaTurnira $prijava, NadolazeciTurnir $turnir, int $actorUserId): void
@@ -1022,6 +1248,177 @@ class NadolazeciTurniriController extends Controller
 
         return 'Kotizacija za: '.$imePrezime.'; za turnir: '.$turnir->naziv
             .' u '.$turnir->mjesto.' dana '.$datum;
+    }
+
+    /**
+     * Vraća stilove za prijavu u unaprijed definiranom redoslijedu.
+     */
+    private function stiloviZaPrijavu(): Collection
+    {
+        return Stilovi::query()
+            ->where('id', '!=', self::STANDARDNI_LUK_STIL_ID)
+            ->get(['id', 'naziv'])
+            ->sortBy(function (Stilovi $stil): array {
+                $naziv = (string) $stil->naziv;
+
+                return [
+                    $this->prioritetStila($naziv),
+                    Str::ascii(mb_strtolower($naziv, 'UTF-8')),
+                ];
+            })
+            ->values();
+    }
+
+    /**
+     * Vraća prioritet stila prema oznakama (CU, RB, BB, TB, LB).
+     */
+    private function prioritetStila(string $naziv): int
+    {
+        $upper = mb_strtoupper($naziv, 'UTF-8');
+        foreach (self::STIL_REDOSLIJED_KODOVA as $index => $kod) {
+            if (str_contains($upper, '('.$kod.')')) {
+                return $index;
+            }
+        }
+
+        return count(self::STIL_REDOSLIJED_KODOVA) + 100;
+    }
+
+    /**
+     * Vraća metapodatke članova potrebne za automatski odabir kategorije na formi.
+     *
+     * @return array<int, array{spol: string, datum_rodjenja: ?string}>
+     */
+    private function clanoviMetaZaKategoriju(Collection $clanovi): array
+    {
+        $meta = [];
+        foreach ($clanovi as $clan) {
+            if (! ($clan instanceof Clanovi)) {
+                continue;
+            }
+
+            $meta[(int) $clan->id] = [
+                'spol' => $this->normalizirajSpol((string) $clan->spol),
+                'datum_rodjenja' => $this->normalizirajDatumZaUsporedbu($clan->datum_rodjenja ?? null),
+            ];
+        }
+
+        return $meta;
+    }
+
+    /**
+     * Određuje termin prijave: smjena (jednodnevni) ili odabrani dan (višednevni).
+     *
+     * @return array{smjena: ?string, odabrani_dan: ?string}
+     */
+    private function odrediTerminPrijave(NadolazeciTurnir $turnir, mixed $smjena, mixed $odabraniDan): array
+    {
+        if ($this->turnirJeVisednevni($turnir)) {
+            return [
+                'smjena' => null,
+                'odabrani_dan' => $this->normalizirajOdabraniDan($turnir, $odabraniDan),
+            ];
+        }
+
+        return [
+            'smjena' => $this->normalizirajSmjenu(is_string($smjena) ? $smjena : null),
+            'odabrani_dan' => null,
+        ];
+    }
+
+    /**
+     * Provjerava je li turnir višednevni (datum_do > datum).
+     */
+    private function turnirJeVisednevni(NadolazeciTurnir $turnir): bool
+    {
+        $start = $turnir->datum;
+        $end = $turnir->datum_do;
+
+        return $start instanceof CarbonInterface
+            && $end instanceof CarbonInterface
+            && $end->gt($start);
+    }
+
+    /**
+     * Vraća opcije dana za višednevni turnir.
+     *
+     * @return array<int, array{value: string, label: string}>
+     */
+    private function odabirDanaOpcijeZaTurnir(NadolazeciTurnir $turnir): array
+    {
+        if (! $this->turnirJeVisednevni($turnir)) {
+            return [];
+        }
+
+        $vrijednosti = array_values(array_unique(array_filter([
+            $turnir->datum?->toDateString(),
+            $turnir->datum_do?->toDateString(),
+        ])));
+
+        $opcije = [];
+        foreach ($vrijednosti as $vrijednost) {
+            try {
+                $opcije[] = [
+                    'value' => (string) $vrijednost,
+                    'label' => Carbon::parse((string) $vrijednost)->format('d.m.Y.'),
+                ];
+            } catch (Throwable) {
+                continue;
+            }
+        }
+
+        return $opcije;
+    }
+
+    /**
+     * Validira i normalizira odabrani dan za višednevni turnir.
+     */
+    private function normalizirajOdabraniDan(NadolazeciTurnir $turnir, mixed $odabraniDan): ?string
+    {
+        $tekst = trim((string) $odabraniDan);
+        if ($tekst === '' || mb_strtolower($tekst, 'UTF-8') === 'nebitno') {
+            return null;
+        }
+
+        try {
+            $datum = Carbon::parse($tekst)->toDateString();
+        } catch (Throwable) {
+            throw ValidationException::withMessages([
+                'odabrani_dan' => 'Odabrani dan nije valjan.',
+            ]);
+        }
+
+        $dozvoljeniDatumi = collect($this->odabirDanaOpcijeZaTurnir($turnir))
+            ->pluck('value')
+            ->all();
+        if (! in_array($datum, $dozvoljeniDatumi, true)) {
+            throw ValidationException::withMessages([
+                'odabrani_dan' => 'Odabrani dan mora biti prvi ili drugi dan turnira.',
+            ]);
+        }
+
+        return $datum;
+    }
+
+    /**
+     * Normalizira datum u ISO oblik (Y-m-d) za usporedbe u frontend logici.
+     */
+    private function normalizirajDatumZaUsporedbu(mixed $vrijednost): ?string
+    {
+        if ($vrijednost instanceof CarbonInterface) {
+            return $vrijednost->toDateString();
+        }
+
+        $tekst = trim((string) $vrijednost);
+        if ($tekst === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($tekst)->toDateString();
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     /**
@@ -1162,7 +1559,7 @@ class NadolazeciTurniriController extends Controller
         if ($primijeniPravilo60Dana) {
             $danas = now()->startOfDay();
             $maxDatum = now()->addDays(self::VIDLJIVOST_DANA_ZA_PRIJAVU)->endOfDay();
-            if ($turnir->datum === null || $turnir->datum->lt($danas) || $turnir->datum->gt($maxDatum)) {
+            if ($turnir->datum === null || $turnir->datum->lte($danas) || $turnir->datum->gt($maxDatum)) {
                 return 'Turnir nije u rasponu dostupnom za prijavu ('.self::VIDLJIVOST_DANA_ZA_PRIJAVU.' dana).';
             }
         }
@@ -1172,6 +1569,24 @@ class NadolazeciTurniriController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * Briše prošle turnire (datum početka danas ili ranije) koji nemaju aktivnih prijava.
+     */
+    private function obrisiProsleTurnireBezAktivnihPrijava(string $danas): void
+    {
+        $turniriZaBrisanje = NadolazeciTurnir::query()
+            ->whereDate('datum', '<=', $danas)
+            ->whereDoesntHave('prijave', fn ($query) => $query->where('status', PrijavaTurnira::STATUS_ACTIVE))
+            ->get();
+
+        foreach ($turniriZaBrisanje as $turnir) {
+            if (! empty($turnir->poziv_pdf_path) && Storage::disk('public')->exists($turnir->poziv_pdf_path)) {
+                Storage::disk('public')->delete($turnir->poziv_pdf_path);
+            }
+            $turnir->delete();
+        }
     }
 
     /**
@@ -1310,7 +1725,7 @@ class NadolazeciTurniriController extends Controller
             'stil' => trim((string) ($prijava->stil?->naziv ?? '')),
             'kategorija' => trim((string) ($prijava->kategorija?->naziv ?? '')),
             'oib' => $this->formatirajTekstualnoPoljeZaCsv($clan?->oib ?? null),
-            'smjena' => $prijava->smjena === 'nebitno' ? '' : trim((string) ($prijava->smjena ?? '')),
+            'smjena' => $prijava->terminPrijaveLabel() === 'nebitno' ? '' : trim((string) $prijava->terminPrijaveLabel()),
             'kup' => $prijava->sudjelujem_u_kupu ? 'DA' : '',
             default => '',
         };

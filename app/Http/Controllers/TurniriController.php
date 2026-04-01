@@ -58,17 +58,42 @@ class TurniriController extends Controller
         $turnir = Turniri::findOrFail((int)$request->input('turnir_id'));
         return $this->spremanjeTurnira($request, $turnir);
     }
+
+    /**
+     * Uključuje/isključuje eliminacije izravno s ekrana unosa rezultata.
+     */
+    public function postaviEliminacije(Request $request, Turniri $turnir): RedirectResponse
+    {
+        $ukljuciEliminacije = $request->boolean('eliminacije');
+        if (!$ukljuciEliminacije && $this->turnirImaZakljucaneEliminacije($turnir)) {
+            return redirect()
+                ->route('admin.rezultati.unosRezultata', $turnir->id)
+                ->with('error', 'Eliminacije nije moguće isključiti jer postoji barem jedan rezultat s unešenim plasmanom nakon eliminacija.');
+        }
+
+        $turnir->eliminacije = $ukljuciEliminacije;
+        $turnir->save();
+
+        return redirect()->route('admin.rezultati.unosRezultata', $turnir->id);
+    }
     /**
      * Validira ulaz i sprema promjene prema pravilima modula turnira i rezultata.
      */
     private function spremanjeTurnira(Request $request, Turniri $turnir): RedirectResponse
     {
         $stranica = $request->input('stranica') ?? 1;
+        $ukljuciEliminacije = $request->boolean('eliminacije');
+        if (!$ukljuciEliminacije && $turnir->exists && $this->turnirImaZakljucaneEliminacije($turnir)) {
+            return redirect()
+                ->route('admin.rezultati.popisTurnira', ['page' => $stranica])
+                ->with('error', 'Eliminacije nije moguće isključiti jer postoji barem jedan rezultat s unešenim plasmanom nakon eliminacija.');
+        }
+
         $turnir->datum = $request->input('datum_turnira');
         $turnir->naziv = $request->input('naziv_turnira');
         $turnir->lokacija = $request->input('lokacija_turnira');
         $turnir->tipovi_turnira_id = $request->input('odabir_tipa_turnira');
-        $turnir->eliminacije = (bool)$request->input('eliminacije');
+        $turnir->eliminacije = $ukljuciEliminacije;
         $turnir->save();
         return redirect()->route('admin.rezultati.popisTurnira', ['page'=>$stranica]);
     }
@@ -80,7 +105,14 @@ class TurniriController extends Controller
         $turnir = Turniri::findOrFail((int)$request->input('turnir_id'));
         $turniri = Turniri::orderByDesc('datum')->paginate(15, ['*'], 'page', $stranica);
         $tipoviTurnira = TipoviTurnira::orderBy('naziv')->get();
-        return view('admin.rezultati.popisTurnira', ['turniri' => $turniri, 'tipoviTurnira' => $tipoviTurnira, 'uredi_turnir'=>$turnir]);
+        $urediTurnirEliminacijeDisabled = $turnir->eliminacije && $this->turnirImaZakljucaneEliminacije($turnir);
+
+        return view('admin.rezultati.popisTurnira', [
+            'turniri' => $turniri,
+            'tipoviTurnira' => $tipoviTurnira,
+            'uredi_turnir' => $turnir,
+            'urediTurnirEliminacijeDisabled' => $urediTurnirEliminacijeDisabled,
+        ]);
     }
 
     /**
@@ -138,6 +170,7 @@ class TurniriController extends Controller
         $opis2Editor = $this->ukloniFacebookBlokIzOpisa2($turnir->opis2);
         $facebookLinkOpis2 = $this->izvuciFacebookLinkIzOpisa2($turnir->opis2);
         $ukupnoPoljeId = $this->odrediUkupnoPoljeId($turnir);
+        $eliminacijeZakljucane = $turnir->eliminacije && $this->turnirImaZakljucaneEliminacije($turnir);
         $dostupniRezultatiZaTim = $turnir->rezultatiOpci
             ->map(function (RezultatiOpci $rezultat) use ($ukupnoPoljeId): array {
                 // Svaka stavka ima dovoljno konteksta da administrator može složiti tim
@@ -160,6 +193,7 @@ class TurniriController extends Controller
             'dostupniRezultatiZaTim' => $dostupniRezultatiZaTim,
             'opis2Editor' => $opis2Editor,
             'facebookLinkOpis2' => $facebookLinkOpis2,
+            'eliminacijeZakljucane' => $eliminacijeZakljucane,
         ]);
     }
 
@@ -811,6 +845,18 @@ class TurniriController extends Controller
     private function koristiBodovniPlasmanZaTurnirBezEliminacija(Request $request, Turniri $turnir): bool
     {
         return (bool)$turnir->eliminacije && $request->boolean('bez_eliminacija');
+    }
+
+    /**
+     * Provjerava postoji li barem jedan rezultat s upisanim plasmanom nakon eliminacija (> 0).
+     */
+    private function turnirImaZakljucaneEliminacije(Turniri $turnir): bool
+    {
+        return RezultatiOpci::query()
+            ->where('turnir_id', (int)$turnir->id)
+            ->whereNotNull('plasman_nakon_eliminacija')
+            ->where('plasman_nakon_eliminacija', '>', 0)
+            ->exists();
     }
 
     /**

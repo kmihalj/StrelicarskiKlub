@@ -100,14 +100,17 @@ Route::prefix('admin/')->group(function () {
     Route::post('payments/setup/opcije', [PlacanjaController::class, 'addOption'])->name('admin.placanja.setup.option.add')->middleware(['auth', 'admin']);
 
     Route::match(['get', 'post'], 'rezultati/unos/{turnir}', [TurniriController::class, 'unosRezultataForma'])->name('admin.rezultati.unosRezultata')->middleware(['auth', 'admin_or_member']);
+    Route::post('rezultati/unos/{turnir}/eliminacije', [TurniriController::class, 'postaviEliminacije'])->name('admin.rezultati.postaviEliminacije')->middleware(['auth', 'admin']);
     Route::post('turniri', [TurniriController::class, 'spremiTurnir'])->name('admin.rezultati.kreirajTurnir')->middleware(['auth', 'admin']);
     Route::post('turniri/urediTurnir', [TurniriController::class, 'urediTurnirForma'])->name('admin.rezultati.urediTurnir')->middleware(['auth', 'admin']);
     Route::post('turniri/urediTurnir/spremi', [TurniriController::class, 'updateTurnir'])->name('admin.rezultati.updateTurnir')->middleware(['auth', 'admin']);
     Route::post('turniri/turnir/{turnir}/obrisi', [TurniriController::class, 'obrisiTurnir'])->name('admin.rezultati.obrisiTurnir')->middleware(['auth', 'admin']);
     Route::get('nadolazeci-turniri', [NadolazeciTurniriController::class, 'adminIndex'])->name('admin.nadolazeci_turniri.index')->middleware(['auth', 'admin']);
+    Route::post('nadolazeci-turniri/import-archery', [NadolazeciTurniriController::class, 'adminImportArchery'])->name('admin.nadolazeci_turniri.import_archery')->middleware(['auth', 'admin']);
     Route::post('nadolazeci-turniri', [NadolazeciTurniriController::class, 'adminStore'])->name('admin.nadolazeci_turniri.store')->middleware(['auth', 'admin']);
     Route::post('nadolazeci-turniri/{turnir}/update', [NadolazeciTurniriController::class, 'adminUpdate'])->name('admin.nadolazeci_turniri.update')->middleware(['auth', 'admin']);
     Route::post('nadolazeci-turniri/{turnir}/obrisi', [NadolazeciTurniriController::class, 'adminDestroy'])->name('admin.nadolazeci_turniri.destroy')->middleware(['auth', 'admin']);
+    Route::post('nadolazeci-turniri/{turnir}/kreiraj-rezultate', [NadolazeciTurniriController::class, 'adminKreirajRezultate'])->name('admin.nadolazeci_turniri.kreiraj_rezultate')->middleware(['auth', 'admin']);
     Route::get('nadolazeci-turniri/{turnir}', [NadolazeciTurniriController::class, 'adminShow'])->name('admin.nadolazeci_turniri.show')->middleware(['auth', 'admin']);
     Route::get('nadolazeci-turniri/{turnir}/export/csv', [NadolazeciTurniriController::class, 'adminExportCsv'])->name('admin.nadolazeci_turniri.export_csv')->middleware(['auth', 'admin']);
     Route::post('nadolazeci-turniri/{turnir}/prijave/{prijava}/makni', [NadolazeciTurniriController::class, 'adminUkloniPrijavu'])->name('admin.nadolazeci_turniri.prijave.ukloni')->middleware(['auth', 'admin']);

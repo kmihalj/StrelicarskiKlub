@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -26,6 +28,7 @@ class PrijavaTurnira extends Model
         'stil_id',
         'sudjelujem_u_kupu',
         'smjena',
+        'odabrani_dan',
         'status',
         'napomena_admin',
         'removed_by',
@@ -41,6 +44,7 @@ class PrijavaTurnira extends Model
         'kategorija_id' => 'integer',
         'stil_id' => 'integer',
         'sudjelujem_u_kupu' => 'boolean',
+        'odabrani_dan' => 'date',
         'removed_by' => 'integer',
         'removed_at' => 'datetime',
         'cancelled_at' => 'datetime',
@@ -109,5 +113,78 @@ class PrijavaTurnira extends Model
     public function aktivna(): bool
     {
         return $this->status === self::STATUS_ACTIVE;
+    }
+
+    /**
+     * Vraća oznaku termina prijave (smjena ili odabrani dan kod višednevnog turnira).
+     */
+    public function terminPrijaveLabel(): string
+    {
+        if ($this->jeVisednevniTurnir()) {
+            return $this->odabraniDanLabel() ?? 'nebitno';
+        }
+
+        $smjena = trim((string) $this->smjena);
+
+        return $smjena !== '' ? $smjena : 'nebitno';
+    }
+
+    /**
+     * Vraća datum turnira za prikaz u korisničkim tablicama.
+     */
+    public function datumTurniraZaPrikazLabel(): string
+    {
+        if ($this->jeVisednevniTurnir()) {
+            $odabraniDan = $this->odabrani_dan;
+            if ($odabraniDan instanceof CarbonInterface) {
+                return $odabraniDan->format('d.m.Y.');
+            }
+        }
+
+        $turnir = $this->turnir;
+
+        return $turnir instanceof NadolazeciTurnir
+            ? $turnir->datumRasponLabel()
+            : '-';
+    }
+
+    /**
+     * Vraća formatirani odabrani dan ako postoji.
+     */
+    public function odabraniDanLabel(): ?string
+    {
+        $odabraniDan = $this->odabrani_dan;
+        if ($odabraniDan instanceof CarbonInterface) {
+            return $odabraniDan->format('d.m.Y.');
+        }
+
+        $tekst = trim((string) $odabraniDan);
+        if ($tekst === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($tekst)->format('d.m.Y.');
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Provjerava je li prijava vezana na višednevni turnir.
+     */
+    public function jeVisednevniTurnir(): bool
+    {
+        $turnir = $this->turnir;
+        if (! $turnir instanceof NadolazeciTurnir) {
+            return false;
+        }
+
+        $start = $turnir->datum;
+        $end = $turnir->datum_do;
+
+        return $start instanceof CarbonInterface
+            && $end instanceof CarbonInterface
+            && $end->gt($start);
     }
 }

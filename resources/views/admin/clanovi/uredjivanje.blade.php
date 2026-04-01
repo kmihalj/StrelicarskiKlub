@@ -14,6 +14,20 @@
         $paymentProfile = $paymentSummary['profile'] ?? null;
         $paymentCharges = $paymentSummary['charges'] ?? collect();
     @endphp
+    <style>
+        .admin-collapse-toggle .when-open,
+        .admin-collapse-toggle .when-closed {
+            line-height: 1;
+        }
+
+        .admin-collapse-toggle[aria-expanded="true"] .when-closed {
+            display: none;
+        }
+
+        .admin-collapse-toggle[aria-expanded="false"] .when-open {
+            display: none;
+        }
+    </style>
     <div class="row">
         <div class="col-12 mb-2 mt-2">
             <div class="card">
@@ -140,338 +154,343 @@
     @auth
         @if(auth()->user()->rola <= 1 && $paymentTrackingEnabled)
             <div class="card mt-3">
-                <div class="card-header bg-danger fw-bolder text-white">
-                    Praćenje plaćanja člana
-                    <span id="skrivanje_admin_placanja" class="text-white" style="float: right; cursor: pointer; @if($otvoriPlacanja) display: block; @else display: none; @endif"
-                          data-admin-sekcija="placanja"
-                          data-admin-open="0">_</span>
-                    <span id="pokazivanje_admin_placanja" class="text-white" style="float: right; cursor: pointer; @if($otvoriPlacanja) display: none; @endif"
-                          data-admin-sekcija="placanja"
-                          data-admin-open="1">+</span>
+                <div class="card-header bg-danger fw-bolder text-white d-flex align-items-center justify-content-between">
+                    <span>Praćenje plaćanja člana</span>
+                    <button type="button"
+                            class="btn btn-sm btn-link text-white text-decoration-none p-0 admin-collapse-toggle"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#admin_placanja_dropdown"
+                            aria-expanded="{{ $otvoriPlacanja ? 'true' : 'false' }}"
+                            aria-controls="admin_placanja_dropdown">
+                        <span class="when-open">_</span>
+                        <span class="when-closed">+</span>
+                    </button>
                 </div>
-                <div id="admin_placanja_dropdown" class="card-body bg-secondary-subtle shadow d-flex flex-column" style="@if($otvoriPlacanja) display: flex; @else display: none; @endif">
-                    @if(!empty($paymentNotice))
-                        <div class="alert alert-{{ $paymentNotice['variant'] ?? 'secondary' }} mb-3 py-2">
-                            <span class="fw-bold">{{ $paymentNotice['title'] ?? 'Status plaćanja' }}</span>
-                            @if(!empty($paymentNotice['message']))
-                                <span> - {{ $paymentNotice['message'] }}</span>
-                            @endif
-                        </div>
-                    @endif
+                <div id="admin_placanja_dropdown" class="collapse @if($otvoriPlacanja) show @endif">
+                    <div class="card-body bg-secondary-subtle shadow d-flex flex-column">
+                        @if(!empty($paymentNotice))
+                            <div class="alert alert-{{ $paymentNotice['variant'] ?? 'secondary' }} mb-3 py-2">
+                                <span class="fw-bold">{{ $paymentNotice['title'] ?? 'Status plaćanja' }}</span>
+                                @if(!empty($paymentNotice['message']))
+                                    <span> - {{ $paymentNotice['message'] }}</span>
+                                @endif
+                            </div>
+                        @endif
 
-                    <div class="card mb-3 order-2">
-                        <div class="card-header bg-warning text-dark fw-bold">Model plaćanja člana</div>
-                        <div class="card-body">
-                            <form action="{{ route('admin.clanovi.placanja.profil', $clan) }}" method="POST">
-                                @csrf
-                                @php
-                                    $selectedOptionId = old('membership_payment_option_id', $paymentProfile?->membership_payment_option_id);
-                                    $startDateValue = old('start_date', $paymentProfile?->start_date?->format('Y-m-d') ?? now()->toDateString());
-                                    $selectedOptionModel = $paymentProfile?->paymentOption;
-                                    $optionsForSelect = collect($paymentOptions->all());
-                                    if ($selectedOptionModel !== null && !$optionsForSelect->contains(fn ($option) => (int)$option->id === (int)$selectedOptionModel->id)) {
-                                        $optionsForSelect->push($selectedOptionModel);
-                                    }
-                                    $optionPool = $optionsForSelect
-                                        ->filter(fn ($option) => !($option->is_archived ?? false) || (int)$option->id === (int)$selectedOptionId)
-                                        ->values();
+                        <div class="card mb-3 order-2">
+                            <div class="card-header bg-warning text-dark fw-bold">Model plaćanja člana</div>
+                            <div class="card-body">
+                                <form action="{{ route('admin.clanovi.placanja.profil', $clan) }}" method="POST">
+                                    @csrf
+                                    @php
+                                        $selectedOptionId = old('membership_payment_option_id', $paymentProfile?->membership_payment_option_id);
+                                        $startDateValue = old('start_date', $paymentProfile?->start_date?->format('Y-m-d') ?? now()->toDateString());
+                                        $selectedOptionModel = $paymentProfile?->paymentOption;
+                                        $optionsForSelect = collect($paymentOptions->all());
+                                        if ($selectedOptionModel !== null && !$optionsForSelect->contains(fn ($option) => (int)$option->id === (int)$selectedOptionModel->id)) {
+                                            $optionsForSelect->push($selectedOptionModel);
+                                        }
+                                        $optionPool = $optionsForSelect
+                                            ->filter(fn ($option) => !($option->is_archived ?? false) || (int)$option->id === (int)$selectedOptionId)
+                                            ->values();
 
-                                    $pickOption = function (string $periodType, ?string $exactAnchor = null, array $anchorPriority = []) use ($optionPool, $selectedOptionId) {
-                                        $candidates = $optionPool->filter(function ($option) use ($periodType, $exactAnchor) {
-                                            if ((string)($option->period_type ?? '') !== $periodType) {
-                                                return false;
+                                        $pickOption = function (string $periodType, ?string $exactAnchor = null, array $anchorPriority = []) use ($optionPool, $selectedOptionId) {
+                                            $candidates = $optionPool->filter(function ($option) use ($periodType, $exactAnchor) {
+                                                if ((string)($option->period_type ?? '') !== $periodType) {
+                                                    return false;
+                                                }
+
+                                                if ($exactAnchor === null) {
+                                                    return true;
+                                                }
+
+                                                return (string)($option->period_anchor ?? '') === $exactAnchor;
+                                            });
+
+                                            if ($candidates->isEmpty()) {
+                                                return null;
                                             }
 
-                                            if ($exactAnchor === null) {
-                                                return true;
+                                            $selectedCandidate = $candidates->first(fn ($option) => (int)$option->id === (int)$selectedOptionId);
+                                            if ($selectedCandidate !== null) {
+                                                return $selectedCandidate;
                                             }
 
-                                            return (string)($option->period_anchor ?? '') === $exactAnchor;
-                                        });
-
-                                        if ($candidates->isEmpty()) {
-                                            return null;
-                                        }
-
-                                        $selectedCandidate = $candidates->first(fn ($option) => (int)$option->id === (int)$selectedOptionId);
-                                        if ($selectedCandidate !== null) {
-                                            return $selectedCandidate;
-                                        }
-
-                                        $enabledCandidates = $candidates->filter(fn ($option) => (bool)($option->is_enabled ?? false))->values();
-                                        if ($enabledCandidates->isEmpty()) {
-                                            return null;
-                                        }
-
-                                        $preferredPool = $enabledCandidates;
-
-                                        foreach ($anchorPriority as $anchorValue) {
-                                            $anchorCandidate = $preferredPool->first(fn ($option) => (string)($option->period_anchor ?? '') === $anchorValue);
-                                            if ($anchorCandidate !== null) {
-                                                return $anchorCandidate;
+                                            $enabledCandidates = $candidates->filter(fn ($option) => (bool)($option->is_enabled ?? false))->values();
+                                            if ($enabledCandidates->isEmpty()) {
+                                                return null;
                                             }
+
+                                            $preferredPool = $enabledCandidates;
+
+                                            foreach ($anchorPriority as $anchorValue) {
+                                                $anchorCandidate = $preferredPool->first(fn ($option) => (string)($option->period_anchor ?? '') === $anchorValue);
+                                                if ($anchorCandidate !== null) {
+                                                    return $anchorCandidate;
+                                                }
+                                            }
+
+                                            return $preferredPool->sortBy([
+                                                ['sort_order', 'asc'],
+                                                ['id', 'asc'],
+                                            ])->first();
+                                        };
+
+                                        $monthlyOptions = $optionPool
+                                            ->filter(fn ($option) => (string)($option->period_type ?? '') === 'monthly')
+                                            ->sortBy([
+                                                ['sort_order', 'asc'],
+                                                ['id', 'asc'],
+                                            ])
+                                            ->values();
+
+                                        $memberModelOptions = collect();
+
+                                        $exemptOption = $pickOption('exempt');
+                                        if ($exemptOption !== null) {
+                                            $memberModelOptions->push(['label' => 'Oslobođen', 'option' => $exemptOption]);
                                         }
 
-                                        return $preferredPool->sortBy([
-                                            ['sort_order', 'asc'],
-                                            ['id', 'asc'],
-                                        ])->first();
-                                    };
+                                        $monthlyOptionsCount = $monthlyOptions->count();
+                                        foreach ($monthlyOptions as $monthlyOption) {
+                                            $isCashMonthly = (string)($monthlyOption->collection_method ?? 'bank') === 'cash';
+                                            $baseLabel = $isCashMonthly ? 'Mjesečno (gotovina treneru)' : 'Mjesečno';
+                                            $optionName = trim((string)($monthlyOption->name ?? ''));
+                                            $label = ($monthlyOptionsCount > 1 && $optionName !== '')
+                                                ? $baseLabel . ' - ' . $optionName
+                                                : $baseLabel;
+                                            $memberModelOptions->push(['label' => $label, 'option' => $monthlyOption]);
+                                        }
 
-                                    $monthlyOptions = $optionPool
-                                        ->filter(fn ($option) => (string)($option->period_type ?? '') === 'monthly')
-                                        ->sortBy([
-                                            ['sort_order', 'asc'],
-                                            ['id', 'asc'],
-                                        ])
-                                        ->values();
+                                        $seasonalOption = $pickOption('seasonal', null, ['oct', 'apr', 'both']);
+                                        if ($seasonalOption !== null) {
+                                            $memberModelOptions->push(['label' => 'Sezonski', 'option' => $seasonalOption]);
+                                        }
 
-                                    $memberModelOptions = collect();
+                                        $annualAprOption = $pickOption('annual', 'apr');
+                                        if ($annualAprOption !== null) {
+                                            $memberModelOptions->push(['label' => 'Godišnje od 01.04.', 'option' => $annualAprOption]);
+                                        }
 
-                                    $exemptOption = $pickOption('exempt');
-                                    if ($exemptOption !== null) {
-                                        $memberModelOptions->push(['label' => 'Oslobođen', 'option' => $exemptOption]);
-                                    }
-
-                                    $monthlyOptionsCount = $monthlyOptions->count();
-                                    foreach ($monthlyOptions as $monthlyOption) {
-                                        $isCashMonthly = (string)($monthlyOption->collection_method ?? 'bank') === 'cash';
-                                        $baseLabel = $isCashMonthly ? 'Mjesečno (gotovina treneru)' : 'Mjesečno';
-                                        $optionName = trim((string)($monthlyOption->name ?? ''));
-                                        $label = ($monthlyOptionsCount > 1 && $optionName !== '')
-                                            ? $baseLabel . ' - ' . $optionName
-                                            : $baseLabel;
-                                        $memberModelOptions->push(['label' => $label, 'option' => $monthlyOption]);
-                                    }
-
-                                    $seasonalOption = $pickOption('seasonal', null, ['oct', 'apr', 'both']);
-                                    if ($seasonalOption !== null) {
-                                        $memberModelOptions->push(['label' => 'Sezonski', 'option' => $seasonalOption]);
-                                    }
-
-                                    $annualAprOption = $pickOption('annual', 'apr');
-                                    if ($annualAprOption !== null) {
-                                        $memberModelOptions->push(['label' => 'Godišnje od 01.04.', 'option' => $annualAprOption]);
-                                    }
-
-                                    $annualOctOption = $pickOption('annual', 'oct');
-                                    if ($annualOctOption !== null) {
-                                        $memberModelOptions->push(['label' => 'Godišnje od 01.10.', 'option' => $annualOctOption]);
-                                    }
-                                @endphp
-                                <div class="row g-2 align-items-end">
-                                    <div class="col-md-6">
-                                        <label for="membership_payment_option_id" class="form-label">Model plaćanja</label>
-                                        <select class="form-select" id="membership_payment_option_id" name="membership_payment_option_id">
-                                            <option value="">-- nije odabrano --</option>
-                                            @foreach($memberModelOptions as $modelOption)
-                                            @php $option = $modelOption['option']; @endphp
-                                            <option value="{{ $option->id }}" @selected((int)$selectedOptionId === (int)$option->id)>
-                                                    {{ $modelOption['label'] }}
-                                                    @if(($option->is_archived ?? false))
-                                                        (arhivirano)
-                                                    @elseif(!$option->is_enabled)
-                                                        (nije aktivno u postavkama)
-                                                    @endif
-                                                </option>
-                                            @endforeach
-                                        </select>
+                                        $annualOctOption = $pickOption('annual', 'oct');
+                                        if ($annualOctOption !== null) {
+                                            $memberModelOptions->push(['label' => 'Godišnje od 01.10.', 'option' => $annualOctOption]);
+                                        }
+                                    @endphp
+                                    <div class="row g-2 align-items-end">
+                                        <div class="col-md-6">
+                                            <label for="membership_payment_option_id" class="form-label">Model plaćanja</label>
+                                            <select class="form-select" id="membership_payment_option_id" name="membership_payment_option_id">
+                                                <option value="">-- nije odabrano --</option>
+                                                @foreach($memberModelOptions as $modelOption)
+                                                @php $option = $modelOption['option']; @endphp
+                                                <option value="{{ $option->id }}" @selected((int)$selectedOptionId === (int)$option->id)>
+                                                        {{ $modelOption['label'] }}
+                                                        @if(($option->is_archived ?? false))
+                                                            (arhivirano)
+                                                        @elseif(!$option->is_enabled)
+                                                            (nije aktivno u postavkama)
+                                                        @endif
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label for="start_date" class="form-label">Model vrijedi od</label>
+                                            <input type="date" class="form-control" id="start_date" name="start_date"
+                                                   value="{{ $startDateValue }}" required>
+                                        </div>
+                                        <div class="col-md-3 text-end">
+                                            <button type="submit" class="btn btn-primary text-nowrap px-3">Spremi</button>
+                                        </div>
                                     </div>
-                                    <div class="col-md-3">
-                                        <label for="start_date" class="form-label">Model vrijedi od</label>
-                                        <input type="date" class="form-control" id="start_date" name="start_date"
-                                               value="{{ $startDateValue }}" required>
+                                    <div class="small text-muted mt-2">
+                                        @if($paymentProfile?->paymentOption)
+                                            Trenutni model: <strong>{{ $paymentProfile->paymentOption->name }}</strong>
+                                            (vrijedi od {{ $paymentProfile->start_date?->format('d.m.Y.') }})
+                                        @else
+                                            Trenutni model nije postavljen.
+                                        @endif
                                     </div>
-                                    <div class="col-md-3 text-end">
-                                        <button type="submit" class="btn btn-primary text-nowrap px-3">Spremi</button>
-                                    </div>
-                                </div>
-                                <div class="small text-muted mt-2">
-                                    @if($paymentProfile?->paymentOption)
-                                        Trenutni model: <strong>{{ $paymentProfile->paymentOption->name }}</strong>
-                                        (vrijedi od {{ $paymentProfile->start_date?->format('d.m.Y.') }})
-                                    @else
-                                        Trenutni model nije postavljen.
-                                    @endif
-                                </div>
-                            </form>
+                                </form>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="card mb-3 order-3">
-                        <div class="card-header bg-light fw-bold">Dodatna plaćanja (najam opreme, dvorana, ostalo)</div>
-                        <div class="card-body">
-                            <form action="{{ route('admin.clanovi.placanja.manual', $clan) }}" method="POST">
-                                @csrf
-                                <div class="row g-2 align-items-end">
-                                    <div class="col-lg-4">
-                                        <label for="manual_title" class="form-label">Naziv</label>
-                                        <input type="text" class="form-control" id="manual_title" name="title" required>
+                        <div class="card mb-3 order-3">
+                            <div class="card-header bg-light fw-bold">Dodatna plaćanja (najam opreme, dvorana, ostalo)</div>
+                            <div class="card-body">
+                                <form action="{{ route('admin.clanovi.placanja.manual', $clan) }}" method="POST">
+                                    @csrf
+                                    <div class="row g-2 align-items-end">
+                                        <div class="col-lg-4">
+                                            <label for="manual_title" class="form-label">Naziv</label>
+                                            <input type="text" class="form-control" id="manual_title" name="title" required>
+                                        </div>
+                                        <div class="col-lg-3">
+                                            <label for="manual_description" class="form-label">Opis</label>
+                                            <input type="text" class="form-control" id="manual_description" name="description">
+                                        </div>
+                                        <div class="col-lg-2">
+                                            <label for="manual_amount" class="form-label">Iznos (EUR)</label>
+                                            <input type="text" class="form-control" id="manual_amount" name="amount" placeholder="0.00" required>
+                                        </div>
+                                        <div class="col-lg-2">
+                                            <label for="manual_due_date" class="form-label">Datum zaduženja</label>
+                                            <input type="date" class="form-control" id="manual_due_date" name="due_date"
+                                                   value="{{ old('due_date', now()->toDateString()) }}">
+                                        </div>
+                                        <div class="col-lg-1 text-end">
+                                            <button type="submit" class="btn btn-primary text-nowrap px-3">Dodaj</button>
+                                        </div>
                                     </div>
-                                    <div class="col-lg-3">
-                                        <label for="manual_description" class="form-label">Opis</label>
-                                        <input type="text" class="form-control" id="manual_description" name="description">
-                                    </div>
-                                    <div class="col-lg-2">
-                                        <label for="manual_amount" class="form-label">Iznos (EUR)</label>
-                                        <input type="text" class="form-control" id="manual_amount" name="amount" placeholder="0.00" required>
-                                    </div>
-                                    <div class="col-lg-2">
-                                        <label for="manual_due_date" class="form-label">Datum zaduženja</label>
-                                        <input type="date" class="form-control" id="manual_due_date" name="due_date"
-                                               value="{{ old('due_date', now()->toDateString()) }}">
-                                    </div>
-                                    <div class="col-lg-1 text-end">
-                                        <button type="submit" class="btn btn-primary text-nowrap px-3">Dodaj</button>
-                                    </div>
-                                </div>
-                            </form>
+                                </form>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="card mb-2 order-1">
-                        <div class="card-header bg-warning text-dark fw-bold">Popis stavki plaćanja</div>
-                        <div class="card-body">
-                            @if($paymentCharges->count() === 0)
-                                <p class="mb-0">Nema unosa plaćanja za člana.</p>
-                            @else
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-hover align-middle mb-0">
-                                        <thead class="table-warning">
-                                        <tr>
-                                            <th>Naziv</th>
-                                            <th>Razdoblje / datum</th>
-                                            <th>Iznos</th>
-                                            <th>Status</th>
-                                            <th>Datum uplate</th>
-                                            <th>Tip</th>
-                                            <th class="text-end">Akcija</th>
-                                        </tr>
-                                        </thead>
-                                        <tbody>
-                                        @php $paymentService = $paymentTrackingService; @endphp
-                                        @foreach($paymentCharges as $charge)
-                                            @php
-                                                $statusFormId = 'status_placanja_' . $charge->id;
-                                                $deleteFormId = 'obrisi_placanje_' . $charge->id;
-                                                $isPaid = $charge->status === $paymentService::STATUS_PAID;
-                                                $canDeleteCharge = true;
-                                                $variantOptions = $paymentService->availableVariantsForCharge($charge);
-                                                $selectedVariant = $paymentService->selectedVariantForCharge($charge, !$isPaid);
-                                                $displayAmountValue = number_format((float)$paymentService->resolvedChargeAmount($charge, true), 2, '.', '');
-                                            @endphp
-                                            <form id="{{ $statusFormId }}" action="{{ route('admin.clanovi.placanja.status', [$clan, $charge]) }}" method="POST">
-                                                @csrf
-                                                <input type="hidden" name="is_paid" value="{{ $isPaid ? 0 : 1 }}">
-                                            </form>
-                                            <form id="{{ $deleteFormId }}" action="{{ route('admin.clanovi.placanja.destroy', [$clan, $charge]) }}" method="POST">
-                                                @csrf
-                                            </form>
+                        <div class="card mb-2 order-1">
+                            <div class="card-header bg-warning text-dark fw-bold">Popis stavki plaćanja</div>
+                            <div class="card-body">
+                                @if($paymentCharges->count() === 0)
+                                    <p class="mb-0">Nema unosa plaćanja za člana.</p>
+                                @else
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover align-middle mb-0">
+                                            <thead class="table-warning">
                                             <tr>
-                                                <td>{{ $charge->title }}</td>
-                                                <td>
-                                                    @if($charge->period_start && $charge->period_end)
-                                                        @if($charge->period_start->isSameDay($charge->period_end))
-                                                            {{ $charge->period_start->format('d.m.Y.') }}
-                                                        @else
-                                                            {{ $charge->period_start->format('d.m.Y.') }} - {{ $charge->period_end->format('d.m.Y.') }}
-                                                        @endif
-                                                    @elseif($charge->due_date)
-                                                        {{ $charge->due_date->format('d.m.Y.') }}
-                                                    @else
-                                                        -
-                                                    @endif
-                                                </td>
-                                                <td>
-                                                    @if($isPaid)
-                                                        {{ number_format((float)$charge->amount, 2, ',', '.') }} EUR
-                                                    @else
-                                                        <div class="input-group input-group-sm">
-                                                            <input type="text"
-                                                                   class="form-control text-end js-charge-amount-input"
-                                                                   data-charge-id="{{ $charge->id }}"
-                                                                   data-manual="0"
-                                                                   name="amount"
-                                                                   form="{{ $statusFormId }}"
-                                                                   value="{{ $displayAmountValue }}">
-                                                            <span class="input-group-text">EUR</span>
-                                                        </div>
-                                                    @endif
-                                                </td>
-                                                <td>
-                                                    @if($isPaid)
-                                                        <span class="badge bg-success">Plaćeno</span>
-                                                    @else
-                                                        <span class="badge bg-danger">Nije plaćeno</span>
-                                                    @endif
-                                                </td>
-                                                <td>
-                                                    @if($charge->paid_at)
-                                                        {{ $charge->paid_at->format('d.m.Y.') }}
-                                                    @elseif(!$isPaid)
-                                                        <input type="date" class="form-control form-control-sm"
-                                                               name="paid_at" form="{{ $statusFormId }}"
-                                                               value="{{ now()->toDateString() }}">
-                                                    @else
-                                                        -
-                                                    @endif
-                                                </td>
-                                                <td>
-                                                    @if($charge->source === $paymentService::SOURCE_AUTO)
-                                                        Članarina
-                                                    @elseif($charge->source === $paymentService::SOURCE_OPENING)
-                                                        Početni dug
-                                                    @else
-                                                        Dodatno
-                                                    @endif
-                                                </td>
-                                                <td class="text-end">
-                                                    <div class="d-inline-flex flex-nowrap justify-content-end align-items-center gap-2">
-                                                        @if(!$isPaid && count($variantOptions) > 0)
-                                                            <select class="form-select form-select-sm js-payment-variant-select"
-                                                                    data-charge-id="{{ $charge->id }}"
-                                                                    style="min-width: 280px;"
-                                                                    name="payment_variant" form="{{ $statusFormId }}">
-                                                                @foreach($variantOptions as $variantOption)
-                                                                    @php
-                                                                        $variantValue = $variantOption['value'] ?? '';
-                                                                        $variantLabel = $variantOption['label'] ?? $variantValue;
-                                                                        $variantAmount = isset($variantOption['amount']) ? (float)$variantOption['amount'] : null;
-                                                                    @endphp
-                                                                    <option value="{{ $variantValue }}"
-                                                                            data-variant-amount="{{ $variantAmount !== null ? number_format($variantAmount, 2, '.', '') : '' }}"
-                                                                            @selected($selectedVariant === $variantValue)>
-                                                                        {{ $variantLabel }}
-                                                                        @if($variantAmount !== null)
-                                                                            ({{ number_format($variantAmount, 2, ',', '.') }} EUR)
-                                                                        @endif
-                                                                    </option>
-                                                                @endforeach
-                                                            </select>
-                                                        @endif
-                                                        @if($isPaid)
-                                                            <button type="submit" form="{{ $statusFormId }}" class="btn btn-secondary btn-sm text-nowrap">
-                                                                Vrati na neplaćeno
-                                                            </button>
-                                                        @else
-                                                            <button type="submit" form="{{ $statusFormId }}" class="btn btn-success btn-sm text-nowrap">
-                                                                Potvrdi uplatu
-                                                            </button>
-                                                        @endif
-                                                        @if($canDeleteCharge)
-                                                            <button type="submit" form="{{ $deleteFormId }}" class="btn btn-danger btn-sm text-nowrap"
-                                                                    onclick="return confirm('Da li ste sigurni da želite obrisati ovu stavku plaćanja?')">
-                                                                Obriši
-                                                            </button>
-                                                        @endif
-                                                    </div>
-                                                </td>
+                                                <th>Naziv</th>
+                                                <th>Razdoblje / datum</th>
+                                                <th>Iznos</th>
+                                                <th>Status</th>
+                                                <th>Datum uplate</th>
+                                                <th>Tip</th>
+                                                <th class="text-end">Akcija</th>
                                             </tr>
-                                        @endforeach
-                                        </tbody>
-                                    </table>
-                                </div>
-                            @endif
+                                            </thead>
+                                            <tbody>
+                                            @php $paymentService = $paymentTrackingService; @endphp
+                                            @foreach($paymentCharges as $charge)
+                                                @php
+                                                    $statusFormId = 'status_placanja_' . $charge->id;
+                                                    $deleteFormId = 'obrisi_placanje_' . $charge->id;
+                                                    $isPaid = $charge->status === $paymentService::STATUS_PAID;
+                                                    $canDeleteCharge = true;
+                                                    $variantOptions = $paymentService->availableVariantsForCharge($charge);
+                                                    $selectedVariant = $paymentService->selectedVariantForCharge($charge, !$isPaid);
+                                                    $displayAmountValue = number_format((float)$paymentService->resolvedChargeAmount($charge, true), 2, '.', '');
+                                                @endphp
+                                                <form id="{{ $statusFormId }}" action="{{ route('admin.clanovi.placanja.status', [$clan, $charge]) }}" method="POST">
+                                                    @csrf
+                                                    <input type="hidden" name="is_paid" value="{{ $isPaid ? 0 : 1 }}">
+                                                </form>
+                                                <form id="{{ $deleteFormId }}" action="{{ route('admin.clanovi.placanja.destroy', [$clan, $charge]) }}" method="POST">
+                                                    @csrf
+                                                </form>
+                                                <tr>
+                                                    <td>{{ $charge->title }}</td>
+                                                    <td>
+                                                        @if($charge->period_start && $charge->period_end)
+                                                            @if($charge->period_start->isSameDay($charge->period_end))
+                                                                {{ $charge->period_start->format('d.m.Y.') }}
+                                                            @else
+                                                                {{ $charge->period_start->format('d.m.Y.') }} - {{ $charge->period_end->format('d.m.Y.') }}
+                                                            @endif
+                                                        @elseif($charge->due_date)
+                                                            {{ $charge->due_date->format('d.m.Y.') }}
+                                                        @else
+                                                            -
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @if($isPaid)
+                                                            {{ number_format((float)$charge->amount, 2, ',', '.') }} EUR
+                                                        @else
+                                                            <div class="input-group input-group-sm">
+                                                                <input type="text"
+                                                                       class="form-control text-end js-charge-amount-input"
+                                                                       data-charge-id="{{ $charge->id }}"
+                                                                       data-manual="0"
+                                                                       name="amount"
+                                                                       form="{{ $statusFormId }}"
+                                                                       value="{{ $displayAmountValue }}">
+                                                                <span class="input-group-text">EUR</span>
+                                                            </div>
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @if($isPaid)
+                                                            <span class="badge bg-success">Plaćeno</span>
+                                                        @else
+                                                            <span class="badge bg-danger">Nije plaćeno</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @if($charge->paid_at)
+                                                            {{ $charge->paid_at->format('d.m.Y.') }}
+                                                        @elseif(!$isPaid)
+                                                            <input type="date" class="form-control form-control-sm"
+                                                                   name="paid_at" form="{{ $statusFormId }}"
+                                                                   value="{{ now()->toDateString() }}">
+                                                        @else
+                                                            -
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @if($charge->source === $paymentService::SOURCE_AUTO)
+                                                            Članarina
+                                                        @elseif($charge->source === $paymentService::SOURCE_OPENING)
+                                                            Početni dug
+                                                        @else
+                                                            Dodatno
+                                                        @endif
+                                                    </td>
+                                                    <td class="text-end">
+                                                        <div class="d-inline-flex flex-nowrap justify-content-end align-items-center gap-2">
+                                                            @if(!$isPaid && count($variantOptions) > 0)
+                                                                <select class="form-select form-select-sm js-payment-variant-select"
+                                                                        data-charge-id="{{ $charge->id }}"
+                                                                        style="min-width: 280px;"
+                                                                        name="payment_variant" form="{{ $statusFormId }}">
+                                                                    @foreach($variantOptions as $variantOption)
+                                                                        @php
+                                                                            $variantValue = $variantOption['value'] ?? '';
+                                                                            $variantLabel = $variantOption['label'] ?? $variantValue;
+                                                                            $variantAmount = isset($variantOption['amount']) ? (float)$variantOption['amount'] : null;
+                                                                        @endphp
+                                                                        <option value="{{ $variantValue }}"
+                                                                                data-variant-amount="{{ $variantAmount !== null ? number_format($variantAmount, 2, '.', '') : '' }}"
+                                                                                @selected($selectedVariant === $variantValue)>
+                                                                            {{ $variantLabel }}
+                                                                            @if($variantAmount !== null)
+                                                                                ({{ number_format($variantAmount, 2, ',', '.') }} EUR)
+                                                                            @endif
+                                                                        </option>
+                                                                    @endforeach
+                                                                </select>
+                                                            @endif
+                                                            @if($isPaid)
+                                                                <button type="submit" form="{{ $statusFormId }}" class="btn btn-secondary btn-sm text-nowrap">
+                                                                    Vrati na neplaćeno
+                                                                </button>
+                                                            @else
+                                                                <button type="submit" form="{{ $statusFormId }}" class="btn btn-success btn-sm text-nowrap">
+                                                                    Potvrdi uplatu
+                                                                </button>
+                                                            @endif
+                                                            @if($canDeleteCharge)
+                                                                <button type="submit" form="{{ $deleteFormId }}" class="btn btn-danger btn-sm text-nowrap"
+                                                                        onclick="return confirm('Da li ste sigurni da želite obrisati ovu stavku plaćanja?')">
+                                                                    Obriši
+                                                                </button>
+                                                            @endif
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                @endif
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -482,17 +501,21 @@
     @auth
         @if(auth()->user()->rola <= 1)
             <div class="card mt-3">
-                <div class="card-header bg-danger fw-bolder text-white">
-                    Liječnički pregledi i dokumenti člana
-                    <span id="skrivanje_admin_dokumenata" class="text-white" style="float: right; cursor: pointer; @if($otvoriDokumente) display: block; @else display: none; @endif"
-                          data-admin-sekcija="dokumenti"
-                          data-admin-open="0">_</span>
-                    <span id="pokazivanje_admin_dokumenata" class="text-white" style="float: right; cursor: pointer; @if($otvoriDokumente) display: none; @endif"
-                          data-admin-sekcija="dokumenti"
-                          data-admin-open="1">+</span>
+                <div class="card-header bg-danger fw-bolder text-white d-flex align-items-center justify-content-between">
+                    <span>Liječnički pregledi i dokumenti člana</span>
+                    <button type="button"
+                            class="btn btn-sm btn-link text-white text-decoration-none p-0 admin-collapse-toggle"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#admin_dokumenti_dropdown"
+                            aria-expanded="{{ $otvoriDokumente ? 'true' : 'false' }}"
+                            aria-controls="admin_dokumenti_dropdown">
+                        <span class="when-open">_</span>
+                        <span class="when-closed">+</span>
+                    </button>
                 </div>
-                <div id="admin_dokumenti_dropdown" class="card-body bg-secondary-subtle shadow" style="@if($otvoriDokumente) display: block; @else display: none; @endif">
-                    <div class="row">
+                <div id="admin_dokumenti_dropdown" class="collapse @if($otvoriDokumente) show @endif">
+                    <div class="card-body bg-secondary-subtle shadow">
+                        <div class="row">
                     <div class="col-lg-12">
                         <div class="card mb-3">
                             <div class="card-header bg-warning text-dark fw-bold">Novi liječnički pregled</div>
@@ -665,6 +688,7 @@
                         </div>
                     </div>
                     </div>
+                    </div>
                 </div>
             </div>
         @endif
@@ -697,48 +721,6 @@
 
     <script>
         (function () {
-            const toggleAdminSekcija = (sekcija, shouldOpen) => {
-                let bodyId = '';
-                let hideId = '';
-                let showId = '';
-
-                if (sekcija === 'placanja') {
-                    bodyId = 'admin_placanja_dropdown';
-                    hideId = 'skrivanje_admin_placanja';
-                    showId = 'pokazivanje_admin_placanja';
-                } else if (sekcija === 'dokumenti') {
-                    bodyId = 'admin_dokumenti_dropdown';
-                    hideId = 'skrivanje_admin_dokumenata';
-                    showId = 'pokazivanje_admin_dokumenata';
-                } else {
-                    return;
-                }
-
-                const body = /** @type {HTMLElement|null} */ (document.getElementById(bodyId));
-                const hideIcon = /** @type {HTMLElement|null} */ (document.getElementById(hideId));
-                const showIcon = /** @type {HTMLElement|null} */ (document.getElementById(showId));
-                if (!body || !hideIcon || !showIcon) {
-                    return;
-                }
-
-                const displayMode = sekcija === 'placanja' ? 'flex' : 'block';
-                body.style.display = shouldOpen ? displayMode : 'none';
-                hideIcon.style.display = shouldOpen ? 'block' : 'none';
-                showIcon.style.display = shouldOpen ? 'none' : 'block';
-            };
-
-            document.querySelectorAll('[data-admin-sekcija][data-admin-open]').forEach((element) => {
-                element.addEventListener('click', () => {
-                    const sekcija = element.getAttribute('data-admin-sekcija');
-                    if (!sekcija) {
-                        return;
-                    }
-
-                    const shouldOpen = element.getAttribute('data-admin-open') === '1';
-                    toggleAdminSekcija(sekcija, shouldOpen);
-                });
-            });
-
             const vrsta = /** @type {HTMLSelectElement|null} */ (document.getElementById('vrsta_novi_dokument'));
             const naziv = /** @type {HTMLInputElement|null} */ (document.getElementById('naziv_novi_dokument'));
             if (!vrsta || !naziv) return;
