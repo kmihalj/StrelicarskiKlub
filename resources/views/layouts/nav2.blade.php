@@ -77,6 +77,10 @@
                     </ul>
                 </li>
 
+                <li class="nav-item px-4 py-2 text-center position-relative">
+                    <a class="nav-link" href="{{ route('javno.oglasnik.index') }}">Oglasnik</a>
+                </li>
+
                 <li class="nav-item dropdown px-4 py-2 text-center position-relative">
                     <span class="btn-group">
                         <a class="nav-link js-mobile-dropdown-toggle" href="#" role="button" aria-expanded="false">Obavijesti</a>

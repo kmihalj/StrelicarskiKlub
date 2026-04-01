@@ -32,7 +32,7 @@ class Clanovi extends Model
     ];
 
     /**
-     * Vraća sve pojedinačne rezultate koje je član ostvario na turnirima.
+     * Vraca sve pojedinacne rezultate koje je clan ostvario na turnirima.
      */
     /** @noinspection PhpUnused */
     public function rezultatiOpci(): HasMany
@@ -41,7 +41,7 @@ class Clanovi extends Model
     }
 
     /**
-     * Vraća detaljne stavke rezultata člana po poljima tipa turnira.
+     * Vraca detaljne stavke rezultata clana po poljima tipa turnira.
      */
     public function rezultatiPoTipuTurnira(): HasMany
     {
@@ -49,7 +49,7 @@ class Clanovi extends Model
     }
 
     /**
-     * Vraća funkcije koje član obavlja u klubu (npr. trener, tajnik).
+     * Vraca funkcije koje clan obavlja u klubu (npr. trener, tajnik).
      */
     /** @noinspection PhpUnused */
     public function funkcijeUklubu(): HasMany
@@ -58,7 +58,7 @@ class Clanovi extends Model
     }
 
     /**
-     * Vraća sve evidentirane liječničke preglede člana.
+     * Vraca sve evidentirane lijecnicke preglede clana.
      */
     public function lijecnickiPregledi(): HasMany
     {
@@ -66,7 +66,7 @@ class Clanovi extends Model
     }
 
     /**
-     * Vraća zadnji važeći liječnički pregled člana (po datumu `vrijedi_do`).
+     * Vraca zadnji vazeci lijecnicki pregled clana (po datumu `vrijedi_do`).
      */
     /** @noinspection PhpUnused */
     public function zadnjiLijecnickiPregled(): HasOne
@@ -75,7 +75,7 @@ class Clanovi extends Model
     }
 
     /**
-     * Vraća sve dokumente koji su učitani za člana.
+     * Vraca sve dokumente koji su ucitani za clana.
      */
     public function dokumenti(): HasMany
     {
@@ -83,7 +83,7 @@ class Clanovi extends Model
     }
 
     /**
-     * Vraća korisnički račun koji je povezan s ovim članom.
+     * Vraca korisnicki racun koji je povezan s ovim clanom.
      */
     public function korisnik(): HasOne
     {
@@ -91,7 +91,7 @@ class Clanovi extends Model
     }
 
     /**
-     * Vraća roditeljske korisničke račune koji imaju pristup podacima ovog člana.
+     * Vraca roditeljske korisnicke racune koji imaju pristup podacima ovog clana.
      */
     public function roditelji(): BelongsToMany
     {
@@ -99,7 +99,7 @@ class Clanovi extends Model
     }
 
     /**
-     * Vraća zapise škole streličarstva koji su kasnije prebačeni na ovog člana.
+     * Vraca zapise skole strelicarstva koji su kasnije prebaceni na ovog clana.
      */
     /** @noinspection PhpUnused */
     public function evidencijeSkole(): HasMany
@@ -108,7 +108,7 @@ class Clanovi extends Model
     }
 
     /**
-     * Vraća sve dvoranske treninge evidentirane za člana.
+     * Vraca sve dvoranske treninge evidentirane za clana.
      */
     /** @noinspection PhpUnused */
     public function treninziDvorana(): HasMany
@@ -117,7 +117,7 @@ class Clanovi extends Model
     }
 
     /**
-     * Vraća sve vanjske treninge evidentirane za člana.
+     * Vraca sve vanjske treninge evidentirane za clana.
      */
     /** @noinspection PhpUnused */
     public function treninziVanjski(): HasMany
@@ -126,7 +126,7 @@ class Clanovi extends Model
     }
 
     /**
-     * Vraća aktivni profil praćenja članarine za člana.
+     * Vraca aktivni profil pracenja clanarine za clana.
      */
     /** @noinspection PhpUnused */
     public function paymentProfile(): HasOne
@@ -135,7 +135,7 @@ class Clanovi extends Model
     }
 
     /**
-     * Vraća sve stavke zaduženja i uplata članarine ovog člana.
+     * Vraca sve stavke zaduzenja i uplata clanarine ovog clana.
      */
     /** @noinspection PhpUnused */
     public function paymentCharges(): HasMany
@@ -144,7 +144,7 @@ class Clanovi extends Model
     }
 
     /**
-     * Vraća prijave člana na nadolazeće turnire.
+     * Vraca prijave clana na nadolazece turnire.
      */
     /** @noinspection PhpUnused */
     public function prijaveTurnira(): HasMany
@@ -153,7 +153,15 @@ class Clanovi extends Model
     }
 
     /**
-     * Ažurira polje `lijecnicki_do` na članu prema najdaljem datumu iz svih evidentiranih liječničkih pregleda.
+     * Vraca oglase koje je clan objavio u oglasniku.
+     */
+    public function oglasi(): HasMany
+    {
+        return $this->hasMany(Oglas::class, 'clan_id', 'id');
+    }
+
+    /**
+     * Azurira polje `lijecnicki_do` na clanu prema najdaljem datumu iz svih evidentiranih pregleda.
      */
     public function osvjeziLijecnickiDo(): void
     {

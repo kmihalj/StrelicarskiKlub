@@ -9,6 +9,7 @@ use App\Http\Controllers\KlubController;
 use App\Http\Controllers\KlupskiZidController;
 use App\Http\Controllers\KorisniciController;
 use App\Http\Controllers\NadolazeciTurniriController;
+use App\Http\Controllers\OglasnikController;
 use App\Http\Controllers\PlacanjaController;
 use App\Http\Controllers\PolazniciSkoleController;
 use App\Http\Controllers\ThemeController;
@@ -149,6 +150,7 @@ Route::get('turniri', [TurniriController::class, 'index'])->name('admin.rezultat
 Route::get('admin/turniri', [TurniriController::class, 'index'])->name('admin.rezultati.popisTurnira.legacy');
 Route::get('rezultati', [JavnoController::class, 'prikazRezultata'])->name('javno.rezultati');
 Route::get('rezultati/{turnir}', [JavnoController::class, 'pokaziTurnir'])->name('javno.rezultati.prikaz_turnira');
+Route::get('oglasnik', [OglasnikController::class, 'index'])->name('javno.oglasnik.index');
 Route::get('clanovi', [JavnoController::class, 'popisClanova'])->name('javno.clanovi');
 Route::get('klupski-zid/poruke', [KlupskiZidController::class, 'index'])->name('javno.klupski_zid.index');
 Route::middleware(['auth', 'admin_member_or_school'])->group(function () {
@@ -168,6 +170,15 @@ Route::middleware(['auth', 'admin'])->group(function () {
 });
 Route::middleware('auth')->group(function () {
     Route::post('klupski-zid/poruke', [KlupskiZidController::class, 'store'])->name('javno.klupski_zid.store');
+
+    Route::get('oglasnik/predaja', [OglasnikController::class, 'create'])->name('javno.oglasnik.create');
+    Route::post('oglasnik/predaja', [OglasnikController::class, 'store'])->name('javno.oglasnik.store');
+    Route::get('oglasnik/moji', [OglasnikController::class, 'mine'])->name('javno.oglasnik.mine');
+    Route::get('oglasnik/{oglas}/uredi', [OglasnikController::class, 'edit'])->name('javno.oglasnik.edit');
+    Route::post('oglasnik/{oglas}/update', [OglasnikController::class, 'update'])->name('javno.oglasnik.update');
+    Route::post('oglasnik/{oglas}/deaktiviraj', [OglasnikController::class, 'deactivate'])->name('javno.oglasnik.deactivate');
+    Route::post('oglasnik/{oglas}/aktiviraj', [OglasnikController::class, 'reactivate'])->name('javno.oglasnik.reactivate');
+    Route::post('oglasnik/{oglas}/obrisi', [OglasnikController::class, 'destroy'])->name('javno.oglasnik.destroy');
 
     Route::get('clanovi/{clan}/treninzi', [TreninziController::class, 'pregledClana'])->name('javno.treninzi.clan.index');
     Route::get('moji-treninzi', [TreninziController::class, 'index'])->name('javno.treninzi.index');
