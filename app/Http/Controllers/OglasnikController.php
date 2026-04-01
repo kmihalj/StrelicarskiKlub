@@ -606,15 +606,13 @@ class OglasnikController extends Controller
     private function upitMojihOglasa(User $korisnik): Builder
     {
         if ($this->korisnikJeAdmin($korisnik)) {
-            $adminId = (int) $korisnik->id;
             $adminClanId = (int) ($korisnik->clan_id ?? 0);
 
-            return Oglas::query()->where(function (Builder $query) use ($adminId, $adminClanId): void {
-                $query->where('created_by', $adminId);
-                if ($adminClanId > 0) {
-                    $query->orWhere('clan_id', $adminClanId);
-                }
-            });
+            if ($adminClanId > 0) {
+                return Oglas::query()->where('clan_id', $adminClanId);
+            }
+
+            return Oglas::query()->where('created_by', (int) $korisnik->id);
         }
 
         if ((int) $korisnik->clan_id > 0) {
