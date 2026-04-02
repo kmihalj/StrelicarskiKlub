@@ -19,6 +19,11 @@ use Illuminate\Validation\Rule;
 class KorisniciController extends Controller
 {
     /**
+     * Dobna granica za roditeljsko povezivanje (djeca mlađa od 23 godine).
+     */
+    private const RODITELJSKA_DOBNA_GRANICA = 23;
+
+    /**
      * Učitava servis za povezivanje korisničkih računa s članovima i polaznicima.
      */
     public function __construct(private readonly KorisnikClanService $korisnikClanService)
@@ -86,7 +91,7 @@ class KorisniciController extends Controller
             $povezaniId = ($povezaniIdRaw === null || $povezaniIdRaw === '') ? null : (int)$povezaniIdRaw;
             $jeRoditelj = $request->boolean('je_roditelj');
             $granicaAktivnostiSkole = now()->startOfDay()->subMonthsNoOverflow(4)->toDateString();
-            $granicaMaloljetnosti = now()->startOfDay()->subYears(18)->toDateString();
+            $granicaMaloljetnosti = now()->startOfDay()->subYears(self::RODITELJSKA_DOBNA_GRANICA)->toDateString();
 
             $roditeljClanovi = collect((array)$request->input('roditelj_clanovi', []))
                 ->map(fn ($id) => (int)$id)
@@ -171,7 +176,7 @@ class KorisniciController extends Controller
                     ->whereDate('datum_rodjenja', '>', $granicaMaloljetnosti)
                     ->find($clanId);
                 if ($clan === null) {
-                    $validator->errors()->add('roditelj_clanovi', 'Odabrano dijete (član) nije dostupno ili nije maloljetno.');
+                    $validator->errors()->add('roditelj_clanovi', 'Odabrano dijete (član) nije dostupno ili nije mlađe od 23 godine.');
                     continue;
                 }
 
@@ -195,7 +200,7 @@ class KorisniciController extends Controller
                     })
                     ->find($polaznikId);
                 if ($polaznik === null) {
-                    $validator->errors()->add('roditelj_polaznici', 'Odabrano dijete (polaznik) nije dostupno ili nije maloljetno.');
+                    $validator->errors()->add('roditelj_polaznici', 'Odabrano dijete (polaznik) nije dostupno ili nije mlađe od 23 godine.');
                     continue;
                 }
 
@@ -313,7 +318,7 @@ class KorisniciController extends Controller
     private function dohvatiPodatkeOdabiraZaKorisnika(User $user): array
     {
         $granicaAktivnostiSkole = now()->startOfDay()->subMonthsNoOverflow(4)->toDateString();
-        $granicaMaloljetnosti = now()->startOfDay()->subYears(18)->toDateString();
+        $granicaMaloljetnosti = now()->startOfDay()->subYears(self::RODITELJSKA_DOBNA_GRANICA)->toDateString();
 
         $odabraniClanoviIds = $user->djecaClanovi->pluck('id')->map(fn ($id) => (int)$id)->all();
         $odabraniPolazniciIds = $user->djecaPolaznici->pluck('id')->map(fn ($id) => (int)$id)->all();

@@ -1,162 +1,86 @@
-# Streličarski klub - WEB sjedište
+# Streličarski klub - web sustav
 
-Laravel aplikacija za vođenje streličarskog kluba:
-- članovi i dokumenti
-- škola streličarstva
-- treninzi
-- turniri i rezultati
-- članci/obavijesti
-- teme (svijetla/tamna varijanta)
-- praćenje plaćanja
+Laravel aplikacija za vođenje rada kluba:
+
+1. članovi i dokumenti
+2. škola streličarstva
+3. treninzi
+4. turniri i rezultati
+5. članci i obavijesti
+6. praćenje plaćanja
 
 ## Dokumentacija
 
-Brzi linkovi:
+Aktualna dokumentacija je u `docs`:
 
-- [Pregled dokumentacije](docs/README.md)
-- [Instalacija i prvi koraci](docs/01-instalacija-i-prvi-koraci.md)
-- [Admin priručnik](docs/02-admin-prirucnik.md)
-- [Član priručnik](docs/03-clan-prirucnik.md)
-- [Roditelj priručnik](docs/04-roditelj-prirucnik.md)
-- [Polaznik škole priručnik](docs/05-polaznik-skole-prirucnik.md)
+1. [Pregled dokumentacije](docs/README.md)
+2. [Instalacija i prvi koraci](docs/01-instalacija-i-prvi-koraci.md)
+3. [Administrator - detaljni priručnik](docs/02-admin-prirucnik.md)
+4. [Korisnik član - detaljne upute](docs/03-clan-prirucnik.md)
+5. [Roditelj - detaljni priručnik](docs/04-roditelj-prirucnik.md)
+6. [Polaznik škole streličarstva - detaljne upute](docs/05-polaznik-skole-prirucnik.md)
 
-## 1. Preduvjeti
+## Preduvjeti
 
-- PHP 8.2+
-- Composer 2+
-- MySQL 8+
-- Node.js 18+ i npm
-- web server (Apache/Nginx) ili `php artisan serve`
+1. PHP 8.2+
+2. Composer 2+
+3. MySQL 8+
+4. Node.js 18+ i npm
 
-## 2. Instalacija projekta
+## Brzi start (lokalno)
 
 ```bash
 composer install
 cp .env.example .env
 php artisan key:generate
-```
-
-Uredi `.env` (najvažnije DB postavke):
-
-```dotenv
-APP_NAME="Archery Club"
-APP_ENV=local
-APP_DEBUG=false
-APP_URL=http://localhost
-
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=your_database
-DB_USERNAME=your_user
-DB_PASSWORD=your_password
-```
-
-Pokreni migracije i početni seed:
-
-```bash
 php artisan migrate --seed
-```
-
-Kreiraj storage link:
-
-```bash
 php artisan storage:link
-```
-
-Frontend assets:
-
-```bash
 npm install
 npm run build
 ```
 
-Za lokalni razvoj može i:
+Za razvoj:
 
 ```bash
 npm run dev
 php artisan serve
 ```
 
-## 3. Što seed automatski postavlja
+## Što seed postavlja
 
-- tablicu stilova (`stilovis`)
-- kategorije (`kategorijes`)
-- tipove turnira (`tipovi_turniras`) i pripadajuća polja (`polja_za_tipove_turniras`)
-- predefinirane teme, default aktivna tema: **Zelena (light)**
-- globalni logo/favicon: streličarska meta (svijetla i tamna varijanta)
-- početnog bootstrap admin korisnika:
-  - email: `administrator@archery.local`
-  - lozinka: `poklonOdSKDubrava`
+Seed postavlja osnovne šifrarnike i početne podatke:
 
-## 4. Obavezni prvi korak nakon instalacije (handover admina)
+1. stilove luka
+2. kategorije
+3. tipove turnira i polja rezultata
+4. početne teme
+5. bootstrap admin račun
 
-Bootstrap korisnik `Administrator` je samo za inicijalno postavljanje.
+Bootstrap admin:
 
-Nakon instalacije:
+1. e-mail: `administrator@archery.local`
+2. lozinka: `poklonOdSKDubrava`
 
-1. Napravi registraciju stvarnog korisnika kluba (člana).
-2. Ulogiraj se kao privremeni `Administrator`.
-3. Nakon prijave otvara se Admin > Korisnici.
-4. U Admin > Korisnici postavi registriranom korisniku rolu **Administrator**.
-5. Aplikacija automatski:
-   - odjavljuje bootstrap korisnika,
-   - briše bootstrap korisnika iz baze,
-   - novi korisnik ostaje administrator.
+## Obavezni prvi korak nakon instalacije
 
-Time je inicijalni setup završen.
+Bootstrap admin je samo privremeni račun za inicijalni handover.
 
-## 5. Produkcija (preporuka)
+1. registriraj stvarnog korisnika kluba,
+2. prijavi se bootstrap admin računom,
+3. u `Admin -> Korisnici` postavi tom korisniku rolu `1 - Admin`,
+4. sustav automatski odjavljuje i uklanja bootstrap admin račun.
 
-```bash
-composer install --no-dev --optimize-autoloader
-php artisan migrate --seed --force
-npm ci
-npm run build
-```
-
-## 6. Uloge u sustavu (sažetak)
-
-- **Administrator**: puni pristup administraciji (članovi, korisnici, teme, setup, plaćanja, sadržaj).
-- **Član**: vlastiti profil, treninzi, relevantni prikazi i plaćanja.
-- **Roditelj**: vlastiti račun + pregled povezane djece.
-- **Polaznik škole**: profil škole, dolasci i školarina prema ovlastima.
-
-## 7. Import nadolazećih turnira (archery.hr)
-
-Za uvoz kalendara koristi se Artisan komanda:
+## Uvoz nadolazećih turnira (archery.hr)
 
 ```bash
 php artisan turniri:import-archery
 ```
 
-Najčešći primjeri:
+Primjeri:
 
 ```bash
-# samo pregled bez upisa u bazu
 php artisan turniri:import-archery --year=2026 --dry-run
-
-# uvoz samo nadolazećih turnira za 2026 (default: prošli se preskaču)
 php artisan turniri:import-archery --year=2026
-
-# uvoz samo novih zapisa (postojeće ne ažurira)
 php artisan turniri:import-archery --year=2026 --skip-existing
-
-# po potrebi uključi i prošle turnire
 php artisan turniri:import-archery --year=2026 --include-past
 ```
-
-Napomene:
-- Komanda ne dodaje nove tipove turnira; mapira discipline na postojeće tipove iz baze.
-- Ako disciplina nije prepoznata, turnir se preskače i ispisuje se u izvještaju (`Preskočeno (nepoznata disciplina)` + popis turnira).
-- Za višednevne zapise (npr. `07. i 08.03.2026.`) sprema se `datum` + `datum_do`, a prikaz u prijavama je kao raspon (`07.-08.03.2026.`).
-
-## 8. Napomena
-
-Detaljan korisnički priručnik:
-
-- [Instalacija i prvi koraci](docs/01-instalacija-i-prvi-koraci.md)
-- [Admin priručnik](docs/02-admin-prirucnik.md)
-- [Član priručnik](docs/03-clan-prirucnik.md)
-- [Roditelj priručnik](docs/04-roditelj-prirucnik.md)
-- [Polaznik škole priručnik](docs/05-polaznik-skole-prirucnik.md)

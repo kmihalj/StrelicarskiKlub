@@ -1,56 +1,115 @@
-# Član - priručnik
+# Korisnik član - detaljne upute
 
-Član vidi vlastite podatke, treninge, rezultate i plaćanja.
+Ovaj vodič je namjerno pisan opširnije, tako da se kroz njega može proći i bez tehničkog predznanja. Cilj nije samo pokazati gdje kliknuti, nego i objasniti zašto se neke opcije prikazuju, a neke ne, te kako prepoznati normalno ponašanje sustava.
 
-## 1. Naslovnica člana
+## 1. Što se događa nakon registracije
 
-Na naslovnici su:
-- blok "Moji podaci"
-- upozorenja (liječnički, članarina)
-- brzi gumbi (`Moji treninzi`, `Moja plaćanja`)
-- zadnji članci i rezultati.
+Kada član otvori registraciju i unese svoje podatke, sustav ne radi samo izradu korisničkog računa. U isto vrijeme pokušava automatski povezati novi račun s postojećim profilom člana u bazi kluba.
 
-![Početna člana](screenshots/member/01-member-home.png)
+Automatsko povezivanje se radi samo kada identitet stvarno odgovara postojećem članu. U praksi to znači da se podaci moraju podudarati kroz:
 
-## 2. Profil člana
+1. OIB
+2. e-mail adresu
+3. ime i prezime
+4. broj telefona
 
-Profil prikazuje osobne podatke, rezultate, dokumente i pripadajuće funkcionalnosti prema pravima korisnika.
+Ako je podudaranje uspješno, račun odmah dobiva vezu na profil člana i članske ovlasti. Ako nije, registracija može biti uspješna, ali račun ostaje bez veze na člana dok administrator ne napravi ručno povezivanje.
 
-![Profil člana](screenshots/member/02-member-profile.png)
+![01. Naslovnica](<screenshots/member-role/01. naslovnica.png>)
+![02. Registracija](<screenshots/member-role/02. registracija.png>)
+![03. Podaci za registraciju](<screenshots/member-role/03. podaci za registraciju.png>)
+![02a. Prijava na site](<screenshots/member-role/02a. prijava na site.png>)
 
-## 3. Moja plaćanja
+## 2. Kako odmah prepoznati je li račun pravilno povezan
 
-`/clanovi/{id}/placanja` prikazuje:
-- listu stavki (plaćeno / neplaćeno)
-- odabir duga za uplatu
-- odabir vrste uplate (članarina / podupirući)
-- automatski barkod za internet bankarstvo.
+Nakon prve prijave najvažniji signal je izbornik `Korisnik`.
 
-![Moja plaćanja i barkod](screenshots/member/03-member-payments.png)
+Kada je račun pravilno povezan s članom, uobičajeno se prikazuju stavke poput `Profil`, `Prijave na turnire` i `Odjava`. Ako je račun registriran, ali još nije povezan na člana, korisnik je prijavljen, no u izborniku najčešće ostaje samo `Odjava`.
 
-## 4. Moji treninzi
+To nije kvar, nego znak da je potreban kontakt s administratorom koji u administraciji korisnika postavlja odgovarajuću rolu i povezani profil člana.
 
-Član vodi vlastitu evidenciju dvoranskih i vanjskih treninga.
+![04. Provjera statusa](<screenshots/member-role/04. provjera statusa.png>)
+![05. Admin povezuje člana sa korisnikom](<screenshots/member-role/05. admin povezuje člana sa korisnikom.png>)
+![06. Prijavljeni kao član](<screenshots/member-role/06. prijavljeni kao član.png>)
 
-![Moji treninzi](screenshots/member/04-member-trainings.png)
+## 3. Profil člana i dokumentacija
 
-## 5. Unos treninga
+Profil člana je središnje mjesto za osobne podatke, sportske informacije i dokumentaciju. U sekciji `Pregled dokumenata` nalaze se podaci o dokumentima člana i liječničkim pregledima.
 
-Za svaki novi trening član otvara ekran unosa (`dvoranski` ili `vanjski`) i unosi serije/pogotke.
+Važna stvar za razumjeti: član vidi svoje dokumente. U profilima gdje korisnik nema pravo na dokumente ta sekcija se u pravilu uopće ne prikazuje. Dakle, korisnik bez prava najčešće ne dobiva poruku o zabrani, nego taj dio sučelja jednostavno ne vidi.
 
-![Unos dvoranskog treninga](screenshots/member/06-member-training-entry.png)
+![07. Profil korisnika](<screenshots/member-role/07. profil korisnika.png>)
+![08. Dokumenti i podaci](<screenshots/member-role/08. dokumenti i podaci.png>)
 
-## 6. Pregled dokumenata
+## 4. Treninzi člana
 
-Na profilu člana, u bloku `Pregled dokumenata`, vidljiv je:
-- pregled osnovnih podataka
-- liječnički status
-- lista dokumenata člana s linkom `Pregled`.
+Modul `Moji treninzi` služi za osobnu evidenciju dvoranskih i vanjskih treninga. Član unosi rezultate po serijama, kasnije ih pregledava i po potrebi uređuje ili briše.
 
-![Pregled dokumenata člana](screenshots/member/07-member-documents-section.png)
+Sustav treninge veže na prijavljenog korisnika i njegov profil člana, pa unosi ostaju odvojeni po korisnicima i ne miješaju se između članova.
 
-## 7. Rezultati
+![09. Pregled treninga](<screenshots/member-role/09. pregled treninga.png>)
+![10. Unos treninga](<screenshots/member-role/10. unos treninga.png>)
+![11. Pregled i uređivanje treninga](<screenshots/member-role/11. pregled i uređivanje treninga.png>)
 
-Član može pregledavati turnire i ostvarene rezultate.
+## 5. Popis članova i profil rezultata
 
-![Rezultati](screenshots/member/05-member-results.png)
+Kroz izbornik `O nama` -> `Članovi` otvara se popis aktivnih članova. Tu se može otvoriti profil pojedinog člana i pregledati rezultate, rekorde i nastupe na turnirima.
+
+![12. Popis članova](<screenshots/member-role/12. popis članova.png>)
+![13. Profil člana](<screenshots/member-role/13. profil člana.png>)
+
+## 6. Prijave na turnire
+
+Prijava na turnire je jednostavna forma, ali sustav u pozadini radi nekoliko važnih provjera. Prikazuju se turniri u dostupnom razdoblju (u pravilu sljedećih 60 dana), ne dopušta se dvostruka aktivna prijava istog člana na isti turnir, a prijave na zaključane turnire nisu dopuštene.
+
+Kategorija se može promijeniti. Sustav samo predlaže početnu kategoriju prema dobi i spolu člana, ali korisnik može odabrati drugu dostupnu kategoriju iz ponuđenog popisa.
+
+![14. Prijava na turnire](<screenshots/member-role/14. prijava na turnire.png>)
+![15. Prijava na odabrani turnir](<screenshots/member-role/15. prijava na odabrani turnir.png>)
+![16. Pregled prijave](<screenshots/member-role/16. pregled prijave.png>)
+![17. Popis prijava na turnire](<screenshots/member-role/17. popis prijava na turnire.png>)
+
+## 7. Kotizacije i plaćanja
+
+Kod turnira postoje dvije varijante naplate kotizacije:
+
+1. gotovina
+2. plaćanje preko računa kluba
+
+Ako je za turnir postavljeno plaćanje preko računa kluba, u prijavi i popisu prijava pojavljuje se poveznica na `Plaćanja člana`, gdje se vidi stanje, odabire stavka duga i prikazuju podaci za uplatu s barkodom.
+
+Kada uplata bude evidentirana, status prelazi na `Plaćeno`.
+
+![18. Prijava na turnir koji se plaća preko računa](<screenshots/member-role/18. prijava na turnir koji se plaća preko računa.png>)
+![19. Pregled prijave](<screenshots/member-role/19. pregled prijave_.png>)
+![20. Popis prijava - link na plaćanje](<screenshots/member-role/20. popis prijava - link na plaćanje.png>)
+![21. Plaćanja](<screenshots/member-role/21. plaćanja.png>)
+
+Na naslovnici se kod otvorenog duga prikazuju upozorenja tipa `Potrebna uplata`. To nije greška, nego podsjetnik da treba otvoriti modul plaćanja i podmiriti stavku.
+
+![22. Naslovnica - obavijesti članu](<screenshots/member-role/22. naslovnica - obavijesti članu.png>)
+![23. Naslovnica - članarina](<screenshots/member-role/23. naslovnica - članarina.png>)
+![24. Pregled plaćanja - članarina](<screenshots/member-role/24. pregled plaćanja - članarina.png>)
+![25. Upute za plaćanje ako ne želite plaćati barkodom](<screenshots/member-role/25. upute za plaćanje ako ne želite plaćati barkodom.png>)
+![26. Sva plaćanja su podmirena](<screenshots/member-role/26. sva plaćanja su podmirena.png>)
+
+## 8. Oglasnik
+
+`Oglasnik` služi za objavu, razmjenu i prodaju opreme. Član može izraditi oglas, dodati slike, kasnije ga uređivati, privremeno deaktivirati ili trajno obrisati.
+
+![27. Oglasnik](<screenshots/member-role/27. oglasnik.png>)
+![28. Kreiranje oglasa](<screenshots/member-role/28. kreiranje oglasa.png>)
+![29. Radnje sa oglasom](<screenshots/member-role/29. radnje sa oglasom.png>)
+![30. Vaš oglas](<screenshots/member-role/30. vaš oglas.png>)
+
+## 9. Klupski zid
+
+Svi članovi imaju pravo pisati poruke na `Klupski zid`. To je mjesto za kratke klupske obavijesti, dogovore i informacije koje želite podijeliti sa zajednicom.
+
+Važno je znati da su poruke s Klupskog zida vidljive svim posjetiteljima stranice, uključujući i one koji nisu prijavljeni. Zato na zid nemojte upisivati osjetljive osobne podatke (npr. OIB, adrese, brojeve dokumenata ili medicinske podatke), nego samo sadržaj koji smije biti javan.
+
+## Završna napomena za člana
+
+Ako nakon registracije ne vidite `Profil` i `Prijave na turnire`, najčešći uzrok je da račun još nije povezan s profilom člana. U toj situaciji treba kontaktirati administratora i poslati točne podatke korištene pri registraciji (ime i prezime, OIB, e-mail, broj telefona).
+
+Kada je povezivanje dovršeno, članski prikaz i mogućnosti postaju dostupni odmah nakon sljedeće prijave.

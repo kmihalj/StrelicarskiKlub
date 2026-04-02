@@ -112,7 +112,7 @@
                         </div>
 
                         <div class="col-lg-6">
-                            <label for="roditelj_clanovi" class="form-label mb-1">Djeca (članovi, maloljetni)</label>
+                            <label for="roditelj_clanovi" class="form-label mb-1">Djeca (članovi, mlađi od 23 godine)</label>
                             <select class="form-select js-roditelj-clanovi" id="roditelj_clanovi" name="roditelj_clanovi[]" multiple size="6">
                                 @php foreach ($maloljetniClanovi as $clan): @endphp
                                     <option value="{{ (int)$clan->id }}" {{ in_array((int)$clan->id, $stariRoditeljClanovi, true) ? 'selected' : '' }}>
@@ -123,7 +123,7 @@
                         </div>
 
                         <div class="col-lg-6">
-                            <label for="roditelj_polaznici" class="form-label mb-1">Djeca (polaznici škole, maloljetni)</label>
+                            <label for="roditelj_polaznici" class="form-label mb-1">Djeca (polaznici škole, mlađi od 23 godine)</label>
                             <select class="form-select js-roditelj-polaznici" id="roditelj_polaznici" name="roditelj_polaznici[]" multiple size="6">
                                 @php foreach ($maloljetniPolaznici as $polaznik): @endphp
                                     <option value="{{ (int)$polaznik->id }}" {{ in_array((int)$polaznik->id, $stariRoditeljPolaznici, true) ? 'selected' : '' }}>

@@ -1,110 +1,100 @@
-# Administrator - priručnik
+# Administrator - detaljni priručnik
 
-Ovaj vodič pokazuje glavne ekrane i tipične adminsitratorske zadatke.
+Administratorska uloga je operativno središte cijelog sustava. U praksi to znači da administrator vodi korisnike i ovlasti, postavlja i nadzire turnire, potvrđuje uplate, uređuje sadržaj stranice i održava osnovne klupske postavke.
 
-## 1. Početna administratora
+Važna napomena za role: administrator može ujedno biti i član (ako je povezan na profil člana), pa za svoj profil može koristiti sve što koristi i član. Također, administrator može biti označen i kao roditelj, pa uz adminsko sučelje može imati i roditeljski pregled povezane djece.
 
-Admin vidi standardnu naslovnicu, ali i admin izbornike.
+## 1. Administratorski izbornik i početna orijentacija
 
-![Admin početna](screenshots/admin/01-admin-home.png)
+Nakon prijave administrator u glavnoj navigaciji vidi dodatni izbornik `Admin`. Kroz taj izbornik ulazi se u sve ključne module: podešenja, nadolazeće turnire, plaćanja, korisnike, teme, članke i podatke o klubu.
 
-## 2. Korisnici i uloge
+![01. Admin menu](<screenshots/admin-role/01. admin menu.png>)
 
-`Admin > Korisnici` služi za:
-- promjenu role (`Admin`, `Član`, `Korisnik`, `Polaznik škole`)
-- povezivanje korisnika s članom ili polaznikom škole
-- uključivanje roditeljske uloge i povezivanje djece.
+## 2. Nadolazeći turniri i prijave
 
-![Popis korisnika](screenshots/admin/02-admin-users.png)
-![Uređivanje korisnika i roditeljskih veza](screenshots/admin/03-admin-edit-parent-user.png)
+Modul `Nadolazeći turniri` služi za unos i održavanje kalendara turnira. Tu se može ručno dodati turnir, dopuniti tip turnira, definirati kotizacija, zaključati prijave i pripremiti sve prije nego članovi krenu s prijavama.
 
-## 3. Članovi i status plaćanja
+![02. Nadolazeći turniri](<screenshots/admin-role/02. nadolazeći turniri.png>)
+![16. Dodavanje turnira](<screenshots/admin-role/16. dodavanje turnira.png>)
 
-Na popisu članova admin vidi dodatnu kolonu sa stanjem plaćanja (iznos duga ili uredno stanje).
+Na detalju pojedinog turnira administrator vidi sve prijave, može izvesti CSV za organizatora i po potrebi ukloniti člana s turnira uz obaveznu napomenu. Uklanjanje prijave ne briše trag, nego prijavu prebacuje u povijest uklonjenih.
 
-![Popis članova s plaćanjima](screenshots/admin/04-admin-clanovi-list.png)
+![03. Prijave i izvoz podataka](<screenshots/admin-role/03. prijave i izvoz podataka.png>)
+![03a. Prijave i izvoz podataka - detalj](<screenshots/admin-role/03a. Slika zaslona 2026-04-02 u 01.20.11.png>)
+![03b. Prijave i izvoz podataka - detalj](<screenshots/admin-role/03b. Slika zaslona 2026-04-02 u 01.21.01.png>)
 
-Na profilu člana (`admin/clanovi/{id}`) admin upravlja:
-- modelom plaćanja
-- ručnim/dodatnim stavkama
-- potvrdom uplata
-- pregledom povijesti stavki.
+## 3. Plaćanja članova i škole
 
-![Praćenje plaćanja člana](screenshots/admin/05-admin-member-payments-section.png)
+Modul `Plaćanja` je kontrolna ploča za članarine, kotizacije i školarine. U njemu administrator podešava modele naplate, prati otvorene stavke i vidi sažetak po osobi i po statusu.
 
-## 4. Polaznici škole i školarina
+![04. Plaćanja](<screenshots/admin-role/04. plaćanja.png>)
 
-Na profilu polaznika admin vodi:
-- model školarine (`u cijelosti`, `u dvije rate`, `oslobođen`)
-- potvrde uplata
-- praćenje druge rate nakon 8 treninga
-- evidenciju dolazaka i dokumente.
+Na popisu članova vidi se i stanje plaćanja, a na profilu člana administrator može potvrditi uplatu, mijenjati status i dodavati ručne stavke kada je to potrebno.
 
-![Školarina polaznika](screenshots/admin/06-admin-school-payments-section.png)
+![05. Popis članova - sa plaćanjima](<screenshots/admin-role/05. popis članova - sa plaćanjima.png>)
+![07. Admin radnje na članu](<screenshots/admin-role/07. admin radnje na članu.png>)
+![08. Potvrda plaćanja](<screenshots/admin-role/08. potvrda plaćanja.png>)
 
-## 5. Administracija plaćanja i izvještaji
+Za stavke koje se vode kao gotovina (npr. naplata treneru), status se također vodi kroz sustav kako bi izvještaji ostali točni.
 
-`Admin > Plaćanja` uključuje:
-- setup modela plaćanja i iznosa
-- filtere perioda/statusa/naplate
-- sažetke dugovanja
-- tablice dužnika i svih stavki
-- CSV export.
+![06. Plaćanja treneru](<screenshots/admin-role/06. plaćanja treneru.png>)
 
-![Dashboard plaćanja](screenshots/admin/07-admin-payments-dashboard.png)
+## 4. Podaci o klubu i osnovna sportska podešenja
 
-Otvoreni setup blok (`Praćenje plaćanja članarina`) služi za:
-- uključivanje/isključivanje praćenja plaćanja
-- unos školarine punoljetni/maloljetni
-- definiranje modela plaćanja (naziv, tip razdoblja, sidro sezone, naplata, iznos, dostupnost)
-- dodavanje novih modela plaćanja.
+`Admin -> Klub` služi za održavanje službenih podataka kluba koji se koriste kroz cijelu aplikaciju, uključujući prikaz i generiranje podataka za uplatu.
 
-![Setup plaćanja - otvoren](screenshots/admin/13-admin-payments-setup-open.png)
+![09. Podaci o klubu](<screenshots/admin-role/09. Podaci o klubu.png>)
 
-## 6. Podaci o klubu i barkod
+U modulu podešenja administrator održava osnovne sportske šifrarnike (tipovi turnira, stilovi, kategorije i polja rezultata). To je važno jer o tim postavkama ovise forme za unos rezultata i prijave.
 
-`Admin > Klub` je mjesto gdje se postavljaju službeni podaci kluba:
-- naziv
-- adresa
-- kontakt
-- IBAN.
+![10. Osnovne stavke za unos rezultata](<screenshots/admin-role/10. osnovne stavke za unos rezultata.png>)
 
-![Podaci o klubu](screenshots/admin/14-admin-klub-podaci.png)
+## 5. Korisnici, role i povezivanja
 
-Ti podaci se koriste kod generiranja barkoda i podataka za uplatu na ekranu plaćanja člana.
+U modulu `Korisnici` administrator upravlja identitetima i pravima pristupa. Tu se korisniku postavlja rola (`Admin`, `Član`, `Korisnik`, `Polaznik škole`), povezani profil i roditeljske veze.
 
-## 7. Teme, logo i favicon
+![11. Popis korisnika](<screenshots/admin-role/11. popis korisnika.png>)
+![12. Uređivanje korisnika](<screenshots/admin-role/12. uređivanje korisnika.png>)
 
-`Admin > Teme`:
-- odabir aktivne teme
-- uređivanje boja
-- light/dark varijante
-- upload globalnog loga i favicona.
+Praktično pravilo rada:
 
-![Administracija tema](screenshots/admin/08-admin-themes.png)
+1. rola određuje osnovna prava,
+2. povezani profil određuje čiji se podaci i moduli otvaraju,
+3. roditeljske veze određuju koja djeca su vidljiva roditeljskom računu.
 
-## 8. Članci i sadržaj
+Za roditeljske veze sustav primjenjuje ograničenja (maloljetna djeca, maksimalan broj povezanih djece i roditelja po djetetu), pa administracija ostaje konzistentna i kontrolirana.
 
-`Admin > Članci` prikazuje sve sadržaje.
+## 6. Oglasnik i članci
 
-![Popis članaka](screenshots/admin/09-admin-articles-list.png)
+Administrator može moderirati i održavati sadržaj stranice kroz `Oglasnik` i `Članke`. To uključuje pregled objava, unos novih sadržaja, izmjene postojećih i objavu informacija važnih za rad kluba.
 
-Kreiranje članka koristi CKEditor (sadržaj, menu, Facebook link, mediji).
+![13. Oglasnik](<screenshots/admin-role/13. oglasnik.png>)
+![14. Unos oglasa](<screenshots/admin-role/14. unos oglasa.png>)
+![15. Unos članka](<screenshots/admin-role/15. unos članka.png>)
+![15a. Uređivanje članka](<screenshots/admin-role/15a. uređivanje članka.png>)
 
-![Unos članka](screenshots/admin/10-admin-article-create.png)
+## 7. Škola streličarstva
 
-## 9. Turniri i rezultati
+U modulu škole administrator vodi aktivne i neaktivne polaznike, status školarine i evidenciju dolazaka.
 
-`Admin > Turniri` za kreiranje i pregled turnira:
+![17. Polaznici škole](<screenshots/admin-role/17. polaznici škole.png>)
+![18. Evidencija dolazaka](<screenshots/admin-role/18.evidencija dolazaka.png>)
 
-![Popis turnira](screenshots/admin/11-admin-tournaments.png)
+Na profilu polaznika administrator može:
 
-Unos rezultata po turniru:
-- član
-- stil
-- kategorija
-- polja po tipu turnira
-- plasman i eliminacije
-- mediji i opisi.
+1. uređivati osobne podatke,
+2. voditi dokumente,
+3. postaviti model školarine i potvrđivati uplate,
+4. po potrebi prebaciti polaznika u članove.
 
-![Unos rezultata](screenshots/admin/12-admin-results-entry.png)
+## 8. Teme i vizualni identitet
+
+Kroz modul tema administrator bira i uređuje aktivni vizualni stil sučelja.
+
+![19. Uređivanje teme](<screenshots/admin-role/19. uređivanje teme.png>)
+
+Ovdje se centralno upravlja bojama i izgledom, pa se promjena odmah vidi na cijelom web sučelju.
+
+## Završna operativna napomena
+
+Najstabilniji način rada je da se svaka promjena radi redom: prvo korisnici i povezivanja, zatim sadržaj i postavke, pa tek onda operativni moduli poput prijava i plaćanja. Tako se izbjegnu situacije u kojima je funkcionalnost tehnički dostupna, ali korisnik zbog pogrešne role ili nepovezanog profila ne vidi očekivane opcije.
