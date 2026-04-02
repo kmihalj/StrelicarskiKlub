@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="hr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Upute za kori?tenje web stranice SK Dubrava</title>
+  <style>
+    :root {
+      --text:#1f2937;
+      --muted:#4b5563;
+      --border:#d1d5db;
+      --bg:#ffffff;
+      --toc-bg:#f9fafb;
+      --accent:#b91c1c;
+      --link:#1d4ed8;
+    }
+    html, body { background: var(--bg); color: var(--text); }
+    body { margin: 0; font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; line-height: 1.6; font-size: 16px; }
+    .page { max-width: 1180px; margin: 0 auto; padding: 28px 26px 70px; }
+    .doc-title { margin: 0 0 18px; font-size: 2rem; border-bottom: 3px solid var(--accent); padding-bottom: 10px; }
+
+    .toc-box {
+      background: var(--toc-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin: 0 0 28px;
+    }
+    .toc-title { margin: 0 0 8px; font-size: 1.2rem; }
+    .toc ul { margin: .35rem 0 .35rem 1.2rem; }
+    .toc li { margin: .2rem 0; }
+
+    h1, h2, h3, h4 { line-height: 1.25; margin-top: 1.55em; margin-bottom: .6em; color: #111827; }
+    h1 { font-size: 1.8rem; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    h2 { font-size: 1.35rem; }
+    h3 { font-size: 1.1rem; }
+
+    a { color: var(--link); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin: 10px 0 22px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.06);
+    }
+
+    code { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 4px; padding: 1px 5px; }
+    pre code { display: block; padding: 12px; overflow-x: auto; }
+
+    @media print {
+      @page { size: A4; margin: 16mm 14mm 16mm 14mm; }
+      body { font-size: 11pt; }
+      .page { max-width: none; padding: 0; margin: 0; }
+      h1, h2, h3 { page-break-after: avoid; }
+      img { page-break-inside: avoid; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1 class="doc-title">Upute za kori?tenje web stranice SK Dubrava</h1>
+    <section class="toc-box" aria-label="Sadr?aj dokumenta">
+      <h2 class="toc-title">Sadr?aj</h2>
+      <div class="toc">
+<ul>
+<li><a href="#korisnik-clan-detaljne-upute">Korisnik član - detaljne upute</a><ul>
+<li><a href="#1-sto-se-dogaa-nakon-registracije">1. Što se događa nakon registracije</a></li>
+<li><a href="#2-kako-odmah-prepoznati-je-li-racun-pravilno-povezan">2. Kako odmah prepoznati je li račun pravilno povezan</a></li>
+<li><a href="#3-profil-clana-i-dokumentacija">3. Profil člana i dokumentacija</a></li>
+<li><a href="#4-treninzi-clana">4. Treninzi člana</a></li>
+<li><a href="#5-popis-clanova-i-profil-rezultata">5. Popis članova i profil rezultata</a></li>
+<li><a href="#6-prijave-na-turnire">6. Prijave na turnire</a></li>
+<li><a href="#7-kotizacije-i-placanja">7. Kotizacije i plaćanja</a></li>
+<li><a href="#8-oglasnik">8. Oglasnik</a></li>
+<li><a href="#9-klupski-zid">9. Klupski zid</a></li>
+<li><a href="#zavrsna-napomena-za-clana">Završna napomena za člana</a></li>
+</ul>
+</li>
+<li><a href="#polaznik-skole-strelicarstva-detaljne-upute">Polaznik škole streličarstva - detaljne upute</a><ul>
+<li><a href="#1-registracija-i-povezivanje">1. Registracija i povezivanje</a></li>
+<li><a href="#2-profil-polaznika">2. Profil polaznika</a></li>
+<li><a href="#3-skolarina-i-status-uplata">3. Školarina i status uplata</a></li>
+<li><a href="#4-dolasci-i-prakticna-uporaba">4. Dolasci i praktična uporaba</a></li>
+<li><a href="#5-klupski-zid">5. Klupski zid</a></li>
+</ul>
+</li>
+<li><a href="#roditelj-detaljni-prirucnik">Roditelj - detaljni priručnik</a><ul>
+<li><a href="#1-kako-roditeljski-pristup-nastaje">1. Kako roditeljski pristup nastaje</a></li>
+<li><a href="#2-roditelj-clana-kluba">2. Roditelj člana kluba</a></li>
+<li><a href="#3-roditelj-polaznika-skole-strelicarstva">3. Roditelj polaznika škole streličarstva</a></li>
+<li><a href="#4-granice-roditeljskog-pristupa">4. Granice roditeljskog pristupa</a></li>
+<li><a href="#5-klupski-zid_1">5. Klupski zid</a></li>
+<li><a href="#zavrsna-napomena-za-roditelje">Završna napomena za roditelje</a></li>
+</ul>
+</li>
+<li><a href="#administrator-detaljni-prirucnik">Administrator - detaljni priručnik</a><ul>
+<li><a href="#1-administratorski-izbornik-i-pocetna-orijentacija">1. Administratorski izbornik i početna orijentacija</a></li>
+<li><a href="#2-nadolazeci-turniri-i-prijave">2. Nadolazeći turniri i prijave</a></li>
+<li><a href="#3-placanja-clanova-i-skole">3. Plaćanja članova i škole</a></li>
+<li><a href="#4-podaci-o-klubu-i-osnovna-sportska-podesenja">4. Podaci o klubu i osnovna sportska podešenja</a></li>
+<li><a href="#5-korisnici-role-i-povezivanja">5. Korisnici, role i povezivanja</a></li>
+<li><a href="#6-oglasnik-i-clanci">6. Oglasnik i članci</a></li>
+<li><a href="#7-skola-strelicarstva">7. Škola streličarstva</a></li>
+<li><a href="#8-teme-i-vizualni-identitet">8. Teme i vizualni identitet</a></li>
+<li><a href="#9-klupski-zid-i-moderiranje-poruka">9. Klupski zid i moderiranje poruka</a></li>
+<li><a href="#zavrsna-operativna-napomena">Završna operativna napomena</a></li>
+</ul>
+</li>
+<li><a href="#instalacija-i-prvi-koraci">Instalacija i prvi koraci</a><ul>
+<li><a href="#1-preduvjeti">1. Preduvjeti</a></li>
+<li><a href="#2-osnovna-instalacija-projekta">2. Osnovna instalacija projekta</a></li>
+<li><a href="#3-baza-seed-i-asseti">3. Baza, seed i asseti</a></li>
+<li><a href="#4-sto-seed-automatski-postavlja">4. Što seed automatski postavlja</a></li>
+<li><a href="#5-prvi-ulaz-i-obavezni-handover-administratora">5. Prvi ulaz i obavezni handover administratora</a></li>
+<li><a href="#6-produkcija-preporuceni-oblik-instalacije">6. Produkcija (preporučeni oblik instalacije)</a></li>
+<li><a href="#7-uvoz-nadolazecih-turnira-archeryhr">7. Uvoz nadolazećih turnira (archery.hr)</a></li>
+<li><a href="#8-kratka-provjera-nakon-instalacije">8. Kratka provjera nakon instalacije</a></li>
+</ul>
+</li>
+</ul>
+</div>
+
+    </section>
+    <h1 id="korisnik-clan-detaljne-upute">Korisnik član - detaljne upute</h1>
+<p>Ovaj vodič je namjerno pisan opširnije, tako da se kroz njega može proći i bez tehničkog predznanja. Cilj nije samo pokazati gdje kliknuti, nego i objasniti zašto se neke opcije prikazuju, a neke ne, te kako prepoznati normalno ponašanje sustava.</p>
+<h2 id="1-sto-se-dogaa-nakon-registracije">1. Što se događa nakon registracije</h2>
+<p>Kada član otvori registraciju i unese svoje podatke, sustav ne radi samo izradu korisničkog računa. U isto vrijeme pokušava automatski povezati novi račun s postojećim profilom člana u bazi kluba.</p>
+<p>Automatsko povezivanje se radi samo kada identitet stvarno odgovara postojećem članu. U praksi to znači da se podaci moraju podudarati kroz:</p>
+<ol>
+<li>OIB</li>
+<li>e-mail adresu</li>
+<li>ime i prezime</li>
+<li>broj telefona</li>
+</ol>
+<p>Ako je podudaranje uspješno, račun odmah dobiva vezu na profil člana i članske ovlasti. Ako nije, registracija može biti uspješna, ali račun ostaje bez veze na člana dok administrator ne napravi ručno povezivanje.</p>
+<p>Na slici ispod prikazano je: Naslovnica.
+<img alt="01. Naslovnica" src="images/member-role/01. naslovnica.png" />
+Na slici ispod prikazano je: Registracija.
+<img alt="02. Registracija" src="images/member-role/02. registracija.png" />
+Na slici ispod prikazano je: Podaci za registraciju.
+<img alt="03. Podaci za registraciju" src="images/member-role/03. podaci za registraciju.png" />
+Na slici ispod prikazano je: Prijava na site.
+<img alt="02a. Prijava na site" src="images/member-role/02a. prijava na site.png" /></p>
+<h2 id="2-kako-odmah-prepoznati-je-li-racun-pravilno-povezan">2. Kako odmah prepoznati je li račun pravilno povezan</h2>
+<p>Nakon prve prijave najvažniji signal je izbornik <code>Korisnik</code>.</p>
+<p>Kada je račun pravilno povezan s članom, uobičajeno se prikazuju stavke poput <code>Profil</code>, <code>Prijave na turnire</code> i <code>Odjava</code>. Ako je račun registriran, ali još nije povezan na člana, korisnik je prijavljen, no u izborniku najčešće ostaje samo <code>Odjava</code>.</p>
+<p>To nije kvar, nego znak da je potreban kontakt s administratorom koji u administraciji korisnika postavlja odgovarajuću rolu i povezani profil člana.</p>
+<p>Na slici ispod prikazano je: Provjera statusa.
+<img alt="04. Provjera statusa" src="images/member-role/04. provjera statusa.png" />
+Na slici ispod prikazano je: Admin povezuje člana sa korisnikom.
+<img alt="05. Admin povezuje člana sa korisnikom" src="images/member-role/05. admin povezuje člana sa korisnikom.png" />
+Na slici ispod prikazano je: Prijavljeni kao član.
+<img alt="06. Prijavljeni kao član" src="images/member-role/06. prijavljeni kao član.png" /></p>
+<h2 id="3-profil-clana-i-dokumentacija">3. Profil člana i dokumentacija</h2>
+<p>Profil člana je središnje mjesto za osobne podatke, sportske informacije i dokumentaciju. U sekciji <code>Pregled dokumenata</code> nalaze se podaci o dokumentima člana i liječničkim pregledima.</p>
+<p>Važna stvar za razumjeti: član vidi svoje dokumente. U profilima gdje korisnik nema pravo na dokumente ta sekcija se u pravilu uopće ne prikazuje. Dakle, korisnik bez prava najčešće ne dobiva poruku o zabrani, nego taj dio sučelja jednostavno ne vidi.</p>
+<p>Na slici ispod prikazano je: Profil korisnika.
+<img alt="07. Profil korisnika" src="images/member-role/07. profil korisnika.png" />
+Na slici ispod prikazano je: Dokumenti i podaci.
+<img alt="08. Dokumenti i podaci" src="images/member-role/08. dokumenti i podaci.png" /></p>
+<h2 id="4-treninzi-clana">4. Treninzi člana</h2>
+<p>Modul <code>Moji treninzi</code> služi za osobnu evidenciju dvoranskih i vanjskih treninga. Član unosi rezultate po serijama, kasnije ih pregledava i po potrebi uređuje ili briše.</p>
+<p>Sustav treninge veže na prijavljenog korisnika i njegov profil člana, pa unosi ostaju odvojeni po korisnicima i ne miješaju se između članova.</p>
+<p>Na slici ispod prikazano je: Pregled treninga.
+<img alt="09. Pregled treninga" src="images/member-role/09. pregled treninga.png" />
+Na slici ispod prikazano je: Unos treninga.
+<img alt="10. Unos treninga" src="images/member-role/10. unos treninga.png" />
+Na slici ispod prikazano je: Pregled i uređivanje treninga.
+<img alt="11. Pregled i uređivanje treninga" src="images/member-role/11. pregled i uređivanje treninga.png" /></p>
+<h2 id="5-popis-clanova-i-profil-rezultata">5. Popis članova i profil rezultata</h2>
+<p>Kroz izbornik <code>O nama</code> -&gt; <code>Članovi</code> otvara se popis aktivnih članova. Tu se može otvoriti profil pojedinog člana i pregledati rezultate, rekorde i nastupe na turnirima.</p>
+<p>Na slici ispod prikazano je: Popis članova.
+<img alt="12. Popis članova" src="images/member-role/12. popis članova.png" />
+Na slici ispod prikazano je: Profil člana.
+<img alt="13. Profil člana" src="images/member-role/13. profil člana.png" /></p>
+<h2 id="6-prijave-na-turnire">6. Prijave na turnire</h2>
+<p>Prijava na turnire je jednostavna forma, ali sustav u pozadini radi nekoliko važnih provjera. Prikazuju se turniri u dostupnom razdoblju (u pravilu sljedećih 60 dana), ne dopušta se dvostruka aktivna prijava istog člana na isti turnir, a prijave na zaključane turnire nisu dopuštene.</p>
+<p>Kategorija se može promijeniti. Sustav samo predlaže početnu kategoriju prema dobi i spolu člana, ali korisnik može odabrati drugu dostupnu kategoriju iz ponuđenog popisa.</p>
+<p>Na slici ispod prikazano je: Prijava na turnire.
+<img alt="14. Prijava na turnire" src="images/member-role/14. prijava na turnire.png" />
+Na slici ispod prikazano je: Prijava na odabrani turnir.
+<img alt="15. Prijava na odabrani turnir" src="images/member-role/15. prijava na odabrani turnir.png" />
+Na slici ispod prikazano je: Pregled prijave.
+<img alt="16. Pregled prijave" src="images/member-role/16. pregled prijave.png" />
+Na slici ispod prikazano je: Popis prijava na turnire.
+<img alt="17. Popis prijava na turnire" src="images/member-role/17. popis prijava na turnire.png" /></p>
+<h2 id="7-kotizacije-i-placanja">7. Kotizacije i plaćanja</h2>
+<p>Kod turnira postoje dvije varijante naplate kotizacije:</p>
+<ol>
+<li>gotovina</li>
+<li>plaćanje preko računa kluba</li>
+</ol>
+<p>Ako je za turnir postavljeno plaćanje preko računa kluba, u prijavi i popisu prijava pojavljuje se poveznica na <code>Plaćanja člana</code>, gdje se vidi stanje, odabire stavka duga i prikazuju podaci za uplatu s barkodom.</p>
+<p>Kod članarine (sezonske ili godišnje) član može imati više ponuđenih varijanti plaćanja. O odabranoj varijanti ovisi status člana u pojedinoj sezoni. Ako je odabrana podupiruća varijanta za dvoransku i/ili vanjsku sezonu, osoba i dalje ostaje član kluba, ali u toj sezoni nema pravo korištenja dvorane i/ili terena.</p>
+<p><strong>Važno: potvrde plaćanja radi administrator nakon uvida u bankovni izvod. Izvod se radi svakih 7 do 10 dana, pa ako je nešto plaćeno, a još nije evidentirano, to najčešće znači da administrator još nije napravio sljedeći uvid i označio da je uplata podmirena.</strong></p>
+<p>Kada uplata bude evidentirana, status prelazi na <code>Plaćeno</code>.</p>
+<p>Na slici ispod prikazano je: Prijava na turnir koji se plaća preko računa.
+<img alt="18. Prijava na turnir koji se plaća preko računa" src="images/member-role/18. prijava na turnir koji se plaća preko računa.png" />
+Na slici ispod prikazano je: Pregled prijave.
+<img alt="19. Pregled prijave" src="images/member-role/19. pregled prijave_.png" />
+Na slici ispod prikazano je: Popis prijava - link na plaćanje.
+<img alt="20. Popis prijava - link na plaćanje" src="images/member-role/20. popis prijava - link na plaćanje.png" />
+Na slici ispod prikazano je: Plaćanja.
+<img alt="21. Plaćanja" src="images/member-role/21. plaćanja.png" /></p>
+<p>Na naslovnici se kod otvorenog duga prikazuju upozorenja tipa <code>Potrebna uplata</code>. To nije greška, nego podsjetnik da treba otvoriti modul plaćanja i podmiriti stavku.</p>
+<p>Na slici ispod prikazano je: Naslovnica - obavijesti članu.
+<img alt="22. Naslovnica - obavijesti članu" src="images/member-role/22. naslovnica - obavijesti članu.png" />
+Na slici ispod prikazano je: Naslovnica - članarina.
+<img alt="23. Naslovnica - članarina" src="images/member-role/23. naslovnica - članarina.png" />
+Na slici ispod prikazano je: Pregled plaćanja - članarina.
+<img alt="24. Pregled plaćanja - članarina" src="images/member-role/24. pregled plaćanja - članarina.png" />
+Na slici ispod prikazano je: Upute za plaćanje ako ne želite plaćati barkodom.
+<img alt="25. Upute za plaćanje ako ne želite plaćati barkodom" src="images/member-role/25. upute za plaćanje ako ne želite plaćati barkodom.png" />
+Na slici ispod prikazano je: Sva plaćanja su podmirena.
+<img alt="26. Sva plaćanja su podmirena" src="images/member-role/26. sva plaćanja su podmirena.png" /></p>
+<h2 id="8-oglasnik">8. Oglasnik</h2>
+<p><code>Oglasnik</code> služi za objavu, razmjenu i prodaju opreme. Član može izraditi oglas, dodati slike, kasnije ga uređivati, privremeno deaktivirati ili trajno obrisati.</p>
+<p>Na slici ispod prikazano je: Oglasnik.
+<img alt="27. Oglasnik" src="images/member-role/27. oglasnik.png" />
+Na slici ispod prikazano je: Kreiranje oglasa.
+<img alt="28. Kreiranje oglasa" src="images/member-role/28. kreiranje oglasa.png" />
+Na slici ispod prikazano je: Radnje sa oglasom.
+<img alt="29. Radnje sa oglasom" src="images/member-role/29. radnje sa oglasom.png" />
+Na slici ispod prikazano je: Vaš oglas.
+<img alt="30. Vaš oglas" src="images/member-role/30. vaš oglas.png" /></p>
+<h2 id="9-klupski-zid">9. Klupski zid</h2>
+<p>Svi članovi imaju pravo pisati poruke na <code>Klupski zid</code>. To je mjesto za kratke klupske obavijesti, dogovore i informacije koje želite podijeliti sa zajednicom.</p>
+<p>Važno je znati da su poruke s Klupskog zida vidljive svim posjetiteljima stranice, uključujući i one koji nisu prijavljeni. Zato na zid nemojte upisivati osjetljive osobne podatke (npr. OIB, adrese, brojeve dokumenata ili medicinske podatke), nego samo sadržaj koji smije biti javan.</p>
+<h2 id="zavrsna-napomena-za-clana">Završna napomena za člana</h2>
+<p>Ako nakon registracije ne vidite <code>Profil</code> i <code>Prijave na turnire</code>, najčešći uzrok je da račun još nije povezan s profilom člana. U toj situaciji treba kontaktirati administratora i poslati točne podatke korištene pri registraciji (ime i prezime, OIB, e-mail, broj telefona).</p>
+<p>Kada je povezivanje dovršeno, članski prikaz i mogućnosti postaju dostupni odmah nakon sljedeće prijave.</p>
+<h1 id="polaznik-skole-strelicarstva-detaljne-upute">Polaznik škole streličarstva - detaljne upute</h1>
+<p>Ovaj vodič opisuje kako sustav izgleda kada je korisnički račun povezan s profilom polaznika škole streličarstva. Naglasak je na tome što polaznik vidi i prati kroz svoj račun, a što administrativno održava klub.</p>
+<h2 id="1-registracija-i-povezivanje">1. Registracija i povezivanje</h2>
+<p>Polaznik se registrira svojim podacima. Kao i kod ostalih korisnika, sustav pri registraciji pokušava automatski povezati račun s postojećim profilom u bazi. Ako podaci odgovaraju, veza se napravi odmah; ako ne, administrator ručno dovršava povezivanje.</p>
+<p>Na slici ispod prikazano je: Naslovnica i registracija.
+<img alt="01. Naslovnica i registracija" src="images/school-role/01. naslovnica i registracija.png" />
+Na slici ispod prikazano je: Registracija.
+<img alt="02. Registracija" src="images/school-role/02. registracija.png" />
+Na slici ispod prikazano je: Provjera registracije.
+<img alt="03. Provjera registracije" src="images/school-role/03. provjera registracije.png" />
+Na slici ispod prikazano je: Admin Vas povezuje sa profilom.
+<img alt="04. Admin Vas povezuje sa profilom" src="images/school-role/04. admin Vas povezuje sa profilom.png" /></p>
+<p>Nakon uspješnog povezivanja naslovnica počinje prikazivati blok <code>Moji podaci škole streličarstva</code>, s osnovnim statusom i brzim ulazom na detaljni profil.</p>
+<p>Na slici ispod prikazano je: Naslovnica povezanog polatnika.
+<img alt="05. Naslovnica povezanog polatnika" src="images/school-role/05. naslovnica povezanog polatnika.png" /></p>
+<h2 id="2-profil-polaznika">2. Profil polaznika</h2>
+<p>Profil polaznika je glavno mjesto pregleda podataka. U njemu se vidi osobni profil, stanje dolazaka i školarina.</p>
+<p>Važno je znati da polaznik u pravilu pregledava vlastite podatke, dok uređivanje ključnih administrativnih stavki (npr. promjene modela školarine i potvrde uplata) radi administrator.</p>
+<p>Na slici ispod prikazano je: Pregled profila.
+<img alt="06. Pregled profila" src="images/school-role/06. pregled profila.png" /></p>
+<h2 id="3-skolarina-i-status-uplata">3. Školarina i status uplata</h2>
+<p>U sekciji školarine prikazuju se stavke, status (<code>plaćeno</code> / <code>nije plaćeno</code>) i informativne poruke. Kada je stavka otvorena, na naslovnici i profilu pojavljuje se odgovarajuća obavijest.</p>
+<p><strong>Važno: potvrde plaćanja radi administrator nakon uvida u bankovni izvod. Izvod se radi svakih 7 do 10 dana, pa ako je nešto plaćeno, a još nije evidentirano, to najčešće znači da administrator još nije napravio sljedeći uvid i označio da je uplata podmirena.</strong></p>
+<p>Nakon što administrator potvrdi uplatu, status se ažurira i obavijest prelazi u uredno stanje.</p>
+<p>Na slici ispod prikazano je: Pregled školarine.
+<img alt="07. Pregled školarine" src="images/school-role/07. pregled školarine.png" />
+Na slici ispod prikazano je: Sve plaćeno.
+<img alt="08. Sve plaćeno" src="images/school-role/08. sve plaćeno.png" />
+Na slici ispod prikazano je: Sve plaćeno u profilu.
+<img alt="09. Sve plaćeno u profilu" src="images/school-role/09. sve plaćeno u profilu.png" /></p>
+<h2 id="4-dolasci-i-prakticna-uporaba">4. Dolasci i praktična uporaba</h2>
+<p>Polaznik kroz svoj profil može redovito pratiti evidenciju dolazaka i promjene statusa školarine bez dodatne komunikacije za svaku pojedinu stavku. To olakšava praćenje obveza i daje jasan pregled što je već podmireno, a što još čeka potvrdu.</p>
+<p>Ako se podaci ne prikazuju kako očekujete nakon registracije, najčešći uzrok je da korisnički račun još nije povezan s profilom polaznika. U tom slučaju administrator treba dovršiti povezivanje u modulu korisnika.</p>
+<h2 id="5-klupski-zid">5. Klupski zid</h2>
+<p>Polaznici škole mogu pisati poruke na <code>Klupski zid</code> kroz svoje korisničke račune. Zid je namijenjen kratkim javnim obavijestima i porukama koje su korisne cijeloj zajednici.</p>
+<p>Važno je znati da su poruke s Klupskog zida vidljive svim posjetiteljima stranice, uključujući i one koji nisu prijavljeni. Zato na zid nemojte upisivati osjetljive osobne podatke (npr. OIB, adrese, brojeve dokumenata ili medicinske podatke), nego samo sadržaj koji smije biti javan.</p>
+<h1 id="roditelj-detaljni-prirucnik">Roditelj - detaljni priručnik</h1>
+<p>Roditeljski račun je zamišljen kao zaseban, punopravan korisnički račun roditelja, kroz koji se pregledavaju podaci djeteta. To znači da roditelj ne treba i ne smije koristiti djetetov račun.</p>
+<p>Najvažnija napomena prije svega:</p>
+<ol>
+<li>roditelj se registrira i prijavljuje kao roditelj, svojim podacima,</li>
+<li>ne prijavljuje se kao dijete,</li>
+<li>prijava kao dijete nije potrebna za roditeljski pregled, a može otvoriti pitanja privatnosti i prava djeteta (GDPR).</li>
+</ol>
+<h2 id="1-kako-roditeljski-pristup-nastaje">1. Kako roditeljski pristup nastaje</h2>
+<p>Nakon registracije roditeljskog računa sustav ne može sam pogoditi koje je dijete povezano s tim računom. Zato administrator u modulu korisnika mora uključiti roditeljsku oznaku i povezati dijete (član i/ili polaznik škole).</p>
+<p>Tek nakon tog povezivanja roditeljski račun dobiva smisleni sadržaj na naslovnici i pristup profilima djece.</p>
+<h2 id="2-roditelj-clana-kluba">2. Roditelj člana kluba</h2>
+<p>Kod roditelja koji je povezan s djetetom članom kluba, sustav na naslovnici prikazuje blokove za dijete, stanje liječničkog i obavijesti o plaćanjima.</p>
+<p>Na slici ispod prikazano je: Naslovnica.
+<img alt="00. Naslovnica" src="images/parent-member-role/00. naslovnica.png" />
+Na slici ispod prikazano je: Registracija.
+<img alt="01. Registracija" src="images/parent-member-role/01. registracija.png" />
+Na slici ispod prikazano je: Registracija roditelja.
+<img alt="02. Registracija roditelja" src="images/parent-member-role/02. registracija roditelja.png" />
+Na slici ispod prikazano je: Prijava na site.
+<img alt="03. Prijava na site" src="images/parent-member-role/03. prijava na site.png" />
+Na slici ispod prikazano je: Provjera statusa.
+<img alt="04. Provjera statusa" src="images/parent-member-role/04. provjera statusa.png" />
+Na slici ispod prikazano je: Admin vas povezuje sa djecom.
+<img alt="05. Admin vas povezuje sa djecom" src="images/parent-member-role/05. admin vas povezuje sa djecom.png" />
+Na slici ispod prikazano je: Pregled djece.
+<img alt="06. Pregled djece" src="images/parent-member-role/06. pregled djece.png" /></p>
+<p>Kada je dijete član, roditelj preko svog računa može:</p>
+<ol>
+<li>otvoriti profil djeteta člana,</li>
+<li>pregledati dokumente i status liječničkog,</li>
+<li>otvoriti pregled treninga djeteta,</li>
+<li>prijaviti dijete na turnir,</li>
+<li>otvoriti i pratiti plaćanja djeteta.</li>
+</ol>
+<p>Na slici ispod prikazano je: Pregled djeteta.
+<img alt="07. Pregled djeteta" src="images/parent-member-role/07. Pregled djeteta.png" />
+Na slici ispod prikazano je: Pregled podataka djeteta.
+<img alt="08. Pregled podataka djeteta" src="images/parent-member-role/08. pregled podataka djeteta.png" />
+Na slici ispod prikazano je: Prijava djeteta na turnir.
+<img alt="09. Prijava djeteta na turnir" src="images/parent-member-role/09. prijava djeteta na turnir.png" />
+Na slici ispod prikazano je: Pregled prijave.
+<img alt="10. Pregled prijave" src="images/parent-member-role/10. pregled prijave.png" />
+Na slici ispod prikazano je: Pregled svih prijava.
+<img alt="11. Pregled svih prijava" src="images/parent-member-role/11. pregled svih prijava.png" />
+Na slici ispod prikazano je: Naslovnica sa podacima.
+<img alt="12. Naslovnica sa podacima" src="images/parent-member-role/12. naslovnica sa podacima.png" /></p>
+<p>Kod turnirskih prijava roditelj može odabrati dijete iz padajuće liste i prijavljivati samo onu djecu koja su mu stvarno povezana u administraciji.</p>
+<p>Plaćanja se vode kroz isti modul kao i za članove, pa roditelj može vidjeti otvorene stavke, birati dug za uplatu i koristiti podatke za plaćanje.</p>
+<p><strong>Važno: potvrde plaćanja radi administrator nakon uvida u bankovni izvod. Izvod se radi svakih 7 do 10 dana, pa ako je nešto plaćeno, a još nije evidentirano, to najčešće znači da administrator još nije napravio sljedeći uvid i označio da je uplata podmirena.</strong></p>
+<p>Na slici ispod prikazano je: Plaćanja.
+<img alt="13. Plaćanja" src="images/parent-member-role/13. plaćanja.png" />
+Na slici ispod prikazano je: Plaćanja ako ne koristite barcode.
+<img alt="14. Plaćanja ako ne koristite barcode" src="images/parent-member-role/14. plaćanja ako ne koristite barcode.png" />
+Na slici ispod prikazano je: Plaćanje članarine.
+<img alt="15. Plaćanje članarine" src="images/parent-member-role/15. plaćanje članarine.png" />
+Na slici ispod prikazano je: Sve plaćeno za dijete.
+<img alt="16. Sve plaćeno za dijete" src="images/parent-member-role/16. sve plaćeno za dijete.png" />
+Na slici ispod prikazano je: Pregled plaćanja.
+<img alt="17. Pregled plaćanja" src="images/parent-member-role/17. pregled plaćanja.png" />
+Na slici ispod prikazano je: Pregled članova.
+<img alt="18. Pregled članova" src="images/parent-member-role/18. pregled članova.png" /></p>
+<h2 id="3-roditelj-polaznika-skole-strelicarstva">3. Roditelj polaznika škole streličarstva</h2>
+<p>Roditelj može biti povezan i s djetetom koje je polaznik škole. U toj varijanti fokus je na profilu polaznika, dolascima i školarini.</p>
+<p>Na slici ispod prikazano je: Naslovnica i registracija.
+<img alt="01. Naslovnica i registracija" src="images/parent-school-role/01. naslovnica i registracija.png" />
+Na slici ispod prikazano je: Registracija.
+<img alt="02. Registracija" src="images/parent-school-role/02. registracija.png" />
+Na slici ispod prikazano je: Provjera prijave.
+<img alt="03. Provjera prijave" src="images/parent-school-role/03. provjera prijave.png" />
+Na slici ispod prikazano je: Admin vas povezuje s djecom.
+<img alt="04. Admin vas povezuje s djecom" src="images/parent-school-role/04. admin vas povezuje s djecom.png" /></p>
+<p>Kada je povezivanje napravljeno, roditelj otvara profil djeteta polaznika i vidi:</p>
+<ol>
+<li>osnovne podatke,</li>
+<li>evidenciju dolazaka,</li>
+<li>stanje školarine i otvorene stavke.</li>
+</ol>
+<p>Na slici ispod prikazano je: Pregled polaznika - djeteta.
+<img alt="05. Pregled polaznika - djeteta" src="images/parent-school-role/05. pregled polaznika - djeteta.png" />
+Na slici ispod prikazano je: Pregled školarine.
+<img alt="06. Pregled školarine" src="images/parent-school-role/06. pregled školarine.png" />
+Na slici ispod prikazano je: Administrator je potvrdio upatu.
+<img alt="07. Administrator je potvrdio upatu" src="images/parent-school-role/07. administrator je potvrdio upatu.png" />
+Na slici ispod prikazano je: Pregled profila i školarine.
+<img alt="08. Pregled profila i školarine" src="images/parent-school-role/08. pregled profila i školarine.png" /></p>
+<p>Kod školarine sustav jasno razlikuje otvorene i podmirene stavke, a roditelj sve prati preko vlastitog računa bez potrebe za prijavom kao dijete.</p>
+<p><strong>Važno: potvrde plaćanja radi administrator nakon uvida u bankovni izvod. Izvod se radi svakih 7 do 10 dana, pa ako je nešto plaćeno, a još nije evidentirano, to najčešće znači da administrator još nije napravio sljedeći uvid i označio da je uplata podmirena.</strong></p>
+<h2 id="4-granice-roditeljskog-pristupa">4. Granice roditeljskog pristupa</h2>
+<p>Roditelj vidi samo djecu koja su mu stvarno povezana u administraciji. Ako dijete nije povezano, njegove sekcije neće biti dostupne roditeljskom računu.</p>
+<p>To je namjerno ponašanje sustava i sigurnosna mjera:</p>
+<ol>
+<li>štiti privatnost djece,</li>
+<li>zadržava pregled samo na stvarno ovlaštene osobe,</li>
+<li>smanjuje mogućnost pogrešne obrade osobnih podataka.</li>
+</ol>
+<h2 id="5-klupski-zid_1">5. Klupski zid</h2>
+<p>Roditeljski račun koji je pravilno povezan i ima roditeljske ovlasti može pisati poruke na <code>Klupski zid</code>. To je korisno za kratke javne poruke i obavijesti koje su relevantne široj zajednici kluba.</p>
+<p>Važno je znati da su poruke s Klupskog zida vidljive svim posjetiteljima stranice, uključujući i one koji nisu prijavljeni. Zato na zid nemojte upisivati osjetljive osobne podatke (npr. OIB, adrese, brojeve dokumenata ili medicinske podatke), nego samo sadržaj koji smije biti javan.</p>
+<h2 id="zavrsna-napomena-za-roditelje">Završna napomena za roditelje</h2>
+<p>Ako nakon registracije vidite samo osnovni korisnički izbornik bez podataka djece, najčešći uzrok je da administrativno povezivanje još nije dovršeno. U tom slučaju treba se javiti administratoru da potvrdi roditeljsku oznaku i doda odgovarajuće veze prema djetetu.</p>
+<h1 id="administrator-detaljni-prirucnik">Administrator - detaljni priručnik</h1>
+<p>Administratorska uloga je operativno središte cijelog sustava. U praksi to znači da administrator vodi korisnike i ovlasti, postavlja i nadzire turnire, potvrđuje uplate, uređuje sadržaj stranice i održava osnovne klupske postavke.</p>
+<p>Važna napomena za role: administrator može ujedno biti i član (ako je povezan na profil člana), pa za svoj profil može koristiti sve što koristi i član. Također, administrator može biti označen i kao roditelj, pa uz adminsko sučelje može imati i roditeljski pregled povezane djece.</p>
+<h2 id="1-administratorski-izbornik-i-pocetna-orijentacija">1. Administratorski izbornik i početna orijentacija</h2>
+<p>Nakon prijave administrator u glavnoj navigaciji vidi dodatni izbornik <code>Admin</code>. Kroz taj izbornik ulazi se u sve ključne module: podešenja, nadolazeće turnire, plaćanja, korisnike, teme, članke i podatke o klubu.</p>
+<p>Na slici ispod prikazano je: Admin menu.
+<img alt="01. Admin menu" src="images/admin-role/01. admin menu.png" /></p>
+<h2 id="2-nadolazeci-turniri-i-prijave">2. Nadolazeći turniri i prijave</h2>
+<p>Modul <code>Nadolazeći turniri</code> služi za unos i održavanje kalendara turnira. Tu se može ručno dodati turnir, dopuniti tip turnira, definirati kotizacija, zaključati prijave i pripremiti sve prije nego članovi krenu s prijavama.</p>
+<p>Na vrhu modula nalazi se i gumb za uvoz turnira s <code>archery.hr</code>, pa se popis nadolazećih turnira može brzo osvježiti za tekuću i sljedeću godinu bez ručnog unosa svakog pojedinog zapisa.</p>
+<p>Na slici ispod prikazano je: Nadolazeći turniri.
+<img alt="02. Nadolazeći turniri" src="images/admin-role/02. nadolazeći turniri.png" />
+Na slici ispod prikazano je: Dodavanje turnira.
+<img alt="16. Dodavanje turnira" src="images/admin-role/16. dodavanje turnira.png" /></p>
+<p>Na detalju pojedinog turnira administrator vidi sve prijave, može izvesti CSV za organizatora i po potrebi ukloniti člana s turnira uz obaveznu napomenu. Uklanjanje prijave ne briše trag, nego prijavu prebacuje u povijest uklonjenih.</p>
+<p>Za turnire koji su završili administrator može iz modula prošlih turnira pokrenuti akciju <code>Kreiraj rezultate</code>. Time sustav iz prijava pripremi početni unos rezultata, a nakon toga administrator treba upisati stvarno ostvarene rezultate članova.</p>
+<p>Na slici ispod prikazano je: Prijave i izvoz podataka.
+<img alt="03. Prijave i izvoz podataka" src="images/admin-role/03. prijave i izvoz podataka.png" />
+Na slici ispod prikazano je: Prijave i izvoz podataka - detalj.
+<img alt="03a. Prijave i izvoz podataka - detalj" src="images/admin-role/03a. Slika zaslona 2026-04-02 u 01.20.11.png" />
+Na slici ispod prikazano je: Prijave i izvoz podataka - detalj.
+<img alt="03b. Prijave i izvoz podataka - detalj" src="images/admin-role/03b. Slika zaslona 2026-04-02 u 01.21.01.png" /></p>
+<h2 id="3-placanja-clanova-i-skole">3. Plaćanja članova i škole</h2>
+<p>Modul <code>Plaćanja</code> je kontrolna ploča za članarine, kotizacije i školarine. U njemu administrator podešava modele naplate, prati otvorene stavke i vidi sažetak po osobi i po statusu.</p>
+<p>Na slici ispod prikazano je: Plaćanja.
+<img alt="04. Plaćanja" src="images/admin-role/04. plaćanja.png" /></p>
+<p>Na popisu članova vidi se i stanje plaćanja, a na profilu člana administrator može potvrditi uplatu, mijenjati status i dodavati ručne stavke kada je to potrebno.</p>
+<p><strong>Važno: potvrde plaćanja treba označavati nakon uvida u bankovni izvod. Izvod se radi svakih 7 do 10 dana, pa u tom razdoblju može postojati uplata koja je stvarno izvršena, ali još nije administrativno označena kao podmirena.</strong></p>
+<p>Na slici ispod prikazano je: Popis članova - sa plaćanjima.
+<img alt="05. Popis članova - sa plaćanjima" src="images/admin-role/05. popis članova - sa plaćanjima.png" />
+Na slici ispod prikazano je: Admin radnje na članu.
+<img alt="07. Admin radnje na članu" src="images/admin-role/07. admin radnje na članu.png" />
+Na slici ispod prikazano je: Potvrda plaćanja.
+<img alt="08. Potvrda plaćanja" src="images/admin-role/08. potvrda plaćanja.png" /></p>
+<p>Za stavke koje se vode kao gotovina (npr. naplata treneru), status se također vodi kroz sustav kako bi izvještaji ostali točni.</p>
+<p>Na slici ispod prikazano je: Plaćanja treneru.
+<img alt="06. Plaćanja treneru" src="images/admin-role/06. plaćanja treneru.png" /></p>
+<h2 id="4-podaci-o-klubu-i-osnovna-sportska-podesenja">4. Podaci o klubu i osnovna sportska podešenja</h2>
+<p><code>Admin -&gt; Klub</code> služi za održavanje službenih podataka kluba koji se koriste kroz cijelu aplikaciju, uključujući prikaz i generiranje podataka za uplatu.</p>
+<p>Na slici ispod prikazano je: Podaci o klubu.
+<img alt="09. Podaci o klubu" src="images/admin-role/09. Podaci o klubu.png" /></p>
+<p>U modulu podešenja administrator održava osnovne sportske šifrarnike (tipovi turnira, stilovi, kategorije i polja rezultata). To je važno jer o tim postavkama ovise forme za unos rezultata i prijave.</p>
+<p>Na slici ispod prikazano je: Osnovne stavke za unos rezultata.
+<img alt="10. Osnovne stavke za unos rezultata" src="images/admin-role/10. osnovne stavke za unos rezultata.png" /></p>
+<h2 id="5-korisnici-role-i-povezivanja">5. Korisnici, role i povezivanja</h2>
+<p>U modulu <code>Korisnici</code> administrator upravlja identitetima i pravima pristupa. Tu se korisniku postavlja rola (<code>Admin</code>, <code>Član</code>, <code>Korisnik</code>, <code>Polaznik škole</code>), povezani profil i roditeljske veze.</p>
+<p>Na slici ispod prikazano je: Popis korisnika.
+<img alt="11. Popis korisnika" src="images/admin-role/11. popis korisnika.png" />
+Na slici ispod prikazano je: Uređivanje korisnika.
+<img alt="12. Uređivanje korisnika" src="images/admin-role/12. uređivanje korisnika.png" /></p>
+<p>Praktično pravilo rada:</p>
+<ol>
+<li>rola određuje osnovna prava,</li>
+<li>povezani profil određuje čiji se podaci i moduli otvaraju,</li>
+<li>roditeljske veze određuju koja djeca su vidljiva roditeljskom računu.</li>
+</ol>
+<p>Za roditeljske veze sustav primjenjuje ograničenja (djeca mlađa od 23 godine, maksimalan broj povezanih djece i roditelja po djetetu), pa administracija ostaje konzistentna i kontrolirana.</p>
+<h2 id="6-oglasnik-i-clanci">6. Oglasnik i članci</h2>
+<p>Administrator može moderirati i održavati sadržaj stranice kroz <code>Oglasnik</code> i <code>Članke</code>. To uključuje pregled objava, unos novih sadržaja, izmjene postojećih i objavu informacija važnih za rad kluba.</p>
+<p>Na slici ispod prikazano je: Oglasnik.
+<img alt="13. Oglasnik" src="images/admin-role/13. oglasnik.png" />
+Na slici ispod prikazano je: Unos oglasa.
+<img alt="14. Unos oglasa" src="images/admin-role/14. unos oglasa.png" />
+Na slici ispod prikazano je: Unos članka.
+<img alt="15. Unos članka" src="images/admin-role/15. unos članka.png" />
+Na slici ispod prikazano je: Uređivanje članka.
+<img alt="15a. Uređivanje članka" src="images/admin-role/15a. uređivanje članka.png" /></p>
+<h2 id="7-skola-strelicarstva">7. Škola streličarstva</h2>
+<p>U modulu škole administrator vodi aktivne i neaktivne polaznike, status školarine i evidenciju dolazaka.</p>
+<p>Na slici ispod prikazano je: Polaznici škole.
+<img alt="17. Polaznici škole" src="images/admin-role/17. polaznici škole.png" />
+Na slici ispod prikazano je: Evidencija dolazaka.
+<img alt="18. Evidencija dolazaka" src="images/admin-role/18.evidencija dolazaka.png" /></p>
+<p>Na profilu polaznika administrator može:</p>
+<ol>
+<li>uređivati osobne podatke,</li>
+<li>voditi dokumente,</li>
+<li>postaviti model školarine i potvrđivati uplate,</li>
+<li>po potrebi prebaciti polaznika u članove.</li>
+</ol>
+<p><strong>Važno: potvrde plaćanja treba označavati nakon uvida u bankovni izvod. Izvod se radi svakih 7 do 10 dana, pa u tom razdoblju može postojati uplata koja je stvarno izvršena, ali još nije administrativno označena kao podmirena.</strong></p>
+<h2 id="8-teme-i-vizualni-identitet">8. Teme i vizualni identitet</h2>
+<p>Kroz modul tema administrator bira i uređuje aktivni vizualni stil sučelja.</p>
+<p>Na slici ispod prikazano je: Uređivanje teme.
+<img alt="19. Uređivanje teme" src="images/admin-role/19. uređivanje teme.png" /></p>
+<p>Ovdje se centralno upravlja bojama i izgledom, pa se promjena odmah vidi na cijelom web sučelju.</p>
+<h2 id="9-klupski-zid-i-moderiranje-poruka">9. Klupski zid i moderiranje poruka</h2>
+<p>Administrator može pisati poruke na <code>Klupski zid</code> kao i ostali ovlašteni korisnici. Uz to, administrator ima dodatne moderatorske ovlasti: može istaknuti bilo koju poruku na zidu i može obrisati bilo koju poruku.</p>
+<p>Važno je znati da su poruke s Klupskog zida vidljive svim posjetiteljima stranice, uključujući i one koji nisu prijavljeni. Zato na zid ne treba upisivati osjetljive osobne podatke (npr. OIB, adrese, brojeve dokumenata ili medicinske podatke), nego samo sadržaj koji smije biti javan.</p>
+<h2 id="zavrsna-operativna-napomena">Završna operativna napomena</h2>
+<p>Najstabilniji način rada je da se svaka promjena radi redom: prvo korisnici i povezivanja, zatim sadržaj i postavke, pa tek onda operativni moduli poput prijava i plaćanja. Tako se izbjegnu situacije u kojima je funkcionalnost tehnički dostupna, ali korisnik zbog pogrešne role ili nepovezanog profila ne vidi očekivane opcije.</p>
+<h1 id="instalacija-i-prvi-koraci">Instalacija i prvi koraci</h1>
+<p>Ovaj vodič pokriva cijeli put od prazne instalacije do prvog stvarnog administratora koji preuzima sustav.</p>
+<h2 id="1-preduvjeti">1. Preduvjeti</h2>
+<p>Prije instalacije provjeri da je okruženje spremno:</p>
+<ol>
+<li>PHP 8.2+</li>
+<li>Composer 2+</li>
+<li>MySQL 8+</li>
+<li>Node.js 18+ i npm</li>
+<li>web server (Apache/Nginx) ili lokalno <code>php artisan serve</code></li>
+</ol>
+<h2 id="2-osnovna-instalacija-projekta">2. Osnovna instalacija projekta</h2>
+<p>U rootu projekta pokreni:</p>
+<pre><code class="language-bash">composer install
+cp .env.example .env
+php artisan key:generate
+</code></pre>
+<p>Zatim u <code>.env</code> postavi barem osnovne stavke:</p>
+<pre><code class="language-dotenv">APP_NAME=&quot;Archery Club&quot;
+APP_ENV=local
+APP_DEBUG=false
+APP_URL=http://localhost
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=your_database
+DB_USERNAME=your_user
+DB_PASSWORD=your_password
+</code></pre>
+<h2 id="3-baza-seed-i-asseti">3. Baza, seed i asseti</h2>
+<p>Pokreni migracije i početni seed:</p>
+<pre><code class="language-bash">php artisan migrate --seed
+</code></pre>
+<p>Napravi storage link:</p>
+<pre><code class="language-bash">php artisan storage:link
+</code></pre>
+<p>Složi frontend assete:</p>
+<pre><code class="language-bash">npm install
+npm run build
+</code></pre>
+<p>Za lokalni razvoj može i:</p>
+<pre><code class="language-bash">npm run dev
+php artisan serve
+</code></pre>
+<h2 id="4-sto-seed-automatski-postavlja">4. Što seed automatski postavlja</h2>
+<p>Početni seed postavlja ključne početne podatke, između ostalog:</p>
+<ol>
+<li>stilove luka (<code>stilovis</code>)</li>
+<li>kategorije (<code>kategorijes</code>)</li>
+<li>tipove turnira i polja za unos rezultata (<code>tipovi_turniras</code>, <code>polja_za_tipove_turniras</code>)</li>
+<li>početne teme i aktivnu default temu</li>
+<li>bootstrap administratorski račun</li>
+</ol>
+<p>Bootstrap admin podaci:</p>
+<ol>
+<li>e-mail: <code>administrator@archery.local</code></li>
+<li>lozinka: <code>poklonOdSKDubrava</code></li>
+</ol>
+<h2 id="5-prvi-ulaz-i-obavezni-handover-administratora">5. Prvi ulaz i obavezni handover administratora</h2>
+<p>Nakon seeda početna stranica je funkcionalna, ali sustav je još uvijek na privremenom bootstrap administratoru.</p>
+<p>Na slici ispod prikazano je: Početna nakon instalacije.
+<img alt="Početna nakon instalacije" src="images/setup/01-home-after-install.png" /></p>
+<p>Prvo registriraj stvarnog korisnika kluba (osoba koja će trajno biti administrator):</p>
+<p>Na slici ispod prikazano je: Registracija.
+<img alt="Registracija" src="images/setup/02-register-form.png" />
+Na slici ispod prikazano je: Nakon registracije.
+<img alt="Nakon registracije" src="images/setup/03-after-registration.png" /></p>
+<p>Zatim se prijavi bootstrap admin računom i otvori <code>Admin -&gt; Korisnici</code>:</p>
+<p>Na slici ispod prikazano je: Bootstrap admin - korisnici.
+<img alt="Bootstrap admin - korisnici" src="images/setup/04-bootstrap-admin-users.png" /></p>
+<p>Uredi stvarno registriranog korisnika i postavi mu rolu <code>1 - Admin</code>, pa spremi:</p>
+<p>Na slici ispod prikazano je: Promocija korisnika u admina.
+<img alt="Promocija korisnika u admina" src="images/setup/05-edit-user-promote-admin.png" /></p>
+<p>Nakon spremanja sustav automatski:</p>
+<ol>
+<li>odjavljuje bootstrap admin sesiju,</li>
+<li>briše bootstrap korisnika,</li>
+<li>traži prijavu novog administratora.</li>
+</ol>
+<p>Na slici ispod prikazano je: Bootstrap korisnik uklonjen.
+<img alt="Bootstrap korisnik uklonjen" src="images/setup/06-bootstrap-removed-login.png" />
+Na slici ispod prikazano je: Novi admin prijavljen.
+<img alt="Novi admin prijavljen" src="images/setup/07-new-admin-logged-in.png" /></p>
+<h2 id="6-produkcija-preporuceni-oblik-instalacije">6. Produkcija (preporučeni oblik instalacije)</h2>
+<p>Za produkcijski deploy koristi:</p>
+<pre><code class="language-bash">composer install --no-dev --optimize-autoloader
+php artisan migrate --seed --force
+npm ci
+npm run build
+</code></pre>
+<p>Ako deploy pipeline odvojeno rješava migracije/seed, prilagodi naredbe prema procesu tima.</p>
+<h2 id="7-uvoz-nadolazecih-turnira-archeryhr">7. Uvoz nadolazećih turnira (archery.hr)</h2>
+<p>Za uvoz kalendara koristi artisan komandu:</p>
+<pre><code class="language-bash">php artisan turniri:import-archery
+</code></pre>
+<p>Česti primjeri:</p>
+<pre><code class="language-bash"># pregled bez upisa
+php artisan turniri:import-archery --year=2026 --dry-run
+
+# uvoz nadolazećih turnira za godinu
+php artisan turniri:import-archery --year=2026
+
+# samo novi zapisi
+php artisan turniri:import-archery --year=2026 --skip-existing
+
+# uključi i prošle turnire
+php artisan turniri:import-archery --year=2026 --include-past
+</code></pre>
+<h2 id="8-kratka-provjera-nakon-instalacije">8. Kratka provjera nakon instalacije</h2>
+<p>Instalacija se smatra uspješnom kada su ispunjena sva četiri uvjeta:</p>
+<ol>
+<li>aplikacija se otvara bez greške,</li>
+<li>stvarni korisnik je promoviran u admina,</li>
+<li>bootstrap admin više ne postoji,</li>
+<li><code>Admin</code> izbornik je vidljiv novom administratoru.</li>
+</ol>
+  </main>
+</body>
+</html>

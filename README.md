@@ -14,11 +14,11 @@ Laravel aplikacija za vođenje rada kluba:
 Aktualna dokumentacija je u `docs`:
 
 1. [Pregled dokumentacije](docs/README.md)
-2. [Instalacija i prvi koraci](docs/01-instalacija-i-prvi-koraci.md)
-3. [Administrator - detaljni priručnik](docs/02-admin-prirucnik.md)
-4. [Korisnik član - detaljne upute](docs/03-clan-prirucnik.md)
-5. [Roditelj - detaljni priručnik](docs/04-roditelj-prirucnik.md)
-6. [Polaznik škole streličarstva - detaljne upute](docs/05-polaznik-skole-prirucnik.md)
+2. [Korisnik član - detaljne upute](docs/01-clan-prirucnik.md)
+3. [Polaznik škole streličarstva - detaljne upute](docs/02-polaznik-skole-prirucnik.md)
+4. [Roditelj - detaljni priručnik](docs/03-roditelj-prirucnik.md)
+5. [Administrator - detaljni priručnik](docs/04-admin-prirucnik.md)
+6. [Instalacija i prvi koraci](docs/05-instalacija-i-prvi-koraci.md)
 
 ## Preduvjeti
 
