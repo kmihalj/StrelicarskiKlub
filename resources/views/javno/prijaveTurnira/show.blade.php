@@ -20,6 +20,10 @@
                 <div><span class="fw-semibold">Turnir:</span> {{ $turnir->naziv }}</div>
                 <div><span class="fw-semibold">Datum i mjesto:</span> {{ $prijava->datumTurniraZaPrikazLabel() }}, {{ $turnir->mjesto }}</div>
                 <div><span class="fw-semibold">Smjena / dan:</span> {{ $prijava->terminPrijaveLabel() }}</div>
+                <div><span class="fw-semibold">Obrok:</span> {{ $prijava->obrokLabel() }}</div>
+                @if(!empty($prijava->napomena_clana))
+                    <div><span class="fw-semibold">Napomena člana:</span> {{ $prijava->napomena_clana }}</div>
+                @endif
                 <div><span class="fw-semibold">Tip turnira:</span> {{ $turnir->tipTurnira->naziv ?? '-' }}</div>
                 @if(!empty($turnir->napomena))
                     <div><span class="fw-semibold">Napomena:</span> {{ $turnir->napomena }}</div>
@@ -139,6 +143,29 @@
                                 <div class="form-text">*ako ima smjena</div>
                             </div>
                         @endif
+
+                        <div class="col-lg-4">
+                            <label for="obrok" class="form-label fw-semibold mb-1">Obrok</label>
+                            <select class="form-select" id="obrok" name="obrok" @disabled(!$mozeUredjivati)>
+                                @foreach($obrokOpcije as $obrokVrijednost => $obrokLabel)
+                                    <option value="{{ $obrokVrijednost }}"
+                                        @selected(old('obrok', $prijava->obrok ?: \App\Models\PrijavaTurnira::OBROK_NE) === $obrokVrijednost)>
+                                        {{ $obrokLabel }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-lg-8">
+                            <label for="napomena_clana" class="form-label fw-semibold mb-1">Napomena</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="napomena_clana"
+                                   name="napomena_clana"
+                                   maxlength="255"
+                                   value="{{ old('napomena_clana', $prijava->napomena_clana) }}"
+                                   @disabled(!$mozeUredjivati)
+                                   placeholder="Kratka napomena (nije obavezno)">
+                        </div>
 
                         <div class="col-12">
                             <div class="form-check">

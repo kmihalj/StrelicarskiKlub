@@ -11,24 +11,41 @@
         $sljedecaGodina = $tekucaGodina + 1;
         $archeryImportReport = session('archery_import_report');
         $trebaOtvoritiImportModal = is_array($archeryImportReport) && array_key_exists('output', $archeryImportReport);
+        $trebaOtvoritiNoviTurnirModal = $errors->any() && old('_form_context') === 'create_turnir';
     @endphp
 
     <div class="container-xxl bg-white shadow mb-3">
         <div class="row justify-content-center p-2 shadow bg-danger fw-bolder">
             <div class="col-lg-12 text-white d-flex flex-wrap justify-content-between align-items-center gap-2">
-                <span>{{ $jeUredjivanje ? 'Uredi nadolazeći turnir' : 'Novi nadolazeći turnir' }}</span>
-                <form action="{{ route('admin.nadolazeci_turniri.import_archery') }}" method="POST" class="m-0">
-                    @csrf
-                    <button type="submit" class="btn btn-sm btn-light">
-                        Uvezi turnire sa archery.hr ({{ $tekucaGodina }} i {{ $sljedecaGodina }})
+                <span>Administracija nadolazećih turnira</span>
+                <div class="d-inline-flex flex-wrap align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#noviNadolazeciTurnirModal">
+                        Novi nadolazeći turnir
                     </button>
-                </form>
+                    <form action="{{ route('admin.nadolazeci_turniri.import_archery') }}" method="POST" class="m-0">
+                        @csrf
+                        <button type="submit" class="btn btn-sm btn-light">
+                            Uvezi turnire sa archery.hr ({{ $tekucaGodina }} i {{ $sljedecaGodina }})
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if($jeUredjivanje)
+    <div class="container-xxl bg-white shadow mb-3">
+        <div class="row justify-content-center p-2 shadow bg-danger fw-bolder">
+            <div class="col-lg-12 text-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <span>Uredi nadolazeći turnir</span>
+                <a href="{{ route('admin.nadolazeci_turniri.index') }}" class="btn btn-sm btn-light">Odustani</a>
             </div>
         </div>
         <div class="row p-3">
             <div class="col-12">
                 <form action="{{ $formaRuta }}" method="POST" enctype="multipart/form-data" class="row g-3">
                     @csrf
+                    <input type="hidden" name="_form_context" value="edit_turnir">
                     <div class="col-lg-4">
                         <label class="form-label fw-semibold mb-1">Naziv turnira</label>
                         <input type="text" class="form-control" name="naziv"
@@ -144,16 +161,15 @@
 
                     <div class="col-12 d-flex gap-2">
                         <button type="submit" class="btn btn-danger">
-                            {{ $jeUredjivanje ? 'Spremi promjene' : 'Spremi turnir' }}
+                            Spremi promjene
                         </button>
-                        @if($jeUredjivanje)
-                            <a href="{{ route('admin.nadolazeci_turniri.index') }}" class="btn btn-secondary">Odustani</a>
-                        @endif
+                        <a href="{{ route('admin.nadolazeci_turniri.index') }}" class="btn btn-secondary">Odustani</a>
                     </div>
                 </form>
             </div>
         </div>
     </div>
+    @endif
 
     @include('layouts.paginationBlok', ['paginator' => $nadolazeciTurniri, 'isTop' => true])
     <div class="container-xxl bg-white shadow mb-3">
@@ -464,6 +480,108 @@
     </div>
     @include('layouts.paginationBlok', ['paginator' => $prosliTurniri])
 
+    <div class="modal fade" id="noviNadolazeciTurnirModal" tabindex="-1" aria-labelledby="noviNadolazeciTurnirTitle" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-danger">
+                    <h5 class="modal-title text-white" id="noviNadolazeciTurnirTitle">Novi nadolazeći turnir</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Zatvori"></button>
+                </div>
+                <form action="{{ route('admin.nadolazeci_turniri.store') }}" method="POST" enctype="multipart/form-data" class="m-0">
+                    @csrf
+                    <input type="hidden" name="_form_context" value="create_turnir">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-lg-4">
+                                <label class="form-label fw-semibold mb-1">Naziv turnira</label>
+                                <input type="text" class="form-control" name="naziv" value="{{ old('naziv') }}" required>
+                            </div>
+                            <div class="col-lg-4">
+                                <label class="form-label fw-semibold mb-1">Organizator</label>
+                                <input type="text" class="form-control" name="organizator" value="{{ old('organizator') }}">
+                            </div>
+                            <div class="col-lg-4">
+                                <label class="form-label fw-semibold mb-1">Mjesto</label>
+                                <input type="text" class="form-control" name="mjesto" value="{{ old('mjesto') }}" required>
+                            </div>
+                            <div class="col-lg-12">
+                                <label class="form-label fw-semibold mb-1">Napomena</label>
+                                <input type="text"
+                                       class="form-control"
+                                       name="napomena"
+                                       value="{{ old('napomena') }}"
+                                       placeholder="Npr. Turnir traje dva dana...">
+                            </div>
+                            <div class="col-lg-2">
+                                <label class="form-label fw-semibold mb-1">Datum</label>
+                                <input type="date" class="form-control" name="datum" value="{{ old('datum') }}" required>
+                            </div>
+                            <div class="col-lg-2">
+                                <label class="form-label fw-semibold mb-1">Datum do</label>
+                                <input type="date" class="form-control" name="datum_do" value="{{ old('datum_do') }}">
+                            </div>
+                            <div class="col-lg-3">
+                                <label class="form-label fw-semibold mb-1">Tip turnira</label>
+                                <select class="form-select" name="tipovi_turnira_id" required>
+                                    <option value="">Odaberi tip turnira</option>
+                                    @foreach($tipoviTurnira as $tip)
+                                        <option value="{{ $tip->id }}" @selected((int) old('tipovi_turnira_id') === (int) $tip->id)>
+                                            {{ $tip->naziv }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-lg-2">
+                                <label class="form-label fw-semibold mb-1">Rok prijava do</label>
+                                <input type="date" class="form-control" name="prijave_otvorene_do" value="{{ old('prijave_otvorene_do') }}">
+                            </div>
+                            <div class="col-lg-3">
+                                <label class="form-label fw-semibold mb-1">Poziv (PDF)</label>
+                                <input type="file" class="form-control" name="poziv_pdf" accept="application/pdf">
+                            </div>
+                            <div class="col-lg-3">
+                                <label class="form-label fw-semibold mb-1">Kotizacija</label>
+                                @php
+                                    $kotizacijaNacinNovi = old('kotizacija_nacin', 'undefined');
+                                    $kotizacijaNacinNovi = $kotizacijaNacinNovi === null || $kotizacijaNacinNovi === '' ? 'undefined' : $kotizacijaNacinNovi;
+                                @endphp
+                                <select class="form-select" name="kotizacija_nacin">
+                                    <option value="undefined" @selected($kotizacijaNacinNovi === 'undefined')>Nije još definirano</option>
+                                    <option value="bank" @selected($kotizacijaNacinNovi === 'bank')>Plaćanje preko računa kluba</option>
+                                    <option value="cash" @selected($kotizacijaNacinNovi === 'cash')>Plaćanje gotovinom</option>
+                                </select>
+                            </div>
+                            <div class="col-lg-3">
+                                <label class="form-label fw-semibold mb-1">Iznos kotizacije (EUR)</label>
+                                <input type="text"
+                                       class="form-control"
+                                       name="kotizacija_iznos"
+                                       value="{{ old('kotizacija_iznos') }}"
+                                       placeholder="npr. 15.00">
+                            </div>
+                            <div class="col-lg-3">
+                                <label class="form-label fw-semibold mb-1">Rok uplate</label>
+                                <input type="date" class="form-control" name="kotizacija_rok_uplate" value="{{ old('kotizacija_rok_uplate') }}">
+                                <div class="form-text">Vrijedi samo za "Plaćanje preko računa kluba".</div>
+                            </div>
+                            <div class="col-lg-3 d-flex align-items-end">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="1" id="is_zakljucan_novi" name="is_zakljucan"
+                                        @checked((bool) old('is_zakljucan'))>
+                                    <label class="form-check-label" for="is_zakljucan_novi">Ručno zaključaj prijave</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Odustani</button>
+                        <button type="submit" class="btn btn-danger">Spremi turnir</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="archeryImportReportModal" tabindex="-1" aria-labelledby="archeryImportReportTitle" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
@@ -512,6 +630,23 @@
         <script>
             window.addEventListener('load', function () {
                 const trigger = document.getElementById('archeryImportReportAutoOpen');
+                if (trigger instanceof HTMLButtonElement) {
+                    trigger.click();
+                }
+            });
+        </script>
+    @endif
+
+    @if($trebaOtvoritiNoviTurnirModal)
+        <button type="button"
+                id="noviTurnirAutoOpen"
+                class="d-none"
+                data-bs-toggle="modal"
+                data-bs-target="#noviNadolazeciTurnirModal"
+                aria-hidden="true"></button>
+        <script>
+            window.addEventListener('load', function () {
+                const trigger = document.getElementById('noviTurnirAutoOpen');
                 if (trigger instanceof HTMLButtonElement) {
                     trigger.click();
                 }

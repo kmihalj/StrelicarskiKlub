@@ -134,6 +134,27 @@
                             <select class="form-select" id="odabrani_dan" name="odabrani_dan" data-old-value="{{ old('odabrani_dan', '') }}"></select>
                             <div class="form-text">*dan može ovisiti o kategoriji i stilu, provjerite poziv...</div>
                         </div>
+                        <div class="col-lg-4">
+                            <label for="obrok" class="form-label fw-semibold mb-1">Obrok</label>
+                            <select class="form-select" id="obrok" name="obrok">
+                                @foreach($obrokOpcije as $obrokVrijednost => $obrokLabel)
+                                    <option value="{{ $obrokVrijednost }}" @selected(old('obrok', \App\Models\PrijavaTurnira::OBROK_NE) === $obrokVrijednost)>
+                                        {{ $obrokLabel }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <div class="form-text">* ako je obrok osiguran</div>
+                        </div>
+                        <div class="col-lg-8">
+                            <label for="napomena_clana" class="form-label fw-semibold mb-1">Napomena</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="napomena_clana"
+                                   name="napomena_clana"
+                                   value="{{ old('napomena_clana') }}"
+                                   maxlength="255"
+                                   placeholder="Kratka napomena (nije obavezno)">
+                        </div>
 
                         <div class="col-12">
                             <div class="form-check">

@@ -113,6 +113,11 @@ Route::prefix('admin/')->group(function () {
     Route::post('nadolazeci-turniri/{turnir}/kreiraj-rezultate', [NadolazeciTurniriController::class, 'adminKreirajRezultate'])->name('admin.nadolazeci_turniri.kreiraj_rezultate')->middleware(['auth', 'admin']);
     Route::get('nadolazeci-turniri/{turnir}', [NadolazeciTurniriController::class, 'adminShow'])->name('admin.nadolazeci_turniri.show')->middleware(['auth', 'admin']);
     Route::get('nadolazeci-turniri/{turnir}/export/csv', [NadolazeciTurniriController::class, 'adminExportCsv'])->name('admin.nadolazeci_turniri.export_csv')->middleware(['auth', 'admin']);
+    Route::get('nadolazeci-turniri/{turnir}/prijava/docx', [NadolazeciTurniriController::class, 'adminDownloadPrijavaDocx'])->name('admin.nadolazeci_turniri.prijava_docx')->middleware(['auth', 'admin']);
+    Route::get('nadolazeci-turniri/{turnir}/prijava/pdf', [NadolazeciTurniriController::class, 'adminDownloadPrijavaPdf'])->name('admin.nadolazeci_turniri.prijava_pdf')->middleware(['auth', 'admin']);
+    Route::post('nadolazeci-turniri/{turnir}/prijava/email', [NadolazeciTurniriController::class, 'adminPosaljiPrijavaEmail'])->name('admin.nadolazeci_turniri.prijava_email')->middleware(['auth', 'admin']);
+    Route::post('nadolazeci-turniri/{turnir}/prijave/admin-dodaj', [NadolazeciTurniriController::class, 'adminDodajPrijavu'])->name('admin.nadolazeci_turniri.prijave.admin_dodaj')->middleware(['auth', 'admin']);
+    Route::post('nadolazeci-turniri/{turnir}/prijave/{prijava}/napomena', [NadolazeciTurniriController::class, 'adminUpdateNapomenaClana'])->name('admin.nadolazeci_turniri.prijave.napomena')->middleware(['auth', 'admin']);
     Route::post('nadolazeci-turniri/{turnir}/prijave/{prijava}/makni', [NadolazeciTurniriController::class, 'adminUkloniPrijavu'])->name('admin.nadolazeci_turniri.prijave.ukloni')->middleware(['auth', 'admin']);
     Route::post('rezultati/unos/{turnir}/obrisi', [TurniriController::class, 'brisanjeRezultata'])->name('admin.rezultati.brisanjeRezultata')->middleware(['auth', 'admin']);
     Route::post('rezultati/unos/{turnir}/timovi/aktivno', [TurniriController::class, 'postaviTimoveAktivno'])->name('admin.rezultati.timovi.aktivno')->middleware(['auth', 'admin']);

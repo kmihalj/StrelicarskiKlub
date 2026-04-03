@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Clanovi;
 use App\Models\ClanPaymentCharge;
+use App\Models\clanoviFunkcije;
 use App\Models\Kategorije;
+use App\Models\Klub;
 use App\Models\NadolazeciTurnir;
 use App\Models\PrijavaTurnira;
 use App\Models\RezultatiOpci;
@@ -22,9 +25,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use PhpOffice\PhpWord\IOFactory as PhpWordIOFactory;
+use PhpOffice\PhpWord\PhpWord;
+use PhpOffice\PhpWord\SimpleType\Jc;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
@@ -52,6 +59,8 @@ class NadolazeciTurniriController extends Controller
         'oib' => 'OIB',
         'smjena' => 'Smjena / dan',
         'kup' => 'KUP',
+        'obrok' => 'Obrok',
+        'napomena_clana' => 'Napomena člana',
     ];
 
     private const CSV_EXPORT_ZADANA_POLJA_PRIJAVA = [
@@ -65,6 +74,8 @@ class NadolazeciTurniriController extends Controller
         'oib',
         'smjena',
         'kup',
+        'obrok',
+        'napomena_clana',
     ];
 
     /**
@@ -230,6 +241,21 @@ class NadolazeciTurniriController extends Controller
         $uklonjenePrijave = $svePrijave
             ->filter(fn (PrijavaTurnira $prijava): bool => $prijava->status === PrijavaTurnira::STATUS_REMOVED)
             ->values();
+        $adminAktivniClanIdsTurnira = $svePrijave
+            ->filter(fn (PrijavaTurnira $prijava): bool => $prijava->status === PrijavaTurnira::STATUS_ACTIVE)
+            ->pluck('clan_id')
+            ->map(static fn ($id): int => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+        $adminClanoviZaPrijavu = Clanovi::query()
+            ->where('aktivan', true)
+            ->whereNotIn('id', $adminAktivniClanIdsTurnira)
+            ->orderBy('Prezime')
+            ->orderBy('Ime')
+            ->get(['id', 'Ime', 'Prezime', 'spol', 'datum_rodjenja', 'aktivan']);
+        $dokumentPrijava = $this->podaciZaPrijavaDokument($turnir);
+        $emailDefaultSubject = 'Prijava na turnir: '.$turnir->naziv.' ('.$turnir->datumRasponLabel().')';
 
         return view('admin.nadolazeciTurniri.show', [
             'turnir' => $turnir,
@@ -237,7 +263,100 @@ class NadolazeciTurniriController extends Controller
             'uklonjenePrijave' => $uklonjenePrijave,
             'csvPoljaPrijava' => self::CSV_EXPORT_POLJA_PRIJAVA,
             'csvZadanaPoljaPrijava' => self::CSV_EXPORT_ZADANA_POLJA_PRIJAVA,
+            'dokumentPrijava' => $dokumentPrijava,
+            'emailDefaultSubject' => $emailDefaultSubject,
+            'adminClanoviZaPrijavu' => $adminClanoviZaPrijavu,
+            'adminStiloviZaPrijavu' => $this->stiloviZaPrijavu(),
+            'adminKategorijePoClanu' => $this->kategorijePoClanu($adminClanoviZaPrijavu),
+            'adminClanoviMetaZaKategoriju' => $this->clanoviMetaZaKategoriju($adminClanoviZaPrijavu),
+            'adminSmjeneOpcije' => self::SMJENE,
+            'adminObrokOpcije' => PrijavaTurnira::obrokOpcije(),
+            'adminTurnirJeVisednevni' => $this->turnirJeVisednevni($turnir),
+            'adminOdabirDanaOpcije' => $this->odabirDanaOpcijeZaTurnir($turnir),
+            'adminAktivniClanIdsTurnira' => $adminAktivniClanIdsTurnira,
         ]);
+    }
+
+    /**
+     * Administrator ručno dodaje prijavu člana na turnir.
+     */
+    public function adminDodajPrijavu(Request $request, NadolazeciTurnir $turnir): RedirectResponse
+    {
+        $validated = $request->validate([
+            'clan_id' => ['required', 'integer', 'exists:clanovis,id'],
+            'kategorija_id' => ['required', 'integer', 'exists:kategorijes,id'],
+            'stil_id' => ['required', 'integer', 'exists:stilovis,id'],
+            'sudjelujem_u_kupu' => ['nullable', 'boolean'],
+            'smjena' => ['nullable', 'in:jutarnja,popodnevna,nebitno'],
+            'odabrani_dan' => ['nullable', 'date'],
+            'obrok' => ['nullable', 'in:da,da_vegetarijanski,ne'],
+            'napomena_clana' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $admin = auth()->user();
+        if (! $admin instanceof User) {
+            abort(403);
+        }
+
+        $clan = Clanovi::query()
+            ->with([
+                'korisnik:id,clan_id',
+                'roditelji:id',
+            ])
+            ->findOrFail((int) $validated['clan_id']);
+        $kategorija = Kategorije::query()->findOrFail((int) $validated['kategorija_id']);
+        $stil = Stilovi::query()->where('id', '!=', self::STANDARDNI_LUK_STIL_ID)->findOrFail((int) $validated['stil_id']);
+        if (! $this->kategorijaOdgovaraSpoluClana($clan, $kategorija)) {
+            return redirect()
+                ->route('admin.nadolazeci_turniri.show', $turnir)
+                ->withInput()
+                ->with('error', 'Odabrana kategorija ne odgovara spolu člana.');
+        }
+
+        $terminPrijave = $this->odrediTerminPrijave(
+            $turnir,
+            $validated['smjena'] ?? null,
+            $validated['odabrani_dan'] ?? null
+        );
+
+        $prijava = PrijavaTurnira::query()->firstOrNew([
+            'nadolazeci_turnir_id' => (int) $turnir->id,
+            'clan_id' => (int) $clan->id,
+        ]);
+
+        if ($prijava->exists && $prijava->status === PrijavaTurnira::STATUS_ACTIVE) {
+            return redirect()
+                ->route('admin.nadolazeci_turniri.show', $turnir)
+                ->withInput()
+                ->with('error', 'Član je već prijavljen na odabrani turnir.');
+        }
+
+        $prijava->prijavio_user_id = $this->odrediPrijaviteljaZaAdminskuPrijavu($clan, (int) $admin->id);
+        $prijava->kategorija_id = (int) $kategorija->id;
+        $prijava->stil_id = (int) $stil->id;
+        $prijava->sudjelujem_u_kupu = $request->boolean('sudjelujem_u_kupu');
+        $prijava->smjena = $terminPrijave['smjena'];
+        $prijava->odabrani_dan = $terminPrijave['odabrani_dan'];
+        $prijava->obrok = $this->normalizirajObrok($validated['obrok'] ?? null);
+        $prijava->napomena_clana = $this->normalizirajNapomenuClana($validated['napomena_clana'] ?? null);
+        $prijava->status = PrijavaTurnira::STATUS_ACTIVE;
+        $prijava->napomena_admin = null;
+        $prijava->removed_by = null;
+        $prijava->removed_at = null;
+        $prijava->cancelled_at = null;
+        $prijava->save();
+
+        $this->syncKotizacijaZaPrijavu($prijava, $turnir, (int) $admin->id);
+
+        $warning = $this->lijecnickoUpozorenje($clan, $turnir);
+        $poruka = 'Prijava je spremljena.';
+        if ($warning !== null) {
+            $poruka .= ' '.$warning;
+        }
+
+        return redirect()
+            ->route('admin.nadolazeci_turniri.show', $turnir)
+            ->with('success', $poruka);
     }
 
     /**
@@ -385,6 +504,83 @@ class NadolazeciTurniriController extends Controller
     }
 
     /**
+     * Preuzima prijavnicu turnira u DOCX formatu.
+     */
+    public function adminDownloadPrijavaDocx(NadolazeciTurnir $turnir)
+    {
+        $podaci = $this->podaciZaPrijavaDokument($turnir);
+        $docxSadrzaj = $this->generirajPrijavaDocxSadrzaj($podaci);
+        $nazivDatoteke = $this->nazivDatotekePrijave($turnir, 'docx');
+
+        return response($docxSadrzaj, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Content-Disposition' => 'attachment; filename="'.$nazivDatoteke.'"',
+            'Cache-Control' => 'max-age=0',
+        ]);
+    }
+
+    /**
+     * Preuzima prijavnicu turnira u PDF formatu.
+     */
+    public function adminDownloadPrijavaPdf(NadolazeciTurnir $turnir)
+    {
+        $podaci = $this->podaciZaPrijavaDokument($turnir);
+        $pdf = Pdf::loadView('admin.nadolazeciTurniri.prijavaDokumentPdf', $podaci)
+            ->setPaper('a4', 'landscape');
+
+        return $pdf->download($this->nazivDatotekePrijave($turnir, 'pdf'));
+    }
+
+    /**
+     * Šalje prijavnicu e-mailom uz HTML tablicu u tijelu poruke i DOCX/PDF privitke.
+     */
+    public function adminPosaljiPrijavaEmail(Request $request, NadolazeciTurnir $turnir): RedirectResponse
+    {
+        $validated = $request->validate([
+            'email_to' => ['required', 'email:rfc', 'max:191'],
+            'email_subject' => ['required', 'string', 'max:191'],
+            'email_poruka' => ['nullable', 'string', 'max:5000'],
+        ]);
+
+        $podaci = $this->podaciZaPrijavaDokument($turnir);
+        $docxNaziv = $this->nazivDatotekePrijave($turnir, 'docx');
+        $pdfNaziv = $this->nazivDatotekePrijave($turnir, 'pdf');
+        $docxSadrzaj = $this->generirajPrijavaDocxSadrzaj($podaci);
+        $pdfSadrzaj = Pdf::loadView('admin.nadolazeciTurniri.prijavaDokumentPdf', $podaci)
+            ->setPaper('a4', 'landscape')
+            ->output();
+
+        $porukaTekst = trim((string) ($validated['email_poruka'] ?? ''));
+        $htmlTijelo = view('admin.nadolazeciTurniri.prijavaEmail', [
+            'porukaTekst' => $porukaTekst,
+            'podaci' => $podaci,
+        ])->render();
+
+        try {
+            Mail::send([], [], function ($message) use ($validated, $htmlTijelo, $docxNaziv, $docxSadrzaj, $pdfNaziv, $pdfSadrzaj): void {
+                $message
+                    ->to((string) $validated['email_to'])
+                    ->subject((string) $validated['email_subject'])
+                    ->html($htmlTijelo);
+
+                $message->attachData($docxSadrzaj, $docxNaziv, ['mime' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']);
+                $message->attachData($pdfSadrzaj, $pdfNaziv, ['mime' => 'application/pdf']);
+            });
+        } catch (Throwable $e) {
+            report($e);
+
+            return redirect()
+                ->route('admin.nadolazeci_turniri.show', $turnir)
+                ->withInput()
+                ->with('error', 'Slanje e-maila nije uspjelo. Provjerite mail postavke servera.');
+        }
+
+        return redirect()
+            ->route('admin.nadolazeci_turniri.show', $turnir)
+            ->with('success', 'Prijavnica je uspješno poslana e-mailom.');
+    }
+
+    /**
      * Administrator uklanja aktivnu prijavu člana na turnir uz obaveznu napomenu.
      */
     public function adminUkloniPrijavu(Request $request, NadolazeciTurnir $turnir, PrijavaTurnira $prijava): RedirectResponse
@@ -417,6 +613,33 @@ class NadolazeciTurniriController extends Controller
         return redirect()
             ->route('admin.nadolazeci_turniri.show', $turnir)
             ->with('success', 'Član je maknut s turnira.');
+    }
+
+    /**
+     * Administrator može urediti napomenu člana na prijavi.
+     */
+    public function adminUpdateNapomenaClana(Request $request, NadolazeciTurnir $turnir, PrijavaTurnira $prijava): RedirectResponse
+    {
+        if ((int) $prijava->nadolazeci_turnir_id !== (int) $turnir->id) {
+            abort(404);
+        }
+
+        if ($prijava->status === PrijavaTurnira::STATUS_REMOVED) {
+            return redirect()
+                ->route('admin.nadolazeci_turniri.show', $turnir)
+                ->with('error', 'Napomenu nije moguće uređivati za uklonjenu prijavu.');
+        }
+
+        $validated = $request->validate([
+            'napomena_clana' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $prijava->napomena_clana = $this->normalizirajNapomenuClana($validated['napomena_clana'] ?? null);
+        $prijava->save();
+
+        return redirect()
+            ->route('admin.nadolazeci_turniri.show', $turnir)
+            ->with('success', 'Napomena člana je ažurirana.');
     }
 
     /**
@@ -547,6 +770,7 @@ class NadolazeciTurniriController extends Controller
             'kategorijePoClanu' => $kategorijePoClanu,
             'clanoviMetaZaKategoriju' => $clanoviMetaZaKategoriju,
             'smjeneOpcije' => self::SMJENE,
+            'obrokOpcije' => PrijavaTurnira::obrokOpcije(),
             'lijecnickiUpozorenja' => $lijecnickiUpozorenja,
             'daniVidljivosti' => self::VIDLJIVOST_DANA_ZA_PRIJAVU,
             'prijavljeniPoTurniru' => $prijavljeniPoTurniru,
@@ -568,6 +792,8 @@ class NadolazeciTurniriController extends Controller
             'sudjelujem_u_kupu' => ['nullable', 'boolean'],
             'smjena' => ['nullable', 'in:jutarnja,popodnevna,nebitno'],
             'odabrani_dan' => ['nullable', 'date'],
+            'obrok' => ['nullable', 'in:da,da_vegetarijanski,ne'],
+            'napomena_clana' => ['nullable', 'string', 'max:255'],
         ]);
 
         $korisnik = auth()->user();
@@ -637,6 +863,8 @@ class NadolazeciTurniriController extends Controller
         $prijava->sudjelujem_u_kupu = $request->boolean('sudjelujem_u_kupu');
         $prijava->smjena = $terminPrijave['smjena'];
         $prijava->odabrani_dan = $terminPrijave['odabrani_dan'];
+        $prijava->obrok = $this->normalizirajObrok($validated['obrok'] ?? null);
+        $prijava->napomena_clana = $this->normalizirajNapomenuClana($validated['napomena_clana'] ?? null);
         $prijava->status = PrijavaTurnira::STATUS_ACTIVE;
         $prijava->napomena_admin = null;
         $prijava->removed_by = null;
@@ -717,6 +945,7 @@ class NadolazeciTurniriController extends Controller
             'kategorije' => $kategorije,
             'stilovi' => $stilovi,
             'smjene' => $smjene,
+            'obrokOpcije' => PrijavaTurnira::obrokOpcije(),
             'turnirJeVisednevni' => $turnirJeVisednevni,
             'odabirDanaOpcije' => $odabirDanaOpcije,
             'zakljucano' => $zakljucano,
@@ -764,6 +993,8 @@ class NadolazeciTurniriController extends Controller
             'sudjelujem_u_kupu' => ['nullable', 'boolean'],
             'smjena' => ['nullable', 'in:jutarnja,popodnevna,nebitno'],
             'odabrani_dan' => ['nullable', 'date'],
+            'obrok' => ['nullable', 'in:da,da_vegetarijanski,ne'],
+            'napomena_clana' => ['nullable', 'string', 'max:255'],
         ]);
 
         $kategorija = Kategorije::query()->findOrFail((int) $validated['kategorija_id']);
@@ -785,6 +1016,8 @@ class NadolazeciTurniriController extends Controller
         $prijava->sudjelujem_u_kupu = $request->boolean('sudjelujem_u_kupu');
         $prijava->smjena = $terminPrijave['smjena'];
         $prijava->odabrani_dan = $terminPrijave['odabrani_dan'];
+        $prijava->obrok = $this->normalizirajObrok($validated['obrok'] ?? null);
+        $prijava->napomena_clana = $this->normalizirajNapomenuClana($validated['napomena_clana'] ?? null);
         $prijava->save();
 
         $this->syncKotizacijaZaPrijavu($prijava, $turnir, (int) $korisnik->id);
@@ -922,6 +1155,31 @@ class NadolazeciTurniriController extends Controller
         }
 
         return $korisnik->mozePregledavatiClana($clanId);
+    }
+
+    /**
+     * Odabire korisnički račun koji se upisuje kao prijavitelj kod adminske prijave.
+     */
+    private function odrediPrijaviteljaZaAdminskuPrijavu(Clanovi $clan, int $fallbackUserId): int
+    {
+        $clan->loadMissing([
+            'korisnik:id,clan_id',
+            'roditelji:id',
+        ]);
+
+        $korisnik = $clan->korisnik;
+        if ($korisnik instanceof User) {
+            return (int) $korisnik->id;
+        }
+
+        $roditelj = $clan->roditelji
+            ->sortBy(static fn (User $user): int => (int) $user->id)
+            ->first();
+        if ($roditelj instanceof User) {
+            return (int) $roditelj->id;
+        }
+
+        return $fallbackUserId;
     }
 
     /**
@@ -1552,6 +1810,29 @@ class NadolazeciTurniriController extends Controller
     }
 
     /**
+     * Normalizira odabir obroka na dozvoljene vrijednosti.
+     */
+    private function normalizirajObrok(mixed $obrok): string
+    {
+        $vrijednost = trim((string) $obrok);
+        $dozvoljeno = array_keys(PrijavaTurnira::obrokOpcije());
+
+        return in_array($vrijednost, $dozvoljeno, true)
+            ? $vrijednost
+            : PrijavaTurnira::OBROK_NE;
+    }
+
+    /**
+     * Normalizira napomenu člana (kratki jednoredni unos).
+     */
+    private function normalizirajNapomenuClana(mixed $napomena): ?string
+    {
+        $tekst = preg_replace('/\s+/u', ' ', trim((string) $napomena));
+
+        return $tekst === '' ? null : mb_substr($tekst, 0, 255);
+    }
+
+    /**
      * Vraća razlog zbog kojeg turnir nije dostupan za prijavu.
      */
     private function porukaZaNedostupanTurnir(NadolazeciTurnir $turnir, bool $primijeniPravilo60Dana): ?string
@@ -1643,6 +1924,426 @@ class NadolazeciTurniriController extends Controller
     }
 
     /**
+     * Priprema podatke za prijavnicu turnira (DOCX/PDF/HTML e-mail).
+     *
+     * @return array{
+     *     turnirNaziv:string,
+     *     turnirDatum:string,
+     *     klubNaziv:string,
+     *     klubAdresa:string,
+     *     klubTelefon:string,
+     *     klubEmail:string,
+     *     klubRacun:string,
+     *     klubWeb:string,
+     *     predsjednikImePrezime:string,
+     *     datumPrijave:string,
+     *     logoPath:?string,
+     *     logoUrl:?string,
+     *     potpisLogoPath:?string,
+     *     potpisLogoUrl:?string,
+     *     potpisSvgInline:?string,
+     *     potpisPredsjednikPath:?string,
+     *     pecatKlubaPath:?string,
+     *     redovi:array<int, array{
+     *         rb:int,
+     *         licenca:string,
+     *         ime:string,
+     *         prezime:string,
+     *         stil:string,
+     *         kategorija:string,
+     *         lijecnicki:string,
+     *         kup:string,
+     *         obrok:string,
+     *         napomena:string
+     *     }>
+     * }
+     */
+    private function podaciZaPrijavaDokument(NadolazeciTurnir $turnir): array
+    {
+        $turnir->loadMissing([
+            'prijave' => fn ($query) => $query
+                ->where('status', PrijavaTurnira::STATUS_ACTIVE)
+                ->with(['clan', 'kategorija', 'stil'])
+                ->orderBy('id'),
+        ]);
+
+        $aktivnePrijave = collect($turnir->prijave ?? [])
+            ->filter(function ($prijava): bool {
+                return $prijava instanceof PrijavaTurnira
+                    && $prijava->status === PrijavaTurnira::STATUS_ACTIVE
+                    && $prijava->clan instanceof Clanovi;
+            })
+            ->sortBy(function (PrijavaTurnira $prijava): array {
+                $clan = $prijava->clan;
+                $stilNaziv = (string) ($prijava->stil?->naziv ?? '');
+                $kategorijaNaziv = (string) ($prijava->kategorija?->naziv ?? '');
+                $prezime = (string) ($clan?->Prezime ?? '');
+                $ime = (string) ($clan?->Ime ?? '');
+
+                return [
+                    $this->prioritetStila($stilNaziv),
+                    Str::ascii(mb_strtolower($stilNaziv, 'UTF-8')),
+                    Str::ascii(mb_strtolower($kategorijaNaziv, 'UTF-8')),
+                    Str::ascii(mb_strtolower($prezime, 'UTF-8')),
+                    Str::ascii(mb_strtolower($ime, 'UTF-8')),
+                    (int) $prijava->id,
+                ];
+            })
+            ->values();
+
+        $redovi = [];
+        foreach ($aktivnePrijave as $index => $prijava) {
+            $clan = $prijava->clan;
+            $lijecnicki = $this->formatirajDatumZaCsv($clan?->lijecnicki_do ?? null);
+            if ($lijecnicki === '') {
+                $lijecnicki = 'nije evidentiran';
+            }
+
+            $redovi[] = [
+                'rb' => $index + 1,
+                'licenca' => trim((string) ($clan?->broj_licence ?? '')),
+                'ime' => trim((string) ($clan?->Ime ?? '')),
+                'prezime' => trim((string) ($clan?->Prezime ?? '')),
+                'stil' => trim((string) ($prijava->stil?->naziv ?? '')),
+                'kategorija' => trim((string) ($prijava->kategorija?->naziv ?? '')),
+                'lijecnicki' => $lijecnicki,
+                'kup' => $prijava->sudjelujem_u_kupu ? 'DA' : '',
+                'obrok' => $prijava->obrokLabel(),
+                'napomena' => trim((string) ($prijava->napomena_clana ?? '')),
+            ];
+        }
+
+        $minimalniBrojRedaka = max(1, count($redovi) + 1);
+        for ($rb = count($redovi) + 1; $rb <= $minimalniBrojRedaka; $rb++) {
+            $redovi[] = [
+                'rb' => $rb,
+                'licenca' => '',
+                'ime' => '',
+                'prezime' => '',
+                'stil' => '',
+                'kategorija' => '',
+                'lijecnicki' => '',
+                'kup' => '',
+                'obrok' => '',
+                'napomena' => '',
+            ];
+        }
+
+        $klub = Klub::query()->first();
+        $predsjednikImePrezime = $this->dohvatiImePrezimePredsjednikaKluba($klub);
+        $potpisLogoStoragePath = $this->osigurajLogoKlubaZaPotpis();
+        $potpisSvgStoragePath = $this->osigurajPotpisSvgDatoteku();
+        $potpisSvgInline = $this->ucitajPotpisSvgZaInline($potpisSvgStoragePath);
+        $potpisLogoPath = $potpisLogoStoragePath !== null ? storage_path('app/public/'.$potpisLogoStoragePath) : null;
+        if (! is_string($potpisLogoPath) || ! is_file($potpisLogoPath)) {
+            $potpisLogoPath = null;
+        }
+        $potpisPredsjednikPath = storage_path('app/public/site-assets/potpis-predsjednik.png');
+        if (! is_file($potpisPredsjednikPath)) {
+            $potpisPredsjednikPath = null;
+        }
+        $pecatKlubaPath = storage_path('app/public/site-assets/zig.png');
+        if (! is_file($pecatKlubaPath)) {
+            $pecatKlubaPath = null;
+        }
+
+        $logoPath = public_path('images/prijava/hss-header.png');
+        if (! is_file($logoPath)) {
+            $logoPath = null;
+        }
+
+        return [
+            'turnirNaziv' => trim((string) $turnir->naziv),
+            'turnirDatum' => $turnir->datumRasponLabel(),
+            'klubNaziv' => trim((string) ($klub?->naziv ?? 'SK DUBRAVA')),
+            'klubAdresa' => trim((string) ($klub?->adresa ?? '')),
+            'klubTelefon' => trim((string) ($klub?->telefon ?? '')),
+            'klubEmail' => trim((string) ($klub?->email ?? '')),
+            'klubRacun' => trim((string) ($klub?->racun ?? '')),
+            'klubWeb' => 'https://skdubrava.hr',
+            'predsjednikImePrezime' => $predsjednikImePrezime,
+            'datumPrijave' => now()->format('d.m.Y.'),
+            'logoPath' => $logoPath,
+            'logoUrl' => $logoPath !== null ? asset('images/prijava/hss-header.png') : null,
+            'potpisLogoPath' => $potpisLogoPath,
+            'potpisLogoUrl' => $potpisLogoStoragePath !== null ? asset('storage/'.$potpisLogoStoragePath) : null,
+            'potpisSvgInline' => $potpisSvgInline,
+            'potpisPredsjednikPath' => $potpisPredsjednikPath,
+            'pecatKlubaPath' => $pecatKlubaPath,
+            'redovi' => $redovi,
+        ];
+    }
+
+    /**
+     * Dohvaća puno ime predsjednika kluba iz funkcije "Predsjednik kluba".
+     */
+    private function dohvatiImePrezimePredsjednikaKluba(?Klub $klub): string
+    {
+        $query = clanoviFunkcije::query()
+            ->with(['clan:id,Ime,Prezime'])
+            ->where('funkcija', 'Predsjednik kluba')
+            ->orderBy('id');
+
+        if ($klub !== null) {
+            $query->where('klub_id', (int) $klub->id);
+        }
+
+        $predsjednikFunkcija = $query->first();
+        if ($predsjednikFunkcija === null && $klub !== null) {
+            $predsjednikFunkcija = clanoviFunkcije::query()
+                ->with(['clan:id,Ime,Prezime'])
+                ->where('funkcija', 'Predsjednik kluba')
+                ->orderBy('id')
+                ->first();
+        }
+
+        $ime = trim((string) ($predsjednikFunkcija?->clan?->Ime ?? ''));
+        $prezime = trim((string) ($predsjednikFunkcija?->clan?->Prezime ?? ''));
+
+        return trim($ime.' '.$prezime);
+    }
+
+    /**
+     * Osigurava da je logo kluba dostupan u storage/site-assets i vraća relativnu putanju.
+     */
+    private function osigurajLogoKlubaZaPotpis(): ?string
+    {
+        $disk = Storage::disk('public');
+        $odrediste = 'site-assets/logo.png';
+        if ($disk->exists($odrediste)) {
+            return $odrediste;
+        }
+
+        foreach (['slike/logo.png', 'site-assets/logo_dark.png'] as $izvor) {
+            if (! $disk->exists($izvor)) {
+                continue;
+            }
+
+            try {
+                $disk->copy($izvor, $odrediste);
+            } catch (Throwable) {
+                return null;
+            }
+
+            return $disk->exists($odrediste) ? $odrediste : null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Iz lokalnog HTML potpisa izdvaja SVG i sprema ga u storage/site-assets.
+     */
+    private function osigurajPotpisSvgDatoteku(): ?string
+    {
+        $disk = Storage::disk('public');
+        $odrediste = 'site-assets/potpis-logo.svg';
+        if ($disk->exists($odrediste)) {
+            return $odrediste;
+        }
+
+        $izvorHtmlPath = base_path('local-export/potpis_skdubrava.html');
+        if (! is_file($izvorHtmlPath)) {
+            return null;
+        }
+
+        $html = file_get_contents($izvorHtmlPath);
+        if (! is_string($html) || trim($html) === '') {
+            return null;
+        }
+
+        if (! preg_match('/<svg\b[\s\S]*?<\/svg>/i', $html, $poklapanje)) {
+            return null;
+        }
+
+        $svg = trim((string) ($poklapanje[0] ?? ''));
+        if ($svg === '') {
+            return null;
+        }
+
+        try {
+            $disk->put($odrediste, $svg);
+        } catch (Throwable) {
+            return null;
+        }
+
+        return $disk->exists($odrediste) ? $odrediste : null;
+    }
+
+    /**
+     * Učitava spremljeni SVG i priprema ga za inline prikaz u e-mailu.
+     */
+    private function ucitajPotpisSvgZaInline(?string $storagePath): ?string
+    {
+        if (! is_string($storagePath) || trim($storagePath) === '') {
+            return null;
+        }
+
+        $disk = Storage::disk('public');
+        if (! $disk->exists($storagePath)) {
+            return null;
+        }
+
+        $svg = $disk->get($storagePath);
+        if (! is_string($svg) || trim($svg) === '') {
+            return null;
+        }
+
+        $svg = trim($svg);
+        $svg = preg_replace('/<\?xml[^>]*\?>/i', '', $svg) ?? $svg;
+        $svg = preg_replace('/<script\b[^>]*>[\s\S]*?<\/script>/i', '', $svg) ?? $svg;
+        $svg = preg_replace('/\son\w+=(["\']).*?\1/i', '', $svg) ?? $svg;
+
+        if (! preg_match('/<svg\b[\s\S]*?<\/svg>/i', $svg)) {
+            return null;
+        }
+
+        return trim($svg);
+    }
+
+    /**
+     * Generira DOCX sadržaj prijavnice turnira.
+     */
+    private function generirajPrijavaDocxSadrzaj(array $podaci): string
+    {
+        $stariReporting = error_reporting();
+        error_reporting($stariReporting & ~E_DEPRECATED & ~E_USER_DEPRECATED);
+
+        try {
+            $phpWord = new PhpWord;
+            $phpWord->setDefaultFontName('Calibri');
+            $phpWord->setDefaultFontSize(10);
+
+            $section = $phpWord->addSection([
+                'orientation' => 'landscape',
+                'marginTop' => 600,
+                'marginBottom' => 600,
+                'marginLeft' => 500,
+                'marginRight' => 500,
+            ]);
+
+            $logoPath = $podaci['logoPath'] ?? null;
+            if (is_string($logoPath) && $logoPath !== '' && is_file($logoPath)) {
+                $section->addImage($logoPath, [
+                    'width' => 410,
+                    'alignment' => Jc::START,
+                ]);
+            }
+
+            $infoTable = $section->addTable([
+                'borderSize' => 0,
+                'cellMargin' => 0,
+                'alignment' => Jc::START,
+            ]);
+            $infoTable->addRow();
+            $infoTable->addCell(8500)->addText(
+                'Natjecanje: '.(string) ($podaci['turnirNaziv'] ?? ''),
+                ['bold' => true, 'size' => 11],
+                ['spaceAfter' => 120]
+            );
+            $infoTable->addCell(6000)->addText(
+                'Datum natjecanja: '.(string) ($podaci['turnirDatum'] ?? ''),
+                ['bold' => true, 'size' => 11],
+                ['spaceAfter' => 120]
+            );
+            $infoTable->addRow();
+            $infoTable->addCell(8500)->addText(
+                'Klub: '.(string) ($podaci['klubNaziv'] ?? ''),
+                ['bold' => true, 'size' => 11],
+                ['spaceAfter' => 200]
+            );
+            $infoTable->addCell(6000)->addText(
+                'Datum prijave: '.(string) ($podaci['datumPrijave'] ?? ''),
+                ['bold' => true, 'size' => 11],
+                ['spaceAfter' => 200]
+            );
+
+            $phpWord->addTableStyle('PrijavnicaTable', [
+                'borderSize' => 8,
+                'borderColor' => '6B7280',
+                'cellMargin' => 60,
+                'alignment' => Jc::CENTER,
+            ], [
+                'bgColor' => 'E5E7EB',
+            ]);
+
+            $table = $section->addTable('PrijavnicaTable');
+            $sirineKolona = [500, 900, 1200, 1400, 1700, 1700, 1600, 900, 1500, 3200];
+            $zaglavlja = ['R. br.', 'Licenca', 'Ime', 'Prezime', 'Stil', 'Kategorija', 'Liječnički pregled', 'Kup', 'Obrok', 'Napomena'];
+            $headerCellStyle = ['valign' => 'center'];
+            $bodyCellStyle = ['valign' => 'center'];
+            $headerFont = ['bold' => true, 'size' => 9, 'color' => '111827'];
+            $bodyFont = ['size' => 9, 'color' => '111827'];
+
+            $table->addRow(480);
+            foreach ($zaglavlja as $index => $zaglavlje) {
+                $table->addCell($sirineKolona[$index], $headerCellStyle)
+                    ->addText($zaglavlje, $headerFont, ['alignment' => Jc::CENTER]);
+            }
+
+            foreach ((array) ($podaci['redovi'] ?? []) as $red) {
+                $table->addRow(360);
+                $table->addCell($sirineKolona[0], $bodyCellStyle)->addText((string) ($red['rb'] ?? ''), $bodyFont, ['alignment' => Jc::CENTER]);
+                $table->addCell($sirineKolona[1], $bodyCellStyle)->addText((string) ($red['licenca'] ?? ''), $bodyFont, ['alignment' => Jc::CENTER]);
+                $table->addCell($sirineKolona[2], $bodyCellStyle)->addText((string) ($red['ime'] ?? ''), $bodyFont, ['alignment' => Jc::START]);
+                $table->addCell($sirineKolona[3], $bodyCellStyle)->addText((string) ($red['prezime'] ?? ''), $bodyFont, ['alignment' => Jc::START]);
+                $table->addCell($sirineKolona[4], $bodyCellStyle)->addText((string) ($red['stil'] ?? ''), $bodyFont, ['alignment' => Jc::START]);
+                $table->addCell($sirineKolona[5], $bodyCellStyle)->addText((string) ($red['kategorija'] ?? ''), $bodyFont, ['alignment' => Jc::START]);
+                $table->addCell($sirineKolona[6], $bodyCellStyle)->addText((string) ($red['lijecnicki'] ?? ''), $bodyFont, ['alignment' => Jc::CENTER]);
+                $table->addCell($sirineKolona[7], $bodyCellStyle)->addText((string) ($red['kup'] ?? ''), $bodyFont, ['alignment' => Jc::CENTER]);
+                $table->addCell($sirineKolona[8], $bodyCellStyle)->addText((string) ($red['obrok'] ?? ''), $bodyFont, ['alignment' => Jc::START]);
+                $table->addCell($sirineKolona[9], $bodyCellStyle)->addText((string) ($red['napomena'] ?? ''), $bodyFont, ['alignment' => Jc::START]);
+            }
+
+            $section->addTextBreak(1);
+            $section->addText(
+                'Potpis odgovorne osobe kluba: ______________________________',
+                ['bold' => true, 'size' => 11]
+            );
+            $predsjednikImePrezime = trim((string) ($podaci['predsjednikImePrezime'] ?? ''));
+            if ($predsjednikImePrezime !== '') {
+                $section->addText(
+                    'Predsjednik kluba: '.$predsjednikImePrezime,
+                    ['size' => 10]
+                );
+            }
+
+            $tmpPath = tempnam(sys_get_temp_dir(), 'prijava_docx_');
+            if ($tmpPath === false) {
+                throw new \RuntimeException('Neuspjelo kreiranje privremene DOCX datoteke.');
+            }
+
+            $writer = PhpWordIOFactory::createWriter($phpWord, 'Word2007');
+            $writer->save($tmpPath);
+
+            $sadrzaj = file_get_contents($tmpPath);
+            @unlink($tmpPath);
+            if (! is_string($sadrzaj) || $sadrzaj === '') {
+                throw new \RuntimeException('DOCX datoteka je prazna.');
+            }
+
+            return $sadrzaj;
+        } finally {
+            error_reporting($stariReporting);
+        }
+    }
+
+    /**
+     * Vraća naziv datoteke prijavnice.
+     */
+    private function nazivDatotekePrijave(NadolazeciTurnir $turnir, string $ekstenzija): string
+    {
+        $slug = Str::slug(trim((string) $turnir->naziv), '_');
+        if ($slug === '') {
+            $slug = 'turnir';
+        }
+        $datum = $turnir->datum?->format('Ymd') ?? now()->format('Ymd');
+        $ext = ltrim(trim($ekstenzija), '.');
+
+        return 'prijava_'.$slug.'_'.$datum.'.'.$ext;
+    }
+
+    /**
      * Normalizira tekstualni unos.
      */
     private function normalizirajTekst(mixed $vrijednost): ?string
@@ -1727,6 +2428,8 @@ class NadolazeciTurniriController extends Controller
             'oib' => $this->formatirajTekstualnoPoljeZaCsv($clan?->oib ?? null),
             'smjena' => $prijava->terminPrijaveLabel() === 'nebitno' ? '' : trim((string) $prijava->terminPrijaveLabel()),
             'kup' => $prijava->sudjelujem_u_kupu ? 'DA' : '',
+            'obrok' => $prijava->obrokLabel(),
+            'napomena_clana' => trim((string) ($prijava->napomena_clana ?? '')),
             default => '',
         };
     }

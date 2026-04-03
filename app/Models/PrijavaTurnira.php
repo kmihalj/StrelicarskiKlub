@@ -18,6 +18,12 @@ class PrijavaTurnira extends Model
 
     public const STATUS_REMOVED = 'removed';
 
+    public const OBROK_DA = 'da';
+
+    public const OBROK_DA_VEGETARIJANSKI = 'da_vegetarijanski';
+
+    public const OBROK_NE = 'ne';
+
     protected $table = 'prijave_turnira';
 
     protected $fillable = [
@@ -29,6 +35,8 @@ class PrijavaTurnira extends Model
         'sudjelujem_u_kupu',
         'smjena',
         'odabrani_dan',
+        'obrok',
+        'napomena_clana',
         'status',
         'napomena_admin',
         'removed_by',
@@ -186,5 +194,30 @@ class PrijavaTurnira extends Model
         return $start instanceof CarbonInterface
             && $end instanceof CarbonInterface
             && $end->gt($start);
+    }
+
+    /**
+     * Vraća dozvoljene opcije obroka za prijavu.
+     *
+     * @return array<string, string>
+     */
+    public static function obrokOpcije(): array
+    {
+        return [
+            self::OBROK_DA => 'DA',
+            self::OBROK_DA_VEGETARIJANSKI => 'DA - vegetarijanski',
+            self::OBROK_NE => 'NE',
+        ];
+    }
+
+    /**
+     * Vraća korisničku oznaku odabranog obroka.
+     */
+    public function obrokLabel(): string
+    {
+        $opcije = self::obrokOpcije();
+        $vrijednost = trim((string) $this->obrok);
+
+        return $opcije[$vrijednost] ?? $opcije[self::OBROK_NE];
     }
 }
