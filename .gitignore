@@ -20,5 +20,6 @@ yarn-error.log
 /.vscode
 .DS_Store
 /public/error_log
+/error_log
 /test-results
 /local-export
