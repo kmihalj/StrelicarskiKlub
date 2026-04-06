@@ -16,6 +16,7 @@ use App\Models\Stilovi;
 use App\Models\TipoviTurnira;
 use App\Models\Turniri;
 use App\Models\User;
+use App\Services\ImapSentFolderService;
 use App\Services\PaymentTrackingService;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -555,9 +556,11 @@ class NadolazeciTurniriController extends Controller
             'porukaTekst' => $porukaTekst,
             'podaci' => $podaci,
         ])->render();
+        $symfonyMessage = null;
+        $imapAppendOk = false;
 
         try {
-            Mail::send([], [], function ($message) use ($validated, $htmlTijelo, $docxNaziv, $docxSadrzaj, $pdfNaziv, $pdfSadrzaj): void {
+            Mail::send([], [], function ($message) use ($validated, $htmlTijelo, $docxNaziv, $docxSadrzaj, $pdfNaziv, $pdfSadrzaj, &$symfonyMessage): void {
                 $message
                     ->to((string) $validated['email_to'])
                     ->subject((string) $validated['email_subject'])
@@ -565,7 +568,12 @@ class NadolazeciTurniriController extends Controller
 
                 $message->attachData($docxSadrzaj, $docxNaziv, ['mime' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']);
                 $message->attachData($pdfSadrzaj, $pdfNaziv, ['mime' => 'application/pdf']);
+                $symfonyMessage = $message->getSymfonyMessage();
             });
+
+            /** @var ImapSentFolderService $imapSentFolder */
+            $imapSentFolder = app(ImapSentFolderService::class);
+            $imapAppendOk = $imapSentFolder->appendSymfonyMessage($symfonyMessage);
         } catch (Throwable $e) {
             report($e);
 
@@ -575,9 +583,14 @@ class NadolazeciTurniriController extends Controller
                 ->with('error', 'Slanje e-maila nije uspjelo. Provjerite mail postavke servera.');
         }
 
+        $poruka = 'Prijavnica je uspješno poslana e-mailom.';
+        if ((bool) config('mail.imap_sent.enabled') && ! $imapAppendOk) {
+            $poruka .= ' Kopija poruke nije spremljena u Sent folder (provjerite IMAP postavke servera).';
+        }
+
         return redirect()
             ->route('admin.nadolazeci_turniri.show', $turnir)
-            ->with('success', 'Prijavnica je uspješno poslana e-mailom.');
+            ->with('success', $poruka);
     }
 
     /**

@@ -98,6 +98,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | IMAP "Sent" Append
+    |--------------------------------------------------------------------------
+    |
+    | Kada je uključeno, aplikacija nakon uspješnog slanja pokušava spremiti
+    | kopiju poruke u IMAP Sent folder (npr. za webmail klijente).
+    |
+    */
+    'imap_sent' => [
+        'enabled' => env('MAIL_IMAP_APPEND_SENT', true),
+        'host' => env('MAIL_IMAP_HOST', env('MAIL_HOST')),
+        'port' => env('MAIL_IMAP_PORT', 993),
+        'encryption' => env('MAIL_IMAP_ENCRYPTION', 'ssl'), // ssl | tls | null
+        'validate_cert' => env('MAIL_IMAP_VALIDATE_CERT', true),
+        'username' => env('MAIL_IMAP_USERNAME', env('MAIL_USERNAME')),
+        'password' => env('MAIL_IMAP_PASSWORD', env('MAIL_PASSWORD')),
+        'sent_folder' => env('MAIL_IMAP_SENT_FOLDER', 'INBOX.Sent'),
+        'fallback_folders' => env('MAIL_IMAP_SENT_FALLBACKS', 'INBOX.Sent Messages,Sent,Sent Items,INBOX.Sent Items'),
+        'timeout_seconds' => env('MAIL_IMAP_TIMEOUT_SECONDS', 4),
+        'socket_fallback' => env('MAIL_IMAP_SOCKET_FALLBACK', false),
+        'disable_gssapi' => env('MAIL_IMAP_DISABLE_GSSAPI', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Global "From" Address
     |--------------------------------------------------------------------------
     |
