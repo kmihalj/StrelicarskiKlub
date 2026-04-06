@@ -16,6 +16,7 @@ use App\Http\Controllers\ThemeController;
 use App\Http\Controllers\TipoviTurniraController;
 use App\Http\Controllers\TreninziController;
 use App\Http\Controllers\TurniriController;
+use App\Http\Controllers\UputeController;
 use App\Http\Controllers\UserThemePreferenceController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -154,6 +155,10 @@ Route::prefix('admin/')->group(function () {
 });
 
 Route::get('klub', [KlubController::class, 'oKlubu'])->name('javno.klub');
+Route::get('korisnik/upute', [UputeController::class, 'index'])->name('javno.upute');
+Route::get('korisnik/upute/datoteka/{path}', [UputeController::class, 'asset'])
+    ->where('path', '.*')
+    ->name('javno.upute.asset');
 Route::get('turniri', [TurniriController::class, 'index'])->name('admin.rezultati.popisTurnira');
 Route::get('admin/turniri', [TurniriController::class, 'index'])->name('admin.rezultati.popisTurnira.legacy');
 Route::get('rezultati', [JavnoController::class, 'prikazRezultata'])->name('javno.rezultati');

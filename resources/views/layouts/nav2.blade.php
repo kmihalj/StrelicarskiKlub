@@ -60,6 +60,7 @@
                                 <li><a class="dropdown-item" href="{{ route('login') }}">{{ __('Prijava') }}</a></li>
                                 <li><a class="dropdown-item" href="{{ route('register') }}">{{ __('Registracija') }}</a></li>
                             @endif
+                            <li><a class="dropdown-item" href="{{ route('javno.upute') }}">Upute</a></li>
                         @else
                             @if($authUser->imaPravoAdminOrMember())
                                 <li><a class="dropdown-item" href="{{ route('javno.prijave_turnira.index') }}">Prijave na turnire</a></li>
@@ -67,6 +68,7 @@
                             @if($povezaniClanId > 0)
                                 <li><a class="dropdown-item" href="{{ route('javno.clanovi.prikaz_clana', $povezaniClanId) }}">Profil</a></li>
                             @endif
+                            <li><a class="dropdown-item" href="{{ route('javno.upute') }}">Upute</a></li>
                             <li>
                                 <form action="{{ route('logout') }}" method="POST" class="m-0">
                                     @csrf
