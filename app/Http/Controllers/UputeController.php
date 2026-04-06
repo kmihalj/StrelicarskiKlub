@@ -56,12 +56,14 @@ class UputeController extends Controller
         $naslov = $dokumenti
             ->first(fn (array $item) => $item['putanja'] === $trazenaPutanja)['naslov']
             ?? $trazenaPutanja;
+        $renderirano = $this->renderirajMarkdown($markdown, (string) $trazenaPutanja);
 
         return view('javno.upute.index', [
             'uputeDokumenti' => $dokumenti,
             'uputeAktivniDokument' => $trazenaPutanja,
             'uputeNaslov' => $naslov,
-            'uputeSadrzajHtml' => $this->renderirajMarkdown($markdown, (string) $trazenaPutanja),
+            'uputeSadrzajHtml' => $renderirano['html'],
+            'uputeSadrzajNaslovi' => $renderirano['toc'],
         ]);
     }
 
@@ -83,7 +85,10 @@ class UputeController extends Controller
         return response()->file($apsolutnaPutanja);
     }
 
-    private function renderirajMarkdown(string $markdown, string $trenutniDokument): string
+    /**
+     * @return array{html:string,toc:array<int,array{id:string,tekst:string,razina:int}>}
+     */
+    private function renderirajMarkdown(string $markdown, string $trenutniDokument): array
     {
         $html = Str::markdown($markdown, [
             'html_input' => 'strip',
@@ -93,7 +98,10 @@ class UputeController extends Controller
         return $this->prepraviRelativnePoveznice($html, $trenutniDokument);
     }
 
-    private function prepraviRelativnePoveznice(string $html, string $trenutniDokument): string
+    /**
+     * @return array{html:string,toc:array<int,array{id:string,tekst:string,razina:int}>}
+     */
+    private function prepraviRelativnePoveznice(string $html, string $trenutniDokument): array
     {
         $dom = new \DOMDocument('1.0', 'UTF-8');
         $libxmlErrors = libxml_use_internal_errors(true);
@@ -101,6 +109,49 @@ class UputeController extends Controller
         $dom->loadHTML(mb_convert_encoding($wrapped, 'HTML-ENTITIES', 'UTF-8'));
         libxml_clear_errors();
         libxml_use_internal_errors($libxmlErrors);
+        $toc = [];
+        $koristeniIdNaslova = [];
+
+        $xpath = new \DOMXPath($dom);
+        $headingNodes = $xpath->query('//h2|//h3|//h4');
+        if ($headingNodes instanceof \DOMNodeList) {
+            foreach ($headingNodes as $headingNode) {
+                if (!$headingNode instanceof \DOMElement) {
+                    continue;
+                }
+
+                $tekstNaslova = trim((string) preg_replace('/\s+/u', ' ', (string) $headingNode->textContent));
+                if ($tekstNaslova === '') {
+                    continue;
+                }
+
+                $razina = (int) substr(strtolower($headingNode->tagName), 1);
+                if ($razina < 2 || $razina > 4) {
+                    continue;
+                }
+
+                $predlozeniId = trim((string) $headingNode->getAttribute('id'));
+                $bazniId = $predlozeniId !== '' ? Str::slug($predlozeniId) : Str::slug($tekstNaslova);
+                if ($bazniId === '') {
+                    $bazniId = 'sekcija';
+                }
+
+                $idNaslova = $bazniId;
+                $brojac = 2;
+                while (isset($koristeniIdNaslova[$idNaslova])) {
+                    $idNaslova = $bazniId.'-'.$brojac;
+                    $brojac++;
+                }
+                $koristeniIdNaslova[$idNaslova] = true;
+
+                $headingNode->setAttribute('id', $idNaslova);
+                $toc[] = [
+                    'id' => $idNaslova,
+                    'tekst' => $tekstNaslova,
+                    'razina' => $razina,
+                ];
+            }
+        }
 
         foreach ($dom->getElementsByTagName('img') as $img) {
             $src = (string) $img->getAttribute('src');
@@ -135,7 +186,10 @@ class UputeController extends Controller
 
         $body = $dom->getElementsByTagName('body')->item(0);
         if (!$body instanceof \DOMElement) {
-            return $html;
+            return [
+                'html' => $html,
+                'toc' => $toc,
+            ];
         }
 
         $rezultat = '';
@@ -143,7 +197,10 @@ class UputeController extends Controller
             $rezultat .= $dom->saveHTML($node);
         }
 
-        return $rezultat;
+        return [
+            'html' => $rezultat,
+            'toc' => $toc,
+        ];
     }
 
     /**
@@ -284,4 +341,3 @@ class UputeController extends Controller
         return Str::of($ime)->replace(['-', '_'], ' ')->title()->value();
     }
 }
-

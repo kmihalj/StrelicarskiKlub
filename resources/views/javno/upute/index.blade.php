@@ -12,6 +12,12 @@
             width: 100%;
         }
 
+        .upute-markdown h2,
+        .upute-markdown h3,
+        .upute-markdown h4 {
+            scroll-margin-top: 5rem;
+        }
+
         .upute-sidebar .list-group-item {
             border-color: rgba(var(--bs-primary-rgb), 0.25);
             background-color: var(--bs-secondary-bg-subtle);
@@ -41,6 +47,19 @@
         .theme-dark .upute-sidebar .list-group-item:not(.active):focus {
             background-color: rgba(var(--bs-primary-rgb), 0.18);
             color: var(--bs-body-color) !important;
+        }
+
+        .upute-sidebar .upute-sadrzaj .list-group-item {
+            border-color: rgba(var(--bs-primary-rgb), 0.16);
+            font-size: 0.94rem;
+        }
+
+        .upute-sidebar .upute-sadrzaj .upute-level-3 {
+            padding-left: 1.25rem !important;
+        }
+
+        .upute-sidebar .upute-sadrzaj .upute-level-4 {
+            padding-left: 2rem !important;
         }
 
         .upute-scroll-top-btn {
@@ -76,6 +95,19 @@
                         </a>
                     @endforeach
                 </div>
+                @if(!empty($uputeSadrzajNaslovi))
+                    <div class="mt-3 p-2 border rounded upute-sadrzaj">
+                        <div class="fw-semibold mb-2">Sadržaj</div>
+                        <div class="list-group list-group-flush">
+                            @foreach($uputeSadrzajNaslovi as $naslovSekcije)
+                                <a href="#{{ $naslovSekcije['id'] }}"
+                                   class="list-group-item list-group-item-action py-1 px-2 upute-level-{{ $naslovSekcije['razina'] }}">
+                                    {{ $naslovSekcije['tekst'] }}
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
             </div>
             <div class="col-lg-8 col-xl-9">
                 <div class="border rounded p-3 bg-body-tertiary upute-markdown">

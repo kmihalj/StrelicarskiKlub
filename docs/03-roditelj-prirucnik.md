@@ -19,19 +19,19 @@ Tek nakon tog povezivanja roditeljski račun dobiva smisleni sadržaj na naslovn
 Kod roditelja koji je povezan s djetetom članom kluba, sustav na naslovnici prikazuje blokove za dijete, stanje liječničkog i obavijesti o plaćanjima.
 
 Na slici ispod prikazano je: Naslovnica.
-![00. Naslovnica](<screenshots/parent-member-role/00. naslovnica.png>)
+![00. Naslovnica](<screenshots/parent-member-role/00. naslovnica.webp>)
 Na slici ispod prikazano je: Registracija.
-![01. Registracija](<screenshots/parent-member-role/01. registracija.png>)
+![01. Registracija](<screenshots/parent-member-role/01. registracija.webp>)
 Na slici ispod prikazano je: Registracija roditelja.
-![02. Registracija roditelja](<screenshots/parent-member-role/02. registracija roditelja.png>)
+![02. Registracija roditelja](<screenshots/parent-member-role/02. registracija roditelja.webp>)
 Na slici ispod prikazano je: Prijava na site.
-![03. Prijava na site](<screenshots/parent-member-role/03. prijava na site.png>)
+![03. Prijava na site](<screenshots/parent-member-role/03. prijava na site.webp>)
 Na slici ispod prikazano je: Provjera statusa.
-![04. Provjera statusa](<screenshots/parent-member-role/04. provjera statusa.png>)
+![04. Provjera statusa](<screenshots/parent-member-role/04. provjera statusa.webp>)
 Na slici ispod prikazano je: Admin vas povezuje sa djecom.
-![05. Admin vas povezuje sa djecom](<screenshots/parent-member-role/05. admin vas povezuje sa djecom.png>)
+![05. Admin vas povezuje sa djecom](<screenshots/parent-member-role/05. admin vas povezuje sa djecom.webp>)
 Na slici ispod prikazano je: Pregled djece.
-![06. Pregled djece](<screenshots/parent-member-role/06. pregled djece.png>)
+![06. Pregled djece](<screenshots/parent-member-role/06. pregled djece.webp>)
 
 Kada je dijete član, roditelj preko svog računa može:
 
@@ -42,17 +42,17 @@ Kada je dijete član, roditelj preko svog računa može:
 5. otvoriti i pratiti plaćanja djeteta.
 
 Na slici ispod prikazano je: Pregled djeteta.
-![07. Pregled djeteta](<screenshots/parent-member-role/07. Pregled djeteta.png>)
+![07. Pregled djeteta](<screenshots/parent-member-role/07. Pregled djeteta.webp>)
 Na slici ispod prikazano je: Pregled podataka djeteta.
-![08. Pregled podataka djeteta](<screenshots/parent-member-role/08. pregled podataka djeteta.png>)
+![08. Pregled podataka djeteta](<screenshots/parent-member-role/08. pregled podataka djeteta.webp>)
 Na slici ispod prikazano je: Prijava djeteta na turnir.
-![09. Prijava djeteta na turnir](<screenshots/parent-member-role/09. prijava djeteta na turnir.png>)
+![09. Prijava djeteta na turnir](<screenshots/parent-member-role/09. prijava djeteta na turnir.webp>)
 Na slici ispod prikazano je: Pregled prijave.
-![10. Pregled prijave](<screenshots/parent-member-role/10. pregled prijave.png>)
+![10. Pregled prijave](<screenshots/parent-member-role/10. pregled prijave.webp>)
 Na slici ispod prikazano je: Pregled svih prijava.
-![11. Pregled svih prijava](<screenshots/parent-member-role/11. pregled svih prijava.png>)
+![11. Pregled svih prijava](<screenshots/parent-member-role/11. pregled svih prijava.webp>)
 Na slici ispod prikazano je: Naslovnica sa podacima.
-![12. Naslovnica sa podacima](<screenshots/parent-member-role/12. naslovnica sa podacima.png>)
+![12. Naslovnica sa podacima](<screenshots/parent-member-role/12. naslovnica sa podacima.webp>)
 
 Kod turnirskih prijava roditelj može odabrati dijete iz padajuće liste i prijavljivati samo onu djecu koja su mu stvarno povezana u administraciji.
 
@@ -61,30 +61,30 @@ Plaćanja se vode kroz isti modul kao i za članove, pa roditelj može vidjeti o
 **Važno: potvrde plaćanja radi administrator nakon uvida u bankovni izvod. Izvod se radi svakih 7 do 10 dana, pa ako je nešto plaćeno, a još nije evidentirano, to najčešće znači da administrator još nije napravio sljedeći uvid i označio da je uplata podmirena.**
 
 Na slici ispod prikazano je: Plaćanja.
-![13. Plaćanja](<screenshots/parent-member-role/13. plaćanja.png>)
+![13. Plaćanja](<screenshots/parent-member-role/13. plaćanja.webp>)
 Na slici ispod prikazano je: Plaćanja ako ne koristite barcode.
-![14. Plaćanja ako ne koristite barcode](<screenshots/parent-member-role/14. plaćanja ako ne koristite barcode.png>)
+![14. Plaćanja ako ne koristite barcode](<screenshots/parent-member-role/14. plaćanja ako ne koristite barcode.webp>)
 Na slici ispod prikazano je: Plaćanje članarine.
-![15. Plaćanje članarine](<screenshots/parent-member-role/15. plaćanje članarine.png>)
+![15. Plaćanje članarine](<screenshots/parent-member-role/15. plaćanje članarine.webp>)
 Na slici ispod prikazano je: Sve plaćeno za dijete.
-![16. Sve plaćeno za dijete](<screenshots/parent-member-role/16. sve plaćeno za dijete.png>)
+![16. Sve plaćeno za dijete](<screenshots/parent-member-role/16. sve plaćeno za dijete.webp>)
 Na slici ispod prikazano je: Pregled plaćanja.
-![17. Pregled plaćanja](<screenshots/parent-member-role/17. pregled plaćanja.png>)
+![17. Pregled plaćanja](<screenshots/parent-member-role/17. pregled plaćanja.webp>)
 Na slici ispod prikazano je: Pregled članova.
-![18. Pregled članova](<screenshots/parent-member-role/18. pregled članova.png>)
+![18. Pregled članova](<screenshots/parent-member-role/18. pregled članova.webp>)
 
 ## 3. Roditelj polaznika škole streličarstva
 
 Roditelj može biti povezan i s djetetom koje je polaznik škole. U toj varijanti fokus je na profilu polaznika, dolascima i školarini.
 
 Na slici ispod prikazano je: Naslovnica i registracija.
-![01. Naslovnica i registracija](<screenshots/parent-school-role/01. naslovnica i registracija.png>)
+![01. Naslovnica i registracija](<screenshots/parent-school-role/01. naslovnica i registracija.webp>)
 Na slici ispod prikazano je: Registracija.
-![02. Registracija](<screenshots/parent-school-role/02. registracija.png>)
+![02. Registracija](<screenshots/parent-school-role/02. registracija.webp>)
 Na slici ispod prikazano je: Provjera prijave.
-![03. Provjera prijave](<screenshots/parent-school-role/03. provjera prijave.png>)
+![03. Provjera prijave](<screenshots/parent-school-role/03. provjera prijave.webp>)
 Na slici ispod prikazano je: Admin vas povezuje s djecom.
-![04. Admin vas povezuje s djecom](<screenshots/parent-school-role/04. admin vas povezuje s djecom.png>)
+![04. Admin vas povezuje s djecom](<screenshots/parent-school-role/04. admin vas povezuje s djecom.webp>)
 
 Kada je povezivanje napravljeno, roditelj otvara profil djeteta polaznika i vidi:
 
@@ -93,13 +93,13 @@ Kada je povezivanje napravljeno, roditelj otvara profil djeteta polaznika i vidi
 3. stanje školarine i otvorene stavke.
 
 Na slici ispod prikazano je: Pregled polaznika - djeteta.
-![05. Pregled polaznika - djeteta](<screenshots/parent-school-role/05. pregled polaznika - djeteta.png>)
+![05. Pregled polaznika - djeteta](<screenshots/parent-school-role/05. pregled polaznika - djeteta.webp>)
 Na slici ispod prikazano je: Pregled školarine.
-![06. Pregled školarine](<screenshots/parent-school-role/06. pregled školarine.png>)
+![06. Pregled školarine](<screenshots/parent-school-role/06. pregled školarine.webp>)
 Na slici ispod prikazano je: Administrator je potvrdio upatu.
-![07. Administrator je potvrdio upatu](<screenshots/parent-school-role/07. administrator je potvrdio upatu.png>)
+![07. Administrator je potvrdio upatu](<screenshots/parent-school-role/07. administrator je potvrdio upatu.webp>)
 Na slici ispod prikazano je: Pregled profila i školarine.
-![08. Pregled profila i školarine](<screenshots/parent-school-role/08. pregled profila i školarine.png>)
+![08. Pregled profila i školarine](<screenshots/parent-school-role/08. pregled profila i školarine.webp>)
 
 Kod školarine sustav jasno razlikuje otvorene i podmirene stavke, a roditelj sve prati preko vlastitog računa bez potrebe za prijavom kao dijete.
 

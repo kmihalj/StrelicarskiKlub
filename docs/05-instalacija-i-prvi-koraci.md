@@ -86,24 +86,24 @@ Bootstrap admin podaci:
 Nakon seeda početna stranica je funkcionalna, ali sustav je još uvijek na privremenom bootstrap administratoru.
 
 Na slici ispod prikazano je: Početna nakon instalacije.
-![Početna nakon instalacije](screenshots/setup/01-home-after-install.png)
+![Početna nakon instalacije](screenshots/setup/01-home-after-install.webp)
 
 Prvo registriraj stvarnog korisnika kluba (osoba koja će trajno biti administrator):
 
 Na slici ispod prikazano je: Registracija.
-![Registracija](screenshots/setup/02-register-form.png)
+![Registracija](screenshots/setup/02-register-form.webp)
 Na slici ispod prikazano je: Nakon registracije.
-![Nakon registracije](screenshots/setup/03-after-registration.png)
+![Nakon registracije](screenshots/setup/03-after-registration.webp)
 
 Zatim se prijavi bootstrap admin računom i otvori `Admin -> Korisnici`:
 
 Na slici ispod prikazano je: Bootstrap admin - korisnici.
-![Bootstrap admin - korisnici](screenshots/setup/04-bootstrap-admin-users.png)
+![Bootstrap admin - korisnici](screenshots/setup/04-bootstrap-admin-users.webp)
 
 Uredi stvarno registriranog korisnika i postavi mu rolu `1 - Admin`, pa spremi:
 
 Na slici ispod prikazano je: Promocija korisnika u admina.
-![Promocija korisnika u admina](screenshots/setup/05-edit-user-promote-admin.png)
+![Promocija korisnika u admina](screenshots/setup/05-edit-user-promote-admin.webp)
 
 Nakon spremanja sustav automatski:
 
@@ -112,9 +112,9 @@ Nakon spremanja sustav automatski:
 3. traži prijavu novog administratora.
 
 Na slici ispod prikazano je: Bootstrap korisnik uklonjen.
-![Bootstrap korisnik uklonjen](screenshots/setup/06-bootstrap-removed-login.png)
+![Bootstrap korisnik uklonjen](screenshots/setup/06-bootstrap-removed-login.webp)
 Na slici ispod prikazano je: Novi admin prijavljen.
-![Novi admin prijavljen](screenshots/setup/07-new-admin-logged-in.png)
+![Novi admin prijavljen](screenshots/setup/07-new-admin-logged-in.webp)
 
 ## 6. Produkcija (preporučeni oblik instalacije)
 

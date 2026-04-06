@@ -7,18 +7,18 @@ Ovaj vodič opisuje kako sustav izgleda kada je korisnički račun povezan s pro
 Polaznik se registrira svojim podacima. Kao i kod ostalih korisnika, sustav pri registraciji pokušava automatski povezati račun s postojećim profilom u bazi. Ako podaci odgovaraju, veza se napravi odmah; ako ne, administrator ručno dovršava povezivanje.
 
 Na slici ispod prikazano je: Naslovnica i registracija.
-![01. Naslovnica i registracija](<screenshots/school-role/01. naslovnica i registracija.png>)
+![01. Naslovnica i registracija](<screenshots/school-role/01. naslovnica i registracija.webp>)
 Na slici ispod prikazano je: Registracija.
-![02. Registracija](<screenshots/school-role/02. registracija.png>)
+![02. Registracija](<screenshots/school-role/02. registracija.webp>)
 Na slici ispod prikazano je: Provjera registracije.
-![03. Provjera registracije](<screenshots/school-role/03. provjera registracije.png>)
+![03. Provjera registracije](<screenshots/school-role/03. provjera registracije.webp>)
 Na slici ispod prikazano je: Admin Vas povezuje sa profilom.
-![04. Admin Vas povezuje sa profilom](<screenshots/school-role/04. admin Vas povezuje sa profilom.png>)
+![04. Admin Vas povezuje sa profilom](<screenshots/school-role/04. admin Vas povezuje sa profilom.webp>)
 
 Nakon uspješnog povezivanja naslovnica počinje prikazivati blok `Moji podaci škole streličarstva`, s osnovnim statusom i brzim ulazom na detaljni profil.
 
 Na slici ispod prikazano je: Naslovnica povezanog polatnika.
-![05. Naslovnica povezanog polatnika](<screenshots/school-role/05. naslovnica povezanog polatnika.png>)
+![05. Naslovnica povezanog polatnika](<screenshots/school-role/05. naslovnica povezanog polatnika.webp>)
 
 ## 2. Profil polaznika
 
@@ -27,7 +27,7 @@ Profil polaznika je glavno mjesto pregleda podataka. U njemu se vidi osobni prof
 Važno je znati da polaznik u pravilu pregledava vlastite podatke, dok uređivanje ključnih administrativnih stavki (npr. promjene modela školarine i potvrde uplata) radi administrator.
 
 Na slici ispod prikazano je: Pregled profila.
-![06. Pregled profila](<screenshots/school-role/06. pregled profila.png>)
+![06. Pregled profila](<screenshots/school-role/06. pregled profila.webp>)
 
 ## 3. Školarina i status uplata
 
@@ -38,11 +38,11 @@ U sekciji školarine prikazuju se stavke, status (`plaćeno` / `nije plaćeno`) 
 Nakon što administrator potvrdi uplatu, status se ažurira i obavijest prelazi u uredno stanje.
 
 Na slici ispod prikazano je: Pregled školarine.
-![07. Pregled školarine](<screenshots/school-role/07. pregled školarine.png>)
+![07. Pregled školarine](<screenshots/school-role/07. pregled školarine.webp>)
 Na slici ispod prikazano je: Sve plaćeno.
-![08. Sve plaćeno](<screenshots/school-role/08. sve plaćeno.png>)
+![08. Sve plaćeno](<screenshots/school-role/08. sve plaćeno.webp>)
 Na slici ispod prikazano je: Sve plaćeno u profilu.
-![09. Sve plaćeno u profilu](<screenshots/school-role/09. sve plaćeno u profilu.png>)
+![09. Sve plaćeno u profilu](<screenshots/school-role/09. sve plaćeno u profilu.webp>)
 
 ## 4. Dolasci i praktična uporaba
 

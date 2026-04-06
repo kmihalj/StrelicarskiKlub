@@ -16,13 +16,13 @@ Automatsko povezivanje se radi samo kada identitet stvarno odgovara postojećem 
 Ako je podudaranje uspješno, račun odmah dobiva vezu na profil člana i članske ovlasti. Ako nije, registracija može biti uspješna, ali račun ostaje bez veze na člana dok administrator ne napravi ručno povezivanje.
 
 Na slici ispod prikazano je: Naslovnica.
-![01. Naslovnica](<screenshots/member-role/01. naslovnica.png>)
+![01. Naslovnica](<screenshots/member-role/01. naslovnica.webp>)
 Na slici ispod prikazano je: Registracija.
-![02. Registracija](<screenshots/member-role/02. registracija.png>)
+![02. Registracija](<screenshots/member-role/02. registracija.webp>)
 Na slici ispod prikazano je: Podaci za registraciju.
-![03. Podaci za registraciju](<screenshots/member-role/03. podaci za registraciju.png>)
+![03. Podaci za registraciju](<screenshots/member-role/03. podaci za registraciju.webp>)
 Na slici ispod prikazano je: Prijava na site.
-![02a. Prijava na site](<screenshots/member-role/02a. prijava na site.png>)
+![02a. Prijava na site](<screenshots/member-role/02a. prijava na site.webp>)
 
 ## 2. Kako odmah prepoznati je li račun pravilno povezan
 
@@ -33,11 +33,11 @@ Kada je račun pravilno povezan s članom, uobičajeno se prikazuju stavke poput
 To nije kvar, nego znak da je potreban kontakt s administratorom koji u administraciji korisnika postavlja odgovarajuću rolu i povezani profil člana.
 
 Na slici ispod prikazano je: Provjera statusa.
-![04. Provjera statusa](<screenshots/member-role/04. provjera statusa.png>)
+![04. Provjera statusa](<screenshots/member-role/04. provjera statusa.webp>)
 Na slici ispod prikazano je: Admin povezuje člana sa korisnikom.
-![05. Admin povezuje člana sa korisnikom](<screenshots/member-role/05. admin povezuje člana sa korisnikom.png>)
+![05. Admin povezuje člana sa korisnikom](<screenshots/member-role/05. admin povezuje člana sa korisnikom.webp>)
 Na slici ispod prikazano je: Prijavljeni kao član.
-![06. Prijavljeni kao član](<screenshots/member-role/06. prijavljeni kao član.png>)
+![06. Prijavljeni kao član](<screenshots/member-role/06. prijavljeni kao član.webp>)
 
 ## 3. Profil člana i dokumentacija
 
@@ -46,9 +46,9 @@ Profil člana je središnje mjesto za osobne podatke, sportske informacije i dok
 Važna stvar za razumjeti: član vidi svoje dokumente. U profilima gdje korisnik nema pravo na dokumente ta sekcija se u pravilu uopće ne prikazuje. Dakle, korisnik bez prava najčešće ne dobiva poruku o zabrani, nego taj dio sučelja jednostavno ne vidi.
 
 Na slici ispod prikazano je: Profil korisnika.
-![07. Profil korisnika](<screenshots/member-role/07. profil korisnika.png>)
+![07. Profil korisnika](<screenshots/member-role/07. profil korisnika.webp>)
 Na slici ispod prikazano je: Dokumenti i podaci.
-![08. Dokumenti i podaci](<screenshots/member-role/08. dokumenti i podaci.png>)
+![08. Dokumenti i podaci](<screenshots/member-role/08. dokumenti i podaci.webp>)
 
 ## 4. Treninzi člana
 
@@ -57,20 +57,20 @@ Modul `Moji treninzi` služi za osobnu evidenciju dvoranskih i vanjskih treninga
 Sustav treninge veže na prijavljenog korisnika i njegov profil člana, pa unosi ostaju odvojeni po korisnicima i ne miješaju se između članova.
 
 Na slici ispod prikazano je: Pregled treninga.
-![09. Pregled treninga](<screenshots/member-role/09. pregled treninga.png>)
+![09. Pregled treninga](<screenshots/member-role/09. pregled treninga.webp>)
 Na slici ispod prikazano je: Unos treninga.
-![10. Unos treninga](<screenshots/member-role/10. unos treninga.png>)
+![10. Unos treninga](<screenshots/member-role/10. unos treninga.webp>)
 Na slici ispod prikazano je: Pregled i uređivanje treninga.
-![11. Pregled i uređivanje treninga](<screenshots/member-role/11. pregled i uređivanje treninga.png>)
+![11. Pregled i uređivanje treninga](<screenshots/member-role/11. pregled i uređivanje treninga.webp>)
 
 ## 5. Popis članova i profil rezultata
 
 Kroz izbornik `O nama` -> `Članovi` otvara se popis aktivnih članova. Tu se može otvoriti profil pojedinog člana i pregledati rezultate, rekorde i nastupe na turnirima.
 
 Na slici ispod prikazano je: Popis članova.
-![12. Popis članova](<screenshots/member-role/12. popis članova.png>)
+![12. Popis članova](<screenshots/member-role/12. popis članova.webp>)
 Na slici ispod prikazano je: Profil člana.
-![13. Profil člana](<screenshots/member-role/13. profil člana.png>)
+![13. Profil člana](<screenshots/member-role/13. profil člana.webp>)
 
 ## 6. Prijave na turnire
 
@@ -79,13 +79,13 @@ Prijava na turnire je jednostavna forma, ali sustav u pozadini radi nekoliko va�
 Kategorija se može promijeniti. Sustav samo predlaže početnu kategoriju prema dobi i spolu člana, ali korisnik može odabrati drugu dostupnu kategoriju iz ponuđenog popisa.
 
 Na slici ispod prikazano je: Prijava na turnire.
-![14. Prijava na turnire](<screenshots/member-role/14. prijava na turnire.png>)
+![14. Prijava na turnire](<screenshots/member-role/14. prijava na turnire.webp>)
 Na slici ispod prikazano je: Prijava na odabrani turnir.
-![15. Prijava na odabrani turnir](<screenshots/member-role/15. prijava na odabrani turnir.png>)
+![15. Prijava na odabrani turnir](<screenshots/member-role/15. prijava na odabrani turnir.webp>)
 Na slici ispod prikazano je: Pregled prijave.
-![16. Pregled prijave](<screenshots/member-role/16. pregled prijave.png>)
+![16. Pregled prijave](<screenshots/member-role/16. pregled prijave.webp>)
 Na slici ispod prikazano je: Popis prijava na turnire.
-![17. Popis prijava na turnire](<screenshots/member-role/17. popis prijava na turnire.png>)
+![17. Popis prijava na turnire](<screenshots/member-role/17. popis prijava na turnire.webp>)
 
 ## 7. Kotizacije i plaćanja
 
@@ -103,39 +103,39 @@ Kod članarine (sezonske ili godišnje) član može imati više ponuđenih varij
 Kada uplata bude evidentirana, status prelazi na `Plaćeno`.
 
 Na slici ispod prikazano je: Prijava na turnir koji se plaća preko računa.
-![18. Prijava na turnir koji se plaća preko računa](<screenshots/member-role/18. prijava na turnir koji se plaća preko računa.png>)
+![18. Prijava na turnir koji se plaća preko računa](<screenshots/member-role/18. prijava na turnir koji se plaća preko računa.webp>)
 Na slici ispod prikazano je: Pregled prijave.
-![19. Pregled prijave](<screenshots/member-role/19. pregled prijave_.png>)
+![19. Pregled prijave](<screenshots/member-role/19. pregled prijave_.webp>)
 Na slici ispod prikazano je: Popis prijava - link na plaćanje.
-![20. Popis prijava - link na plaćanje](<screenshots/member-role/20. popis prijava - link na plaćanje.png>)
+![20. Popis prijava - link na plaćanje](<screenshots/member-role/20. popis prijava - link na plaćanje.webp>)
 Na slici ispod prikazano je: Plaćanja.
-![21. Plaćanja](<screenshots/member-role/21. plaćanja.png>)
+![21. Plaćanja](<screenshots/member-role/21. plaćanja.webp>)
 
 Na naslovnici se kod otvorenog duga prikazuju upozorenja tipa `Potrebna uplata`. To nije greška, nego podsjetnik da treba otvoriti modul plaćanja i podmiriti stavku.
 
 Na slici ispod prikazano je: Naslovnica - obavijesti članu.
-![22. Naslovnica - obavijesti članu](<screenshots/member-role/22. naslovnica - obavijesti članu.png>)
+![22. Naslovnica - obavijesti članu](<screenshots/member-role/22. naslovnica - obavijesti članu.webp>)
 Na slici ispod prikazano je: Naslovnica - članarina.
-![23. Naslovnica - članarina](<screenshots/member-role/23. naslovnica - članarina.png>)
+![23. Naslovnica - članarina](<screenshots/member-role/23. naslovnica - članarina.webp>)
 Na slici ispod prikazano je: Pregled plaćanja - članarina.
-![24. Pregled plaćanja - članarina](<screenshots/member-role/24. pregled plaćanja - članarina.png>)
+![24. Pregled plaćanja - članarina](<screenshots/member-role/24. pregled plaćanja - članarina.webp>)
 Na slici ispod prikazano je: Upute za plaćanje ako ne želite plaćati barkodom.
-![25. Upute za plaćanje ako ne želite plaćati barkodom](<screenshots/member-role/25. upute za plaćanje ako ne želite plaćati barkodom.png>)
+![25. Upute za plaćanje ako ne želite plaćati barkodom](<screenshots/member-role/25. upute za plaćanje ako ne želite plaćati barkodom.webp>)
 Na slici ispod prikazano je: Sva plaćanja su podmirena.
-![26. Sva plaćanja su podmirena](<screenshots/member-role/26. sva plaćanja su podmirena.png>)
+![26. Sva plaćanja su podmirena](<screenshots/member-role/26. sva plaćanja su podmirena.webp>)
 
 ## 8. Oglasnik
 
 `Oglasnik` služi za objavu, razmjenu i prodaju opreme. Član može izraditi oglas, dodati slike, kasnije ga uređivati, privremeno deaktivirati ili trajno obrisati.
 
 Na slici ispod prikazano je: Oglasnik.
-![27. Oglasnik](<screenshots/member-role/27. oglasnik.png>)
+![27. Oglasnik](<screenshots/member-role/27. oglasnik.webp>)
 Na slici ispod prikazano je: Kreiranje oglasa.
-![28. Kreiranje oglasa](<screenshots/member-role/28. kreiranje oglasa.png>)
+![28. Kreiranje oglasa](<screenshots/member-role/28. kreiranje oglasa.webp>)
 Na slici ispod prikazano je: Radnje sa oglasom.
-![29. Radnje sa oglasom](<screenshots/member-role/29. radnje sa oglasom.png>)
+![29. Radnje sa oglasom](<screenshots/member-role/29. radnje sa oglasom.webp>)
 Na slici ispod prikazano je: Vaš oglas.
-![30. Vaš oglas](<screenshots/member-role/30. vaš oglas.png>)
+![30. Vaš oglas](<screenshots/member-role/30. vaš oglas.webp>)
 
 ## 9. Klupski zid
 
