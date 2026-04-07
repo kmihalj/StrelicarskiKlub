@@ -155,6 +155,7 @@
 
         .club-wall-message-text {
             margin-top: .35rem;
+            font-size: .82rem;
             line-height: 1.45;
             word-break: break-word;
             overflow-wrap: anywhere;
