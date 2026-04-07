@@ -6,6 +6,7 @@ BRANCH="${DEPLOY_BRANCH:-main}"
 TARGET_REF="${REMOTE}/${BRANCH}"
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPOSER_BIN="${DEPLOY_COMPOSER_BIN:-}"
+NODE_BIN_DIR="${DEPLOY_NODE_BIN_DIR:-}"
 KEEP_FILES=(
     "public/favicon.ico"
     "public/favicon.png"
@@ -38,6 +39,27 @@ require_bin() {
 
 require_cmd git
 require_cmd php
+
+if [[ -z "$NODE_BIN_DIR" ]]; then
+    for candidate in \
+        "/opt/alt/alt-nodejs22/root/usr/bin" \
+        "/opt/alt/alt-nodejs20/root/usr/bin" \
+        "/opt/alt/alt-nodejs18/root/usr/bin"; do
+        if [[ -x "${candidate}/node" && -x "${candidate}/npm" ]]; then
+            NODE_BIN_DIR="$candidate"
+            break
+        fi
+    done
+fi
+
+if [[ -n "$NODE_BIN_DIR" ]]; then
+    [[ -x "${NODE_BIN_DIR}/node" ]] || fail "Configured DEPLOY_NODE_BIN_DIR has no node binary: ${NODE_BIN_DIR}"
+    [[ -x "${NODE_BIN_DIR}/npm" ]] || fail "Configured DEPLOY_NODE_BIN_DIR has no npm binary: ${NODE_BIN_DIR}"
+    export PATH="${NODE_BIN_DIR}:${PATH}"
+    log "Using Node.js toolchain from ${NODE_BIN_DIR}"
+else
+    log "Node.js toolchain not found via DEPLOY_NODE_BIN_DIR or /opt/alt/alt-nodejs*/root/usr/bin"
+fi
 
 if [[ -z "$COMPOSER_BIN" ]]; then
     if command -v composer >/dev/null 2>&1; then
