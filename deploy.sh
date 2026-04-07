@@ -7,6 +7,7 @@ TARGET_REF="${REMOTE}/${BRANCH}"
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPOSER_BIN="${DEPLOY_COMPOSER_BIN:-}"
 NODE_BIN_DIR="${DEPLOY_NODE_BIN_DIR:-}"
+BUILD_FRONTEND="${DEPLOY_BUILD_FRONTEND:-1}"
 KEEP_FILES=(
     "public/favicon.ico"
     "public/favicon.png"
@@ -59,6 +60,11 @@ if [[ -n "$NODE_BIN_DIR" ]]; then
     log "Using Node.js toolchain from ${NODE_BIN_DIR}"
 else
     log "Node.js toolchain not found via DEPLOY_NODE_BIN_DIR or /opt/alt/alt-nodejs*/root/usr/bin"
+fi
+
+if [[ "$BUILD_FRONTEND" == "1" ]]; then
+    require_cmd node
+    require_cmd npm
 fi
 
 if [[ -z "$COMPOSER_BIN" ]]; then
@@ -142,6 +148,19 @@ for file in "${KEEP_FILES[@]}"; do
         log "Restored local override: $file"
     fi
 done
+
+if [[ "$BUILD_FRONTEND" == "1" ]]; then
+    [[ -f package.json ]] || fail "package.json not found; cannot build frontend assets."
+    [[ -f package-lock.json ]] || fail "package-lock.json not found; cannot run npm ci."
+
+    log "Installing Node.js dependencies (including dev dependencies for Vite build)..."
+    npm ci --include=dev --no-audit --no-fund
+
+    log "Building frontend assets with Vite..."
+    npm run build
+else
+    log "Skipping frontend build (DEPLOY_BUILD_FRONTEND=${BUILD_FRONTEND})."
+fi
 
 log "Installing Composer dependencies (production)..."
 "$COMPOSER_BIN" install --no-dev --optimize-autoloader --no-interaction
