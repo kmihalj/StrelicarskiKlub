@@ -22,6 +22,39 @@ fail() {
     exit 1
 }
 
+build_frontend_assets() {
+    local thread_limit
+    thread_limit="$(ulimit -u 2>/dev/null || true)"
+    local use_low_thread_mode="${DEPLOY_LOW_THREAD_BUILD:-auto}"
+
+    if [[ "$use_low_thread_mode" == "auto" ]]; then
+        if [[ "$thread_limit" =~ ^[0-9]+$ ]] && (( thread_limit > 0 && thread_limit <= 64 )); then
+            use_low_thread_mode="1"
+        else
+            use_low_thread_mode="0"
+        fi
+    fi
+
+    if [[ "$use_low_thread_mode" == "1" ]]; then
+        export GOMAXPROCS="${GOMAXPROCS:-1}"
+        export UV_THREADPOOL_SIZE="${UV_THREADPOOL_SIZE:-1}"
+        log "Building frontend in low-thread mode (ulimit -u=${thread_limit:-unknown}, GOMAXPROCS=${GOMAXPROCS}, UV_THREADPOOL_SIZE=${UV_THREADPOOL_SIZE})..."
+        npm run build
+        return 0
+    fi
+
+    log "Building frontend assets with Vite..."
+    if npm run build; then
+        return 0
+    fi
+
+    log "Initial frontend build failed; retrying in low-thread mode..."
+    export GOMAXPROCS="${GOMAXPROCS:-1}"
+    export UV_THREADPOOL_SIZE="${UV_THREADPOOL_SIZE:-1}"
+    log "Retrying with GOMAXPROCS=${GOMAXPROCS}, UV_THREADPOOL_SIZE=${UV_THREADPOOL_SIZE}"
+    npm run build
+}
+
 require_cmd() {
     command -v "$1" >/dev/null 2>&1 || fail "Missing required command: $1"
 }
@@ -156,8 +189,7 @@ if [[ "$BUILD_FRONTEND" == "1" ]]; then
     log "Installing Node.js dependencies (including dev dependencies for Vite build)..."
     npm ci --include=dev --no-audit --no-fund
 
-    log "Building frontend assets with Vite..."
-    npm run build
+    build_frontend_assets
 else
     log "Skipping frontend build (DEPLOY_BUILD_FRONTEND=${BUILD_FRONTEND})."
 fi
