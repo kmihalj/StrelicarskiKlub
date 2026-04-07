@@ -556,9 +556,9 @@
     margin: 0.9rem auto;
 }
 
-.ck-content:not(.ck-editor__editable) iframe[src*="google.com/maps/d/embed"] {
+.ck-content:not(.ck-editor__editable) iframe[src*="google.com/maps"] {
     width: 100%;
-    max-width: 640px;
+    max-width: 1000px;
     aspect-ratio: 4 / 3;
     height: auto;
 }
