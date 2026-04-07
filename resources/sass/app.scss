@@ -1,11 +1,11 @@
-// Fonts
-@import url('https://fonts.bunny.net/css?family=Nunito');
-
 // Variables
-@import 'variables';
+@use 'variables' as *;
 
 // Bootstrap
-@import 'bootstrap/scss/bootstrap';
+@use 'bootstrap/scss/bootstrap';
+
+// Fonts
+@import url('https://fonts.bunny.net/css?family=Nunito');
 
 // Globalna prilagodba paginacije za mobilni prikaz.
 .pagination {
