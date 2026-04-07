@@ -1,8 +1,13 @@
 // Variables
-@use 'variables' as *;
+@use 'variables' as v;
 
 // Bootstrap
-@use 'bootstrap/scss/bootstrap';
+@use 'bootstrap/scss/bootstrap' with (
+    $body-bg: v.$body-bg,
+    $font-family-sans-serif: v.$font-family-sans-serif,
+    $font-size-base: v.$font-size-base,
+    $line-height-base: v.$line-height-base
+);
 
 // Fonts
 @import url('https://fonts.bunny.net/css?family=Nunito');
