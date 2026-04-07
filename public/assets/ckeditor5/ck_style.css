@@ -550,6 +550,19 @@
     height: auto;
 }
 
+.ck-content:not(.ck-editor__editable) iframe {
+    display: block;
+    max-width: 100%;
+    margin: 0.9rem auto;
+}
+
+.ck-content:not(.ck-editor__editable) iframe[src*="google.com/maps/d/embed"] {
+    width: 100%;
+    max-width: 640px;
+    aspect-ratio: 4 / 3;
+    height: auto;
+}
+
 @media (max-width: 991.98px) {
     .ck-content:not(.ck-editor__editable) .image-style-align-left,
     .ck-content:not(.ck-editor__editable) .image-style-align-right,
