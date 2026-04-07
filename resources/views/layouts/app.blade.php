@@ -7,7 +7,6 @@
 
     <!-- CSRF Token -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="theme-color" content="#dc3545">
 
     <title>{{ config('app.name', 'Laravel') }}</title>
     @php
@@ -25,21 +24,6 @@
     <link rel="icon" type="{{ $faviconType }}" href="{{ $faviconHref }}">
     <link rel="shortcut icon" href="{{ $faviconHref }}">
     <link rel="apple-touch-icon" href="{{ $faviconHref }}">
-    <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="{{ config('app.name', 'Strelicarski klub Dubrava') }}">
-
-    @auth
-        @php
-            $webPushPublicKey = trim((string) config('webpush.vapid.public_key'));
-            $webPushEnabled = (bool) config('webpush.enabled') && $webPushPublicKey !== '';
-        @endphp
-        <meta name="webpush-enabled" content="{{ $webPushEnabled ? '1' : '0' }}">
-        <meta name="webpush-public-key" content="{{ $webPushPublicKey }}">
-        <meta name="webpush-subscribe-url" content="{{ route('webpush.subscriptions.store') }}">
-        <meta name="webpush-unsubscribe-url" content="{{ route('webpush.subscriptions.destroy') }}">
-        <meta name="webpush-service-worker-url" content="{{ asset(config('webpush.service_worker_path', 'push-sw.js')) }}">
-    @endauth
 
     <!-- Fonts -->
     <link rel="dns-prefetch" href="//fonts.bunny.net">

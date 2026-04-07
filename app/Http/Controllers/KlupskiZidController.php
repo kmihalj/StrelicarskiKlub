@@ -5,13 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Clanovi;
 use App\Models\ClubWallMessage;
 use App\Models\User;
-use App\Services\WebPushNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
-use Throwable;
 
 /**
  * Kontroler za javni feed poruka "Klupski zid" na naslovnici.
@@ -21,12 +19,6 @@ class KlupskiZidController extends Controller
     private const MESSAGE_LIMIT = 25;
     private const MAX_MESSAGE_LENGTH = 1000;
     private ?bool $clubWallTableSupported = null;
-    private WebPushNotificationService $webPushNotificationService;
-
-    public function __construct(WebPushNotificationService $webPushNotificationService)
-    {
-        $this->webPushNotificationService = $webPushNotificationService;
-    }
 
     /**
      * Vraća zadnjih 25 poruka za prikaz na naslovnici (AJAX).
@@ -90,19 +82,13 @@ class KlupskiZidController extends Controller
 
         $author = $this->resolveAuthorSnapshot($user);
 
-        $createdMessage = ClubWallMessage::query()->create([
+        ClubWallMessage::query()->create([
             'user_id' => (int)$user->id,
             'author_clan_id' => $author['clan_id'],
             'author_name' => $author['name'],
             'message' => $messageText,
             'is_highlighted' => false,
         ]);
-
-        try {
-            $this->webPushNotificationService->sendClubWallMessageNotification($createdMessage);
-        } catch (Throwable $exception) {
-            report($exception);
-        }
 
         $messages = $this->latestMessages();
 
