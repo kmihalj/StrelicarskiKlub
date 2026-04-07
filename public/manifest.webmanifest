@@ -1,0 +1,17 @@
+{
+  "name": "Strelicarski klub Dubrava",
+  "short_name": "SK Dubrava",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#dc3545",
+  "icons": [
+    {
+      "src": "./favicon.png",
+      "sizes": "any",
+      "type": "image/png"
+    }
+  ]
+}

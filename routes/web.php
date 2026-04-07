@@ -18,6 +18,7 @@ use App\Http\Controllers\TreninziController;
 use App\Http\Controllers\TurniriController;
 use App\Http\Controllers\UputeController;
 use App\Http\Controllers\UserThemePreferenceController;
+use App\Http\Controllers\WebPushSubscriptionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -183,6 +184,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
 });
 Route::middleware('auth')->group(function () {
     Route::post('klupski-zid/poruke', [KlupskiZidController::class, 'store'])->name('javno.klupski_zid.store');
+    Route::post('push/subscriptions', [WebPushSubscriptionController::class, 'store'])->name('webpush.subscriptions.store');
+    Route::delete('push/subscriptions', [WebPushSubscriptionController::class, 'destroy'])->name('webpush.subscriptions.destroy');
 
     Route::get('oglasnik/predaja', [OglasnikController::class, 'create'])->name('javno.oglasnik.create');
     Route::post('oglasnik/predaja', [OglasnikController::class, 'store'])->name('javno.oglasnik.store');
