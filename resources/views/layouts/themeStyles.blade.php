@@ -446,6 +446,24 @@
         color: #e9ecef !important;
     }
 
+    .theme-dark .table > :not(caption) > .table-danger > *,
+    .theme-dark .table tbody > tr.table-danger > * {
+        --bs-table-bg: rgba(var(--bs-danger-rgb), 0.24);
+        --bs-table-striped-bg: rgba(var(--bs-danger-rgb), 0.28);
+        --bs-table-active-bg: rgba(var(--bs-danger-rgb), 0.34);
+        --bs-table-hover-bg: rgba(var(--bs-danger-rgb), 0.30);
+        --bs-table-color: var(--bs-body-color);
+        --bs-table-border-color: rgba(var(--bs-danger-rgb), 0.55);
+        background-color: rgba(var(--bs-danger-rgb), 0.24) !important;
+        color: var(--bs-body-color) !important;
+        border-color: rgba(var(--bs-danger-rgb), 0.55) !important;
+    }
+
+    .theme-dark .table > :not(caption) > .table-danger > *.text-danger,
+    .theme-dark .table tbody > tr.table-danger > *.text-danger {
+        color: #ffd0d6 !important;
+    }
+
     .table thead > tr > *.border-danger,
     .table thead > tr > *.border.border-danger {
         border-color: rgba(var(--bs-primary-rgb), 0.65) !important;
