@@ -17,8 +17,15 @@
             @endauth
         </p>
     </div>
+    @php
+        $sadrzajZaPrikaz = (string) $clanak->sadrzaj;
+        if ((int) $clanak->id === \App\Services\Article40DynamicStatsService::ARTICLE_ID) {
+            $sadrzajZaPrikaz = app(\App\Services\Article40DynamicStatsService::class)
+                ->renderArticleContent((int) $clanak->id, $sadrzajZaPrikaz);
+        }
+    @endphp
     <div class="col-lg-12 ck-content">
-        {!! $clanak->sadrzaj !!}
+        {!! $sadrzajZaPrikaz !!}
     </div>
     @php
         $slikeClanka = $clanak->mediji
