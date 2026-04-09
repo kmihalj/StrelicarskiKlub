@@ -40,6 +40,27 @@
                 line-height: 1.2;
             }
         }
+
+        .theme-dark .skola-evidencija-nav-btn,
+        .theme-dark .skola-evidencija-plus-btn {
+            --bs-btn-color: var(--theme-on-primary, #fff);
+            --bs-btn-bg: var(--bs-primary);
+            --bs-btn-border-color: var(--bs-primary);
+            --bs-btn-hover-color: var(--theme-on-primary, #fff);
+            --bs-btn-hover-bg: rgba(var(--bs-primary-rgb), .9);
+            --bs-btn-hover-border-color: rgba(var(--bs-primary-rgb), .9);
+            --bs-btn-active-color: var(--theme-on-primary, #fff);
+            --bs-btn-active-bg: rgba(var(--bs-primary-rgb), .82);
+            --bs-btn-active-border-color: rgba(var(--bs-primary-rgb), .82);
+            --bs-btn-focus-shadow-rgb: var(--bs-primary-rgb);
+            opacity: 1;
+        }
+
+        .skola-evidencija-plus-btn {
+            min-width: 2rem;
+            font-weight: 700;
+            line-height: 1;
+        }
     </style>
 
     <div class="container-xxl bg-white shadow">
@@ -61,7 +82,7 @@
                     @if($mozeUredjivati)
                         <button type="submit" class="btn btn-danger me-md-2" form="spremi_evidenciju_dolazaka">Spremi evidenciju</button>
                     @endif
-                    <button type="button" class="btn btn-secondary" onclick="location.href='{{ route('javno.skola.polaznici.index') }}'">Popis polaznika</button>
+                    <button type="button" class="btn btn-secondary skola-evidencija-nav-btn" onclick="location.href='{{ route('javno.skola.polaznici.index') }}'">Popis polaznika</button>
                 </div>
 
                 @forelse($polaznici as $polaznik)
@@ -92,7 +113,7 @@
                                 </div>
                                 <div class="text-end mt-2">
                                     <button type="button"
-                                            class="btn btn-secondary btn-sm js-popuni-zadnje"
+                                            class="btn btn-secondary btn-sm js-popuni-zadnje skola-evidencija-plus-btn"
                                             data-row-id="{{ $polaznik->id }}"
                                             title="Upiši današnji datum u sljedeće prazno polje">
                                         +
@@ -119,7 +140,7 @@
                     @if($mozeUredjivati)
                         <button type="submit" class="btn btn-danger me-md-2" form="spremi_evidenciju_dolazaka">Spremi evidenciju</button>
                     @endif
-                    <button type="button" class="btn btn-secondary" onclick="location.href='{{ route('javno.skola.polaznici.index') }}'">Popis polaznika</button>
+                    <button type="button" class="btn btn-secondary skola-evidencija-nav-btn" onclick="location.href='{{ route('javno.skola.polaznici.index') }}'">Popis polaznika</button>
                 </div>
             </div>
         </div>
