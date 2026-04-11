@@ -68,7 +68,7 @@ class Article40DynamicStatsService
         $licensedActiveMembers = Clanovi::query()
             ->where('aktivan', true)
             ->whereNotNull('broj_licence')
-            ->whereRaw("TRIM(broj_licence) <> ''")
+            ->whereRaw("TRIM(broj_licence) REGEXP '^[0-9]+$'")
             ->count();
 
         $individualAppearances = (int) RezultatiOpci::query()
