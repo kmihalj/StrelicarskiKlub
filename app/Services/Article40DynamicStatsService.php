@@ -19,6 +19,11 @@ use Throwable;
 class Article40DynamicStatsService
 {
     public const ARTICLE_ID = 40;
+    private const DYNAMIC_ALLOWED_HOSTS = [
+        'piko.webhop.me',
+        'pc-kmihalj.srce.hr',
+        'skdubrava.hr',
+    ];
 
     private const RANGE_YEAR_FROM = 2022;
     private const RANGE_YEAR_TO = 2026;
@@ -31,7 +36,11 @@ class Article40DynamicStatsService
     public function renderArticleContent(int $articleId, ?string $content): string
     {
         $html = (string) $content;
-        if ($articleId !== self::ARTICLE_ID || trim($html) === '') {
+        if (
+            $articleId !== self::ARTICLE_ID
+            || trim($html) === ''
+            || ! $this->isDynamicEnabledForCurrentHost()
+        ) {
             return $html;
         }
 
@@ -290,5 +299,21 @@ class Article40DynamicStatsService
             ->lower()
             ->replaceMatches('/\s+/', ' ')
             ->trim();
+    }
+
+    private function isDynamicEnabledForCurrentHost(): bool
+    {
+        $host = strtolower(trim((string) request()->getHost()));
+        if ($host === '') {
+            return false;
+        }
+
+        foreach (self::DYNAMIC_ALLOWED_HOSTS as $allowedHost) {
+            if ($host === $allowedHost || str_ends_with($host, '.'.$allowedHost)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
