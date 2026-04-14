@@ -86,6 +86,22 @@
 
                         </div>
                     </div>
+                    <div class="col-lg-4 mb-2 align-self-center">
+                        <div class="form-check form-switch">
+                            <br>
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   form="unosClanka"
+                                   id="prikazi_na_naslovnici"
+                                   name="prikazi_na_naslovnici"
+                                   value="1"
+                                   aria-label="prikazi_na_naslovnici"
+                                   @checked($isEditing ? !empty($clanak->prikazi_na_naslovnici) : true)>
+                            <label class="form-check-label" for="prikazi_na_naslovnici">
+                                Prikaži na naslovnici
+                            </label>
+                        </div>
+                    </div>
 
 
                     <div class="row">

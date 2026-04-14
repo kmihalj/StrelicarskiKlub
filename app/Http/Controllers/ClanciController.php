@@ -104,6 +104,11 @@ class ClanciController extends Controller
         } else {
             $clanak->menu = false;
         }
+        if ($request->has('prikazi_na_naslovnici')) {
+            $clanak->prikazi_na_naslovnici = true;
+        } else {
+            $clanak->prikazi_na_naslovnici = false;
+        }
         $clanak->save();
         return redirect()->route('admin.clanci.uredjivanje', $clanak->id);
     }

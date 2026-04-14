@@ -347,6 +347,7 @@ class JavnoController extends Controller
             $danasnjiDatum = now()->toDateString();
 
             $clanciIzmedjuTurnira = Clanci::whereIn('vrsta', ['Streličarstvo', 'O nama', 'Obavijest'])
+                ->where('prikazi_na_naslovnici', true)
                 ->whereDate('datum', '>=', $najstarijiDatumTurnira)
                 ->whereDate('datum', '<=', $danasnjiDatum)
                 ->with('mediji')

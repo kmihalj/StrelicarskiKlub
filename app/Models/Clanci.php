@@ -11,7 +11,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Clanci extends Model
 {
 
-    protected $fillable = ['vrsta', 'naslov', 'datum', 'sadrzaj', 'menu', 'menu_naslov', 'galerija'];
+    protected $fillable = ['vrsta', 'naslov', 'datum', 'sadrzaj', 'menu', 'menu_naslov', 'galerija', 'prikazi_na_naslovnici'];
+
+    protected $casts = [
+        'menu' => 'bool',
+        'galerija' => 'bool',
+        'prikazi_na_naslovnici' => 'bool',
+    ];
 
     /**
      * Članak može imati više povezanih zapisa: medijske priloge članka.
