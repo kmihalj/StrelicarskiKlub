@@ -229,4 +229,5 @@ Route::get('clanovi/{clan}/lijecnicki/{pregled}/pregled', [JavnoController::clas
 Route::get('clanovi/{clan}/dokumenti/{dokument}/pregled', [JavnoController::class, 'preuzmi_dokument'])->name('javno.clanovi.preuzmi_dokument')->middleware('auth');
 Route::get('clanovi/{clan}', [JavnoController::class, 'pregledClana'])->name('javno.clanovi.prikaz_clana');
 Route::get('clanak/{clanak}', [ClanciController::class, 'pokaziClanak'])->name('javno.clanci.prikaz_clanka');
+Route::get('clanci/{vrsta}/popis', [ClanciController::class, 'popisClanakaPoVrstiTablica'])->name('javno.clanci.popisClanakaTablica');
 Route::get('clanci/{vrsta}', [ClanciController::class, 'popisClanakaPoVrsti'])->name('javno.clanci.popisClanaka');

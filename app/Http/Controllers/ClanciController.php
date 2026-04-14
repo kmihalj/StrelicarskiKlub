@@ -133,7 +133,7 @@ class ClanciController extends Controller
      */
     public function popisClanaka()
     {
-        $clanci = Clanci::orderByDesc('datum')->paginate(15);
+        $clanci = Clanci::orderByDesc('datum')->get();
         return view('admin.clanci.popis', ['clanci' => $clanci]);
 
     }
@@ -153,6 +153,22 @@ class ClanciController extends Controller
     {
         $clanci = Clanci::where('vrsta', '=', $vrsta)->orderByDesc('datum')->paginate(5);
         return view('admin.clanci.popisClanaka', ['vrsta' => $vrsta, 'clanci' => $clanci]);
+    }
+
+    /**
+     * Prikazuje tablični popis članaka po vrsti s pretragom i sortiranjem.
+     */
+    public function popisClanakaPoVrstiTablica(string $vrsta): View
+    {
+        $clanci = Clanci::query()
+            ->where('vrsta', '=', $vrsta)
+            ->orderByDesc('datum')
+            ->get();
+
+        return view('admin.clanci.popisClanakaTablica', [
+            'vrsta' => $vrsta,
+            'clanci' => $clanci,
+        ]);
     }
 
     /**
