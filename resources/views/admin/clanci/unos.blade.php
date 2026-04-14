@@ -110,7 +110,7 @@
                 <div class="container-xxl bg-white shadow">
                     <div class="row justify-content-center p-2 shadow bg-danger fw-bolder">
                         <div class="col-lg-12 text-white d-flex justify-content-between align-items-center">
-                            <span>Dodavanje slika <i>(.jpg, .jpeg, .png, .webp)</i> dokumenata <i>(.doc, .docx, .pdf)</i> i/ili videa <i>(.mp4)</i></span>
+                            <span>Dodavanje slika <i>(.jpg, .jpeg, .png, .webp)</i> dokumenata <i>(.doc, .docx, .pdf, .odt, .ods, .odp, .odg, .odf, .odb, .odm, .ott, .ots, .otp)</i> i/ili videa <i>(.mp4)</i></span>
                         </div>
                     </div>
                     <div class="row p-2 bg-white">
@@ -127,7 +127,7 @@
                                 <div class="row mt-3">
                                     <div class="col-lg-10 pb-2">
                                         <input type="hidden" id="clanak_id" name="clanak_id" value="{{$clanak->id}}">
-                                        <input class="form-control" type="file" id="medij" name="medij[]" accept=".jpg,.jpeg,.png,.webp,.doc,.docx,.pdf,.mp4" multiple>
+                                        <input class="form-control" type="file" id="medij" name="medij[]" accept=".jpg,.jpeg,.png,.webp,.doc,.docx,.pdf,.odt,.ods,.odp,.odg,.odf,.odb,.odm,.ott,.ots,.otp,.mp4" multiple>
                                         <small class="text-muted">Možete odabrati više datoteka odjednom.</small>
                                     </div>
                                     <div class="col-lg-2 pb-2">

@@ -21,6 +21,9 @@ class ClanciController extends Controller
 {
     use FacebookContentBlockSupport;
 
+    private const MEDIA_EXTENSIONS = 'jpg,jpeg,png,webp,pdf,doc,docx,odt,ods,odp,odg,odf,odb,odm,ott,ots,otp,mp4';
+    private const DOCUMENT_EXTENSIONS = ['pdf', 'doc', 'docx', 'odt', 'ods', 'odp', 'odg', 'odf', 'odb', 'odm', 'ott', 'ots', 'otp'];
+
     /**
      * Otvara formu za unos novog članka.
      */
@@ -157,14 +160,14 @@ class ClanciController extends Controller
         }
         $rules = array(
             'medij' => 'required|array|min:1',
-            'medij.*' => 'required|extensions:jpg,jpeg,png,webp,pdf,doc,docx,mp4'
+            'medij.*' => 'required|extensions:' . self::MEDIA_EXTENSIONS
         );
         $messages = array(
             'medij.required' => 'Nije odabrana datoteka.',
             'medij.array' => 'Nije odabrana datoteka.',
             'medij.min' => 'Nije odabrana datoteka.',
             'medij.*.required' => 'Nije odabrana datoteka.',
-            'medij.*.extensions' => 'Datoteka nije slika (jpg,jpeg,png,webp), dokument (pdf,doc,docx) niti video (mp4).'
+            'medij.*.extensions' => 'Datoteka nije slika (jpg,jpeg,png,webp), dokument (pdf,doc,docx,odt,ods,odp,odg,odf,odb,odm,ott,ots,otp) niti video (mp4).'
         );
         $validator = Validator::make($request->all(), $rules, $messages);
         $clanak = Clanci::findOrFail((int)$request->input('clanak_id'));
@@ -181,26 +184,18 @@ class ClanciController extends Controller
         }
 
         foreach ($request->file('medij') as $datoteka) {
-            $imeDatoteke = now()->format('d_m_Y_H_i_s_u') . '_' . Str::random(8) . '.' . strtolower($datoteka->extension());
+            $ekstenzija = strtolower((string)$datoteka->getClientOriginalExtension());
+            $imeDatoteke = now()->format('d_m_Y_H_i_s_u') . '_' . Str::random(8) . '.' . $ekstenzija;
             $datoteka->storeAs('public/clanci/' . $clanak->id . '/' . $imeDatoteke);
 
             $medij = new MedijiClanaka();
             $medij->clanak_id = $clanak->id;
-            switch (strtoupper($datoteka->extension())) {
-                case "MP4" :
-                    $medij->vrsta = 'video';
-                    break;
-                case "PDF" :
-                case "DOC" :
-                case "DOCX" :
-                    $medij->vrsta = 'dokument';
-                    break;
-                case "JPG" :
-                case "JPEG" :
-                case "PNG" :
-                case "WEBP" :
-                    $medij->vrsta = 'slika';
-                    break;
+            if ($ekstenzija === 'mp4') {
+                $medij->vrsta = 'video';
+            } elseif (in_array($ekstenzija, self::DOCUMENT_EXTENSIONS, true)) {
+                $medij->vrsta = 'dokument';
+            } else {
+                $medij->vrsta = 'slika';
             }
             $medij->link = $imeDatoteke;
             $medij->save();
