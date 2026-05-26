@@ -113,7 +113,7 @@
                             </option>
                             <option value="bank"
                                 @selected($kotizacijaNacin === 'bank')>
-                                Plaćanje preko računa kluba
+                                Plaćanje preko računa / barkod
                             </option>
                             <option value="cash"
                                 @selected($kotizacijaNacin === 'cash')>
@@ -131,7 +131,30 @@
                         <label class="form-label fw-semibold mb-1">Rok uplate</label>
                         <input type="date" class="form-control" name="kotizacija_rok_uplate"
                                value="{{ old('kotizacija_rok_uplate', isset($urediTurnir?->kotizacija_rok_uplate) ? $urediTurnir->kotizacija_rok_uplate->format('Y-m-d') : '') }}">
-                        <div class="form-text">Vrijedi samo za "Plaćanje preko računa kluba".</div>
+                        <div class="form-text">Vrijedi samo za plaćanje preko računa.</div>
+                    </div>
+                    <div class="col-lg-3">
+                        <label class="form-label fw-semibold mb-1">Primatelj kotizacije</label>
+                        @php
+                            $kotizacijaPrimateljId = old('kotizacija_primatelj_funkcija_id', $urediTurnir->kotizacija_primatelj_funkcija_id ?? '');
+                        @endphp
+                        <select class="form-select" name="kotizacija_primatelj_funkcija_id">
+                            <option value="" @selected((string)$kotizacijaPrimateljId === '')>Račun kluba (zadano)</option>
+                            @foreach($kotizacijaPrimatelji as $primatelj)
+                                @php
+                                    $primateljClan = $primatelj->clan;
+                                    $primateljNaziv = $primatelj->kotizacijaPrimateljLabel();
+                                    $primateljOpis = $primatelj->funkcija . ' - ' . ($primateljClan ? $primateljClan->Prezime . ' ' . $primateljClan->Ime : $primateljNaziv);
+                                    $imaPodatke = $primatelj->imaPodatkeZaKotizacije();
+                                @endphp
+                                <option value="{{ $primatelj->id }}"
+                                    @selected((string)$kotizacijaPrimateljId === (string)$primatelj->id)
+                                    @disabled(!$imaPodatke)>
+                                    {{ $primateljOpis }}{{ $imaPodatke ? '' : ' (nedostaje IBAN)' }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <div class="form-text">Dodatne račune upišite na stranici Podaci o klubu.</div>
                     </div>
                     <div class="col-lg-3 d-flex align-items-end">
                         @if(!empty($urediTurnir?->poziv_pdf_path))
@@ -294,12 +317,21 @@
                             <td>{{ (int)$turnir->aktivne_prijave_count }}</td>
                             <td>
                                 @if($turnir->kotizacija_nacin === 'bank')
-                                    Plaćanje preko računa kluba
+                                    Plaćanje preko računa / barkod
                                     @if($turnir->kotizacija_iznos !== null)
                                         - {{ number_format((float)$turnir->kotizacija_iznos, 2, ',', '.') }} EUR
                                     @else
                                         - iznos nije definiran
                                     @endif
+                                    @php $primateljKotizacije = $turnir->kotizacijaPrimateljFunkcija; @endphp
+                                    <div class="small text-muted">
+                                        Primatelj:
+                                        @if($primateljKotizacije && $primateljKotizacije->imaPodatkeZaKotizacije())
+                                            {{ $primateljKotizacije->kotizacijaPrimateljLabel() }}
+                                        @else
+                                            račun kluba
+                                        @endif
+                                    </div>
                                 @elseif($turnir->kotizacija_nacin === 'cash')
                                     Plaćanje gotovinom
                                     @if($turnir->kotizacija_iznos !== null)
@@ -421,12 +453,21 @@
                             <td>{{ (int)$turnir->aktivne_prijave_count }}</td>
                             <td>
                                 @if($turnir->kotizacija_nacin === 'bank')
-                                    Plaćanje preko računa kluba
+                                    Plaćanje preko računa / barkod
                                     @if($turnir->kotizacija_iznos !== null)
                                         - {{ number_format((float)$turnir->kotizacija_iznos, 2, ',', '.') }} EUR
                                     @else
                                         - iznos nije definiran
                                     @endif
+                                    @php $primateljKotizacije = $turnir->kotizacijaPrimateljFunkcija; @endphp
+                                    <div class="small text-muted">
+                                        Primatelj:
+                                        @if($primateljKotizacije && $primateljKotizacije->imaPodatkeZaKotizacije())
+                                            {{ $primateljKotizacije->kotizacijaPrimateljLabel() }}
+                                        @else
+                                            račun kluba
+                                        @endif
+                                    </div>
                                 @elseif($turnir->kotizacija_nacin === 'cash')
                                     Plaćanje gotovinom
                                     @if($turnir->kotizacija_iznos !== null)
@@ -547,7 +588,7 @@
                                 @endphp
                                 <select class="form-select" name="kotizacija_nacin">
                                     <option value="undefined" @selected($kotizacijaNacinNovi === 'undefined')>Nije još definirano</option>
-                                    <option value="bank" @selected($kotizacijaNacinNovi === 'bank')>Plaćanje preko računa kluba</option>
+                                    <option value="bank" @selected($kotizacijaNacinNovi === 'bank')>Plaćanje preko računa / barkod</option>
                                     <option value="cash" @selected($kotizacijaNacinNovi === 'cash')>Plaćanje gotovinom</option>
                                 </select>
                             </div>
@@ -562,7 +603,30 @@
                             <div class="col-lg-3">
                                 <label class="form-label fw-semibold mb-1">Rok uplate</label>
                                 <input type="date" class="form-control" name="kotizacija_rok_uplate" value="{{ old('kotizacija_rok_uplate') }}">
-                                <div class="form-text">Vrijedi samo za "Plaćanje preko računa kluba".</div>
+                                <div class="form-text">Vrijedi samo za plaćanje preko računa.</div>
+                            </div>
+                            <div class="col-lg-3">
+                                <label class="form-label fw-semibold mb-1">Primatelj kotizacije</label>
+                                @php
+                                    $kotizacijaPrimateljNoviId = old('kotizacija_primatelj_funkcija_id', '');
+                                @endphp
+                                <select class="form-select" name="kotizacija_primatelj_funkcija_id">
+                                    <option value="" @selected((string)$kotizacijaPrimateljNoviId === '')>Račun kluba (zadano)</option>
+                                    @foreach($kotizacijaPrimatelji as $primatelj)
+                                        @php
+                                            $primateljClan = $primatelj->clan;
+                                            $primateljNaziv = $primatelj->kotizacijaPrimateljLabel();
+                                            $primateljOpis = $primatelj->funkcija . ' - ' . ($primateljClan ? $primateljClan->Prezime . ' ' . $primateljClan->Ime : $primateljNaziv);
+                                            $imaPodatke = $primatelj->imaPodatkeZaKotizacije();
+                                        @endphp
+                                        <option value="{{ $primatelj->id }}"
+                                            @selected((string)$kotizacijaPrimateljNoviId === (string)$primatelj->id)
+                                            @disabled(!$imaPodatke)>
+                                            {{ $primateljOpis }}{{ $imaPodatke ? '' : ' (nedostaje IBAN)' }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <div class="form-text">Dodatne račune upišite na stranici Podaci o klubu.</div>
                             </div>
                             <div class="col-lg-3 d-flex align-items-end">
                                 <div class="form-check">

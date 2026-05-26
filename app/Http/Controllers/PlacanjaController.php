@@ -23,6 +23,12 @@ use Throwable;
  */
 class PlacanjaController extends Controller
 {
+    private const CHANNEL_BANK_CLUB = 'bank_club';
+
+    private const CHANNEL_BANK_TRAINER = 'bank_trainer';
+
+    private const CHANNEL_BANK_PRESIDENT = 'bank_president';
+
     /**
      * Učitava servise za članarine, školarine i generiranje barkoda uplata.
      */
@@ -61,8 +67,8 @@ class PlacanjaController extends Controller
             default => $toCollection($reportData['reportRows'] ?? []),
         };
         $headers = match ($scope) {
-            'debtors' => ['Osoba', 'Tip', 'Račun (€)', 'Gotovina (€)', 'Ukupno (€)', 'Stavki'],
-            'persons' => ['Osoba', 'Tip', 'Uplaćeno (€)', 'Otvoreno (€)', 'Uplaćeno račun (€)', 'Uplaćeno gotovina (€)', 'Stavki'],
+            'debtors' => ['Osoba', 'Tip', 'Račun klub (€)', 'Račun trener (€)', 'Račun pred. (€)', 'Gotovina (€)', 'Ukupno (€)', 'Stavki'],
+            'persons' => ['Osoba', 'Tip', 'Uplaćeno (€)', 'Otvoreno (€)', 'Uplaćeno račun klub (€)', 'Uplaćeno račun trener (€)', 'Uplaćeno račun pred. (€)', 'Uplaćeno gotovina (€)', 'Stavki'],
             default => ['Datum', 'Osoba', 'Tip', 'Model', 'Naziv stavke', 'Razdoblje', 'Naplata', 'Iznos (€)', 'Status'],
         };
         $filenamePrefix = match ($scope) {
@@ -88,6 +94,8 @@ class PlacanjaController extends Controller
                         $row['person_name'] ?? '',
                         (($row['entity_type'] ?? '') === 'school' ? 'Polaznik škole' : 'Član'),
                         number_format((float) ($row['open_bank'] ?? 0), 2, ',', '.'),
+                        number_format((float) ($row['open_bank_trainer'] ?? 0), 2, ',', '.'),
+                        number_format((float) ($row['open_bank_president'] ?? 0), 2, ',', '.'),
                         number_format((float) ($row['open_cash'] ?? 0), 2, ',', '.'),
                         number_format((float) ($row['open_total'] ?? 0), 2, ',', '.'),
                         (int) ($row['items_count'] ?? 0),
@@ -103,6 +111,8 @@ class PlacanjaController extends Controller
                         number_format((float) ($row['paid_total'] ?? 0), 2, ',', '.'),
                         number_format((float) ($row['open_total'] ?? 0), 2, ',', '.'),
                         number_format((float) ($row['paid_bank'] ?? 0), 2, ',', '.'),
+                        number_format((float) ($row['paid_bank_trainer'] ?? 0), 2, ',', '.'),
+                        number_format((float) ($row['paid_bank_president'] ?? 0), 2, ',', '.'),
                         number_format((float) ($row['paid_cash'] ?? 0), 2, ',', '.'),
                         (int) ($row['items_count'] ?? 0),
                     ], ';');
@@ -117,7 +127,7 @@ class PlacanjaController extends Controller
                     $row['model_name'] ?? '',
                     $row['title'] ?? '',
                     $row['period_label'] ?? '',
-                    (($row['channel'] ?? '') === PaymentTrackingService::COLLECTION_CASH ? 'Gotovina' : 'Račun'),
+                    $row['channel_label'] ?? (($row['channel'] ?? '') === PaymentTrackingService::COLLECTION_CASH ? 'Gotovina' : 'Račun - klub'),
                     number_format((float) ($row['amount'] ?? 0), 2, ',', '.'),
                     $row['status_label'] ?? '',
                 ], ';');
@@ -425,6 +435,7 @@ class PlacanjaController extends Controller
             'nextCharge' => $nextCharge,
             'paymentHubData' => $uiPayload['paymentHubData'] ?? null,
             'nextChargeIsCashCollection' => (bool) ($uiPayload['isCashCollection'] ?? false),
+            'paymentInstructionsEnabled' => (bool) ($uiPayload['paymentInstructionsEnabled'] ?? true),
             'paymentInfoClanakId' => $this->paymentTrackingService->paymentInfoArticleId(),
             'nextChargeVariants' => $uiPayload['nextChargeVariants'] ?? [],
             'nextChargeSelectedVariant' => $uiPayload['nextChargeSelectedVariant'] ?? null,
@@ -439,6 +450,7 @@ class PlacanjaController extends Controller
      */
     private function memberPaymentsUiPayload(Clanovi $clan, ?ClanPaymentCharge $nextCharge): array
     {
+        $hasSelectedCharge = $nextCharge instanceof ClanPaymentCharge;
         $hubData = $nextCharge instanceof ClanPaymentCharge
             ? $this->paymentTrackingService->buildHubPayloadForCharge($clan, $nextCharge)
             : null;
@@ -463,6 +475,8 @@ class PlacanjaController extends Controller
             ] : null,
             'isCashCollection' => $nextCharge instanceof ClanPaymentCharge
                 && $this->paymentTrackingService->isCashCollectionForCharge($nextCharge),
+            'paymentInstructionsEnabled' => ! $hasSelectedCharge
+                || $this->paymentTrackingService->usesClubBankAccountForCharge($nextCharge),
             'paymentHubData' => $hubData,
             'nextChargeVariants' => $nextChargeVariants,
             'nextChargeSelectedVariant' => $nextChargeSelectedVariant,
@@ -530,8 +544,15 @@ class PlacanjaController extends Controller
                 return false;
             }
 
-            if ($channelFilter !== 'all' && ($row['channel'] ?? '') !== $channelFilter) {
-                return false;
+            if ($channelFilter !== 'all') {
+                $channelDetail = (string) ($row['channel_detail'] ?? $row['channel'] ?? '');
+                if (in_array($channelFilter, [self::CHANNEL_BANK_CLUB, self::CHANNEL_BANK_TRAINER, self::CHANNEL_BANK_PRESIDENT], true)) {
+                    if ($channelDetail !== $channelFilter) {
+                        return false;
+                    }
+                } elseif (($row['channel'] ?? '') !== $channelFilter) {
+                    return false;
+                }
             }
 
             if ($modelTypeFilter !== 'all' && ($row['model_type'] ?? '') !== $modelTypeFilter) {
@@ -562,11 +583,29 @@ class PlacanjaController extends Controller
         $totalPaid = round($sortedRows
             ->filter(fn (array $row): bool => ($row['status'] ?? '') === PaymentTrackingService::STATUS_PAID)
             ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2);
-        $totalOpen = round($sortedRows
+        $totalOpenAll = round($sortedRows
             ->filter(fn (array $row): bool => ($row['status'] ?? '') === PaymentTrackingService::STATUS_OPEN)
             ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2);
+        $totalOpenBankClub = round($sortedRows
+            ->filter(fn (array $row): bool => ($row['status'] ?? '') === PaymentTrackingService::STATUS_OPEN && ($row['channel_detail'] ?? '') === self::CHANNEL_BANK_CLUB)
+            ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2);
+        $totalOpenBankTrainer = round($sortedRows
+            ->filter(fn (array $row): bool => ($row['status'] ?? '') === PaymentTrackingService::STATUS_OPEN && ($row['channel_detail'] ?? '') === self::CHANNEL_BANK_TRAINER)
+            ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2);
+        $totalOpenBankPresident = round($sortedRows
+            ->filter(fn (array $row): bool => ($row['status'] ?? '') === PaymentTrackingService::STATUS_OPEN && ($row['channel_detail'] ?? '') === self::CHANNEL_BANK_PRESIDENT)
+            ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2);
+        $totalOpenCash = round($sortedRows
+            ->filter(fn (array $row): bool => ($row['status'] ?? '') === PaymentTrackingService::STATUS_OPEN && ($row['channel_detail'] ?? '') === PaymentTrackingService::COLLECTION_CASH)
+            ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2);
         $totalPaidBank = round($sortedRows
-            ->filter(fn (array $row): bool => ($row['status'] ?? '') === PaymentTrackingService::STATUS_PAID && ($row['channel'] ?? '') === PaymentTrackingService::COLLECTION_BANK)
+            ->filter(fn (array $row): bool => ($row['status'] ?? '') === PaymentTrackingService::STATUS_PAID && ($row['channel_detail'] ?? '') === self::CHANNEL_BANK_CLUB)
+            ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2);
+        $totalPaidBankTrainer = round($sortedRows
+            ->filter(fn (array $row): bool => ($row['status'] ?? '') === PaymentTrackingService::STATUS_PAID && ($row['channel_detail'] ?? '') === self::CHANNEL_BANK_TRAINER)
+            ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2);
+        $totalPaidBankPresident = round($sortedRows
+            ->filter(fn (array $row): bool => ($row['status'] ?? '') === PaymentTrackingService::STATUS_PAID && ($row['channel_detail'] ?? '') === self::CHANNEL_BANK_PRESIDENT)
             ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2);
         $totalPaidCash = round($sortedRows
             ->filter(fn (array $row): bool => ($row['status'] ?? '') === PaymentTrackingService::STATUS_PAID && ($row['channel'] ?? '') === PaymentTrackingService::COLLECTION_CASH)
@@ -584,7 +623,13 @@ class PlacanjaController extends Controller
                     'profile_url' => (string) ($first['profile_url'] ?? ''),
                     'open_total' => round($rows->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2),
                     'open_bank' => round($rows
-                        ->filter(fn (array $row): bool => ($row['channel'] ?? '') === PaymentTrackingService::COLLECTION_BANK)
+                        ->filter(fn (array $row): bool => ($row['channel_detail'] ?? '') === self::CHANNEL_BANK_CLUB)
+                        ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2),
+                    'open_bank_trainer' => round($rows
+                        ->filter(fn (array $row): bool => ($row['channel_detail'] ?? '') === self::CHANNEL_BANK_TRAINER)
+                        ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2),
+                    'open_bank_president' => round($rows
+                        ->filter(fn (array $row): bool => ($row['channel_detail'] ?? '') === self::CHANNEL_BANK_PRESIDENT)
                         ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2),
                     'open_cash' => round($rows
                         ->filter(fn (array $row): bool => ($row['channel'] ?? '') === PaymentTrackingService::COLLECTION_CASH)
@@ -609,7 +654,13 @@ class PlacanjaController extends Controller
                     'paid_total' => round($paidRows->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2),
                     'open_total' => round($openRows->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2),
                     'paid_bank' => round($paidRows
-                        ->filter(fn (array $row): bool => ($row['channel'] ?? '') === PaymentTrackingService::COLLECTION_BANK)
+                        ->filter(fn (array $row): bool => ($row['channel_detail'] ?? '') === self::CHANNEL_BANK_CLUB)
+                        ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2),
+                    'paid_bank_trainer' => round($paidRows
+                        ->filter(fn (array $row): bool => ($row['channel_detail'] ?? '') === self::CHANNEL_BANK_TRAINER)
+                        ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2),
+                    'paid_bank_president' => round($paidRows
+                        ->filter(fn (array $row): bool => ($row['channel_detail'] ?? '') === self::CHANNEL_BANK_PRESIDENT)
                         ->sum(fn (array $row): float => (float) ($row['amount'] ?? 0)), 2),
                     'paid_cash' => round($paidRows
                         ->filter(fn (array $row): bool => ($row['channel'] ?? '') === PaymentTrackingService::COLLECTION_CASH)
@@ -637,8 +688,15 @@ class PlacanjaController extends Controller
                 'rows_total' => $sortedRows->count(),
                 'rows_shown' => $reportRows->count(),
                 'total_paid' => $totalPaid,
-                'total_open' => $totalOpen,
+                'total_open' => $totalOpenBankClub,
+                'total_open_all' => $totalOpenAll,
+                'total_open_bank_club' => $totalOpenBankClub,
+                'total_open_bank_trainer' => $totalOpenBankTrainer,
+                'total_open_bank_president' => $totalOpenBankPresident,
+                'total_open_cash' => $totalOpenCash,
                 'total_paid_bank' => $totalPaidBank,
+                'total_paid_bank_trainer' => $totalPaidBankTrainer,
+                'total_paid_bank_president' => $totalPaidBankPresident,
                 'total_paid_cash' => $totalPaidCash,
                 'debtors_count' => $debtorsSummary->count(),
             ],
@@ -676,6 +734,8 @@ class PlacanjaController extends Controller
         $channel = $this->paymentTrackingService->isCashCollectionForCharge($charge)
             ? PaymentTrackingService::COLLECTION_CASH
             : PaymentTrackingService::COLLECTION_BANK;
+        $channelDetail = $this->reportChannelDetailForMemberCharge($charge, $channel);
+        $channelLabel = $this->reportChannelLabel($channelDetail);
 
         $periodLabel = '-';
         if ($charge->period_start !== null && $charge->period_end !== null) {
@@ -700,6 +760,8 @@ class PlacanjaController extends Controller
             }),
             'model_type' => $modelType,
             'channel' => $channel,
+            'channel_detail' => $channelDetail,
+            'channel_label' => $channelLabel,
             'amount' => round((float) $charge->amount, 2),
             'status' => (string) $charge->status,
             'status_label' => $charge->status === PaymentTrackingService::STATUS_PAID ? 'Plaćeno' : 'Otvoreno',
@@ -740,6 +802,8 @@ class PlacanjaController extends Controller
             'model_name' => 'Školarina',
             'model_type' => 'school',
             'channel' => PaymentTrackingService::COLLECTION_CASH,
+            'channel_detail' => PaymentTrackingService::COLLECTION_CASH,
+            'channel_label' => 'Gotovina',
             'amount' => round((float) $charge->amount, 2),
             'status' => (string) $charge->status,
             'status_label' => $charge->status === SchoolPaymentService::STATUS_PAID ? 'Plaćeno' : 'Otvoreno',
@@ -750,6 +814,42 @@ class PlacanjaController extends Controller
             'due_date' => null,
             'source' => (string) $charge->source,
         ];
+    }
+
+    /**
+     * Priprema detaljni kanal naplate za izvještaj.
+     */
+    private function reportChannelDetailForMemberCharge(ClanPaymentCharge $charge, string $channel): string
+    {
+        if ($channel === PaymentTrackingService::COLLECTION_CASH) {
+            return PaymentTrackingService::COLLECTION_CASH;
+        }
+
+        if ($charge->source !== PaymentTrackingService::SOURCE_TOURNAMENT_FEE) {
+            return self::CHANNEL_BANK_CLUB;
+        }
+
+        $metadata = is_array($charge->metadata) ? $charge->metadata : [];
+        $recipientRole = trim((string) ($metadata['payment_recipient_role'] ?? ''));
+
+        return match ($recipientRole) {
+            'Trener' => self::CHANNEL_BANK_TRAINER,
+            'Predsjednik kluba' => self::CHANNEL_BANK_PRESIDENT,
+            default => self::CHANNEL_BANK_CLUB,
+        };
+    }
+
+    /**
+     * Priprema čitljivu oznaku naplate za detaljne stavke izvještaja.
+     */
+    private function reportChannelLabel(string $channelDetail): string
+    {
+        return match ($channelDetail) {
+            PaymentTrackingService::COLLECTION_CASH => 'Gotovina',
+            self::CHANNEL_BANK_TRAINER => 'Račun - trener',
+            self::CHANNEL_BANK_PRESIDENT => 'Račun - pred.',
+            default => 'Račun - klub',
+        };
     }
 
     /**

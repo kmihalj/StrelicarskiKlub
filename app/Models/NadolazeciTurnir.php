@@ -32,6 +32,7 @@ class NadolazeciTurnir extends Model
         'kotizacija_nacin',
         'kotizacija_iznos',
         'kotizacija_rok_uplate',
+        'kotizacija_primatelj_funkcija_id',
         'created_by',
         'updated_by',
     ];
@@ -45,6 +46,7 @@ class NadolazeciTurnir extends Model
         'is_zakljucan' => 'boolean',
         'kotizacija_iznos' => 'decimal:2',
         'kotizacija_rok_uplate' => 'date',
+        'kotizacija_primatelj_funkcija_id' => 'integer',
         'created_by' => 'integer',
         'updated_by' => 'integer',
     ];
@@ -79,6 +81,14 @@ class NadolazeciTurnir extends Model
     public function updater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by', 'id');
+    }
+
+    /**
+     * Vraća funkciju kluba čiji se račun koristi za uplatu kotizacije.
+     */
+    public function kotizacijaPrimateljFunkcija(): BelongsTo
+    {
+        return $this->belongsTo(clanoviFunkcije::class, 'kotizacija_primatelj_funkcija_id', 'id');
     }
 
     /**

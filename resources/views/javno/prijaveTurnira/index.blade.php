@@ -766,12 +766,12 @@
 
                 if (nacinKotizacije === 'bank') {
                     if (iznos !== '') {
-                        kotizacijaInfoText.textContent = 'Kotizacija se plaća preko računa kluba u iznosu '
+                        kotizacijaInfoText.textContent = 'Kotizacija se plaća preko računa u iznosu '
                             + iznos + ' EUR' + (rok !== '' ? '. Rok uplate: ' + rok + '.' : '.');
                         return;
                     }
 
-                    kotizacijaInfoText.textContent = 'Plaćanje preko računa kluba je odabrano, ali iznos kotizacije još nije definiran.'
+                    kotizacijaInfoText.textContent = 'Plaćanje preko računa je odabrano, ali iznos kotizacije još nije definiran.'
                         + (rok !== '' ? ' Rok uplate: ' + rok + '.' : '');
                     return;
                 }

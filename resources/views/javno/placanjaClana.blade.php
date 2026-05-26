@@ -21,6 +21,8 @@
         $nextChargeRestrictionNote = $nextChargeRestrictionNote ?? null;
         $nextChargeEffectiveAmount = $nextChargeEffectiveAmount ?? null;
         $nextChargeIsCashCollection = (bool)($nextChargeIsCashCollection ?? false);
+        $paymentInstructionsEnabled = (bool)($paymentInstructionsEnabled ?? true);
+        $paymentInfoUrl = !empty($paymentInfoClanakId) ? route('javno.clanci.prikaz_clanka', $paymentInfoClanakId) : null;
         $selectedChargeId = isset($selectedChargeId) ? (int)$selectedChargeId : ($nextCharge?->id ?? null);
         $hasConfiguredPaymentProfile = !empty($profile) && !empty($profile->paymentOption);
         $hasAnyCharges = $charges->count() > 0;
@@ -311,10 +313,17 @@
                                                 <p id="hub-empty-message" class="small text-muted mb-0">{{ $hubEmptyDefaultMessage }}</p>
                                             @endif
 
-                                            @if(!empty($paymentInfoClanakId))
-                                                <a href="{{ route('javno.clanci.prikaz_clanka', $paymentInfoClanakId) }}" class="btn btn-primary btn-sm mt-3">
+                                            @if(!empty($paymentInfoUrl))
+                                                <a id="payment-info-link"
+                                                   @if($paymentInstructionsEnabled) href="{{ $paymentInfoUrl }}" @endif
+                                                   data-payment-info-url="{{ $paymentInfoUrl }}"
+                                                   @class(['btn', 'btn-primary', 'btn-sm', 'mt-3', 'disabled' => !$paymentInstructionsEnabled])
+                                                   @if(!$paymentInstructionsEnabled) aria-disabled="true" tabindex="-1" @else aria-disabled="false" @endif>
                                                     Upute za plaćanje
                                                 </a>
+                                                <p id="payment-info-disabled-note" @class(['small', 'text-muted', 'mt-2', 'mb-0', 'd-none' => $paymentInstructionsEnabled])>
+                                                    Upute se odnose na uplatu na račun kluba. Za ovu stavku koristite prikazane podatke primatelja.
+                                                </p>
                                             @endif
                                         </div>
                                     </div>
@@ -362,6 +371,9 @@
                 const hubFieldModel = document.getElementById('hub-field-model');
                 const hubFieldPoziv = document.getElementById('hub-field-poziv');
                 const hubFieldOpis = document.getElementById('hub-field-opis');
+                const paymentInfoLinkElement = document.getElementById('payment-info-link');
+                const paymentInfoLink = paymentInfoLinkElement instanceof HTMLAnchorElement ? paymentInfoLinkElement : null;
+                const paymentInfoDisabledNote = document.getElementById('payment-info-disabled-note');
 
                 function formatEur(amount) {
                     const numeric = Number(amount ?? 0);
@@ -384,6 +396,29 @@
                         return;
                     }
                     element.classList.toggle('d-none', !visible);
+                }
+
+                function updatePaymentInfoLink(enabled) {
+                    if (!paymentInfoLink) {
+                        return;
+                    }
+
+                    const shouldEnable = Boolean(enabled);
+                    paymentInfoLink.classList.toggle('disabled', !shouldEnable);
+                    paymentInfoLink.setAttribute('aria-disabled', shouldEnable ? 'false' : 'true');
+
+                    if (shouldEnable) {
+                        const url = paymentInfoLink.dataset.paymentInfoUrl || '';
+                        if (url !== '') {
+                            paymentInfoLink.setAttribute('href', url);
+                        }
+                        paymentInfoLink.removeAttribute('tabindex');
+                    } else {
+                        paymentInfoLink.removeAttribute('href');
+                        paymentInfoLink.setAttribute('tabindex', '-1');
+                    }
+
+                    setVisible(paymentInfoDisabledNote, !shouldEnable);
                 }
 
                 function getPdf417Api() {
@@ -502,6 +537,7 @@
                     const hubData = payload['paymentHubData'] && typeof payload['paymentHubData'] === 'object'
                         ? payload['paymentHubData']
                         : null;
+                    const paymentInstructionsEnabled = Boolean(payload['paymentInstructionsEnabled']);
                     const hubPayload = hubData && typeof hubData['payload'] === 'string' ? hubData['payload'] : null;
                     const hub = hubData && hubData['fields'] && typeof hubData['fields'] === 'object'
                         ? hubData['fields']
@@ -556,6 +592,7 @@
                     setVisible(hubFields, !isCashCollection && !!hub);
                     setVisible(hubCanvasWrap, drawn);
                     setVisible(hubEmptyMessage, !drawn);
+                    updatePaymentInfoLink(paymentInstructionsEnabled);
                 }
 
                 async function fetchJson(url, options) {

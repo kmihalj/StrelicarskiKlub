@@ -135,6 +135,7 @@ Route::prefix('admin/')->group(function () {
     Route::post('klub', [KlubController::class, 'spremanjePodataka'])->name('admin.klub.spremanjePodataka')->middleware(['auth', 'admin']);
     Route::post('klub/spremanjeFunkcija', [KlubController::class, 'spremanjeFunkcija'])->name('admin.klub.spremanjeFunkcija')->middleware(['auth', 'admin']);
     Route::post('klub/spremanjeTrenera', [KlubController::class, 'spremanjeTrenera'])->name('admin.klub.spremanjeTrenera')->middleware(['auth', 'admin']);
+    Route::post('klub/funkcije/{funkcija}/kotizacije', [KlubController::class, 'spremanjePodatakaZaKotizacije'])->name('admin.klub.funkcije.kotizacije')->middleware(['auth', 'admin']);
     Route::post('klub/unos/spremiMedij', [KlubController::class, 'uploadMedija'])->name('admin.klub.uploadMedija')->middleware(['auth', 'admin']);
     Route::post('klub/unos/obrisiMedij', [KlubController::class, 'brisanjeMedija'])->name('admin.klub.brisanjeMedija')->middleware(['auth', 'admin']);
     Route::post('klub/unos/updateMedij', [KlubController::class, 'updateMedija'])->name('admin.klub.updateMedij')->middleware(['auth', 'admin']);

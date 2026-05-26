@@ -198,6 +198,51 @@
                                 <div class="col-lg-12 col-md-12 col-12 mb-2 text-end">
                                     <button type="submit" form="SpremanjeFunkcija" class="btn btn-danger">Spremi</button>
                                 </div>
+                                <hr>
+                                <div class="col-lg-12 mb-3">
+                                    <div class="alert alert-info py-2 mb-3">
+                                        Za kotizacije turnira moguće je odabrati račun kluba ili račun predsjednika/trenera.
+                                        Ovdje upišite IBAN i ime primatelja za osobe koje smiju primati uplate kotizacija.
+                                    </div>
+                                    @if(isset($predsjednik) && $predsjednik?->clan)
+                                        <form id="KotizacijaPredsjednik{{ $predsjednik->id }}" action="{{ route('admin.klub.funkcije.kotizacije', $predsjednik->id) }}" method="POST">
+                                            @csrf
+                                        </form>
+                                        <div class="row g-2 align-items-end border rounded p-2 mb-2">
+                                            <div class="col-lg-3">
+                                                <div class="fw-semibold">Predsjednik kluba</div>
+                                                <div>{{ $predsjednik->clan->Prezime }} {{ $predsjednik->clan->Ime }}</div>
+                                            </div>
+                                            <div class="col-lg-4">
+                                                <label class="form-label mb-1" for="predsjednik_kotizacija_primatelj">Ime primatelja</label>
+                                                <input type="text"
+                                                       class="form-control"
+                                                       form="KotizacijaPredsjednik{{ $predsjednik->id }}"
+                                                       id="predsjednik_kotizacija_primatelj"
+                                                       name="kotizacija_primatelj"
+                                                       value="{{ old('kotizacija_primatelj', $predsjednik->kotizacija_primatelj ?: $predsjednik->kotizacijaPrimateljLabel()) }}"
+                                                       maxlength="70"
+                                                       placeholder="Ime i prezime / naziv primatelja">
+                                            </div>
+                                            <div class="col-lg-4">
+                                                <label class="form-label mb-1" for="predsjednik_kotizacija_iban">IBAN</label>
+                                                <input type="text"
+                                                       class="form-control"
+                                                       form="KotizacijaPredsjednik{{ $predsjednik->id }}"
+                                                       id="predsjednik_kotizacija_iban"
+                                                       name="kotizacija_iban"
+                                                       value="{{ old('kotizacija_iban', $predsjednik->kotizacija_iban) }}"
+                                                       maxlength="34"
+                                                       placeholder="HR...">
+                                            </div>
+                                            <div class="col-lg-1 text-end">
+                                                <button type="submit" form="KotizacijaPredsjednik{{ $predsjednik->id }}" class="btn btn-sm btn-danger">Spremi</button>
+                                            </div>
+                                        </div>
+                                    @else
+                                        <div class="small text-muted">Nakon spremanja predsjednika ovdje će biti dostupna polja za račun kotizacija.</div>
+                                    @endif
+                                </div>
                                 <!-- TRENERI -->
                                 <hr>
                                 <div class="col-lg-4 mb-3">
@@ -217,11 +262,22 @@
                                         <button class="btn btn-danger" type="submit" form="SpremanjeTrenera" id="button-addon2">Spremi</button>
                                     </div>
                                 </div>
-                                <div class="col-lg-4 mb-3 align-self-center">
+                                <div class="col-lg-8 mb-3 align-self-center">
                                     <div class="table-responsive">
-                                        <table class="table table-sm align-middle table-borderless">
+                                        <table class="table table-sm align-middle">
+                                            <thead>
+                                            <tr>
+                                                <th>Trener</th>
+                                                <th>Ime primatelja</th>
+                                                <th>IBAN</th>
+                                                <th class="text-end">Akcije</th>
+                                            </tr>
+                                            </thead>
                                             @foreach($treneri as $trener)
                                                 <form id="brisanje{{ $trener->id }}" action="{{ route('admin.klub.brisanjeTrenera', $trener->id) }}" method="POST">
+                                                    @csrf
+                                                </form>
+                                                <form id="KotizacijaTrener{{ $trener->id }}" action="{{ route('admin.klub.funkcije.kotizacije', $trener->id) }}" method="POST">
                                                     @csrf
                                                 </form>
                                                 <tr>
@@ -229,6 +285,27 @@
                                                                             href="{{ route('javno.clanovi.prikaz_clana', $trener->clan) }}">{{ $trener->clan->Ime }}  {{ $trener->clan->Prezime }}</a>
                                                     </td>
                                                     <td class="bg-white">
+                                                        <input type="text"
+                                                               class="form-control form-control-sm"
+                                                               form="KotizacijaTrener{{ $trener->id }}"
+                                                               name="kotizacija_primatelj"
+                                                               value="{{ $trener->kotizacija_primatelj ?: $trener->kotizacijaPrimateljLabel() }}"
+                                                               maxlength="70"
+                                                               placeholder="Ime primatelja">
+                                                    </td>
+                                                    <td class="bg-white">
+                                                        <input type="text"
+                                                               class="form-control form-control-sm"
+                                                               form="KotizacijaTrener{{ $trener->id }}"
+                                                               name="kotizacija_iban"
+                                                               value="{{ $trener->kotizacija_iban }}"
+                                                               maxlength="34"
+                                                               placeholder="HR...">
+                                                    </td>
+                                                    <td class="bg-white">
+                                                        <button type="submit" form="KotizacijaTrener{{ $trener->id }}" class="btn text-success btn-rounded" title="Spremi podatke za kotizacije">
+                                                            @include('admin.SVG.unos')
+                                                        </button>
                                                         <button type="submit" form="brisanje{{ $trener->id }}" class="btn text-danger btn-rounded" title="Obriši"
                                                                 onclick="return confirm('Da li ste sigurni da želite obrisati trenera ?')">
                                                             @include('admin.SVG.obrisi')
@@ -365,4 +442,3 @@
         @include('layouts.neovlasteno')
     @endsection
 @endguest
-

@@ -77,7 +77,10 @@
                                     <label for="channel" class="form-label mb-1">Naplata</label>
                                     <select class="form-select form-select-sm" id="channel" name="channel">
                                         <option value="all" @selected(($filters['channel'] ?? '') === 'all')>Sve</option>
-                                        <option value="bank" @selected(($filters['channel'] ?? '') === 'bank')>Račun</option>
+                                        <option value="bank" @selected(($filters['channel'] ?? '') === 'bank')>Račun - svi</option>
+                                        <option value="bank_club" @selected(($filters['channel'] ?? '') === 'bank_club')>Račun - klub</option>
+                                        <option value="bank_trainer" @selected(($filters['channel'] ?? '') === 'bank_trainer')>Račun - trener</option>
+                                        <option value="bank_president" @selected(($filters['channel'] ?? '') === 'bank_president')>Račun - pred.</option>
                                         <option value="cash" @selected(($filters['channel'] ?? '') === 'cash')>Gotovina</option>
                                     </select>
                                 </div>
@@ -128,13 +131,25 @@
                                 <div class="card-body py-2">
                                     <div class="small text-muted">Otvoreni dug</div>
                                     <div class="fw-bold text-danger">{{ number_format((float)($stats['total_open'] ?? 0), 2, ',', '.') }} €</div>
+                                    @if((float)($stats['total_open_bank_trainer'] ?? 0) > 0)
+                                        <div class="small text-muted mt-1">
+                                            Račun - trener:
+                                            <span class="fw-semibold text-danger">{{ number_format((float)$stats['total_open_bank_trainer'], 2, ',', '.') }} €</span>
+                                        </div>
+                                    @endif
+                                    @if((float)($stats['total_open_bank_president'] ?? 0) > 0)
+                                        <div class="small text-muted">
+                                            Račun - pred.:
+                                            <span class="fw-semibold text-danger">{{ number_format((float)$stats['total_open_bank_president'], 2, ',', '.') }} €</span>
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                         </div>
                         <div class="col-lg-2 col-md-4 col-6">
                             <div class="card h-100">
                                 <div class="card-body py-2">
-                                    <div class="small text-muted">Uplaćeno račun</div>
+                                    <div class="small text-muted">Uplaćeno račun klub</div>
                                     <div class="fw-bold">{{ number_format((float)($stats['total_paid_bank'] ?? 0), 2, ',', '.') }} €</div>
                                 </div>
                             </div>
@@ -186,7 +201,9 @@
                                         <tr>
                                             <th data-sort-type="string">Osoba</th>
                                             <th data-sort-type="string">Tip</th>
-                                            <th data-sort-type="number">Račun</th>
+                                            <th data-sort-type="number">Račun klub</th>
+                                            <th data-sort-type="number">Račun trener</th>
+                                            <th data-sort-type="number">Račun pred.</th>
                                             <th data-sort-type="number">Gotovina</th>
                                             <th data-sort-type="number">Ukupno</th>
                                         </tr>
@@ -203,6 +220,8 @@
                                                 </td>
                                                 <td>{{ $row['entity_type'] === 'school' ? 'Polaznik škole' : 'Član' }}</td>
                                                 <td>{{ number_format((float)$row['open_bank'], 2, ',', '.') }} €</td>
+                                                <td>{{ number_format((float)($row['open_bank_trainer'] ?? 0), 2, ',', '.') }} €</td>
+                                                <td>{{ number_format((float)($row['open_bank_president'] ?? 0), 2, ',', '.') }} €</td>
                                                 <td>{{ number_format((float)$row['open_cash'], 2, ',', '.') }} €</td>
                                                 <td class="text-danger fw-bold">{{ number_format((float)$row['open_total'], 2, ',', '.') }} €</td>
                                             </tr>
@@ -309,7 +328,7 @@
                                                 <td>{{ $row['model_name'] }}</td>
                                                 <td>{{ $row['title'] }}</td>
                                                 <td>{{ $row['period_label'] }}</td>
-                                                <td>{{ $row['channel'] === 'cash' ? 'Gotovina' : 'Račun' }}</td>
+                                                <td>{{ $row['channel_label'] ?? ($row['channel'] === 'cash' ? 'Gotovina' : 'Račun - klub') }}</td>
                                                 <td>{{ number_format((float)$row['amount'], 2, ',', '.') }} €</td>
                                                 <td>
                                                     @if($row['status'] === 'paid')

@@ -10,12 +10,15 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Admin kontroler za podatke kluba i dokumente koji se prikazuju članovima i javnosti.
  */
 class KlubController extends Controller
 {
+    private const FUNKCIJE_KOTIZACIJA = ['Predsjednik kluba', 'Trener'];
+
     /**
      * Prikazuje administracijski pregled kluba (osnovni podaci, treneri i dokumenti).
      * @noinspection PhpMissingReturnTypeInspection
@@ -23,9 +26,26 @@ class KlubController extends Controller
     public function index()
     {
         $klub = Klub::with(['dokumenti' => fn ($query) => $query->orderBy('created_at', 'desc')])->first();
-        $clanovi = Clanovi::where('aktivan', true)->whereRaw('TIMESTAMPDIFF(YEAR, datum_rodjenja, NOW()) >= 18')->orderBy('Prezime')->orderBy('Ime')->get();
-        $treneri = clanoviFunkcije::where('funkcija', '=', 'Trener')->get();
-        return view('admin.klub.podaciOklubu', ['klub' => $klub, 'clanovi' => $clanovi, 'treneri' => $treneri]);
+        $clanovi = Clanovi::with('funkcijeUklubu')
+            ->where('aktivan', true)
+            ->whereRaw('TIMESTAMPDIFF(YEAR, datum_rodjenja, NOW()) >= 18')
+            ->orderBy('Prezime')
+            ->orderBy('Ime')
+            ->get();
+        $treneri = clanoviFunkcije::with('clan')
+            ->where('funkcija', '=', 'Trener')
+            ->orderBy('id')
+            ->get();
+        $predsjednik = clanoviFunkcije::with('clan')
+            ->where('funkcija', '=', 'Predsjednik kluba')
+            ->first();
+
+        return view('admin.klub.podaciOklubu', [
+            'klub' => $klub,
+            'clanovi' => $clanovi,
+            'treneri' => $treneri,
+            'predsjednik' => $predsjednik,
+        ]);
     }
 
     /**
@@ -165,12 +185,36 @@ class KlubController extends Controller
     public function spremanjeTrenera(Request $request)
     {
         $klub = $request->input('klub_id');
+        $clan = Clanovi::findOrFail((int) $request->input('trener'));
+        $podaciPlacanja = $this->validirajPodatkeKotizacije($request, $clan);
+
         $trener = new clanoviFunkcije();
         $trener->klub_id = $klub;
-        $trener->clan_id = $request->input('trener');
+        $trener->clan_id = $clan->id;
         $trener->funkcija = "Trener";
+        $trener->kotizacija_primatelj = $podaciPlacanja['primatelj'];
+        $trener->kotizacija_iban = $podaciPlacanja['iban'];
         $trener->save();
         return redirect()->route('admin.klub.naslovna');
+    }
+
+    public function spremanjePodatakaZaKotizacije(Request $request, int $funkcija): RedirectResponse
+    {
+        $funkcijaClana = clanoviFunkcije::with('clan')->findOrFail($funkcija);
+        if (! in_array((string) $funkcijaClana->funkcija, self::FUNKCIJE_KOTIZACIJA, true)) {
+            return redirect()
+                ->route('admin.klub.naslovna')
+                ->with('error', 'Podaci za uplatu kotizacije mogu se upisati samo za predsjednika kluba i trenere.');
+        }
+
+        $podaciPlacanja = $this->validirajPodatkeKotizacije($request, $funkcijaClana->clan);
+        $funkcijaClana->kotizacija_primatelj = $podaciPlacanja['primatelj'];
+        $funkcijaClana->kotizacija_iban = $podaciPlacanja['iban'];
+        $funkcijaClana->save();
+
+        return redirect()
+            ->route('admin.klub.naslovna')
+            ->with('success', 'Podaci za uplatu kotizacija su spremljeni.');
     }
 
     /**
@@ -235,5 +279,44 @@ class KlubController extends Controller
         return redirect()->route('admin.klub.naslovna');
     }
 
+    /**
+     * Normalizira IBAN i ime primatelja za kotizacije; prazna oba polja znače brisanje podataka.
+     *
+     * @return array{primatelj: ?string, iban: ?string}
+     */
+    private function validirajPodatkeKotizacije(Request $request, ?Clanovi $clan): array
+    {
+        $validated = $request->validate([
+            'kotizacija_primatelj' => ['nullable', 'string', 'max:70'],
+            'kotizacija_iban' => ['nullable', 'string', 'max:50'],
+        ]);
+
+        $primatelj = trim((string) ($validated['kotizacija_primatelj'] ?? ''));
+        $primatelj = $primatelj === '' ? null : $primatelj;
+
+        $iban = strtoupper((string) preg_replace('/\s+/', '', (string) ($validated['kotizacija_iban'] ?? '')));
+        $iban = $iban === '' ? null : $iban;
+
+        if ($iban !== null && ! preg_match('/^[A-Z]{2}[0-9A-Z]{13,32}$/', $iban)) {
+            throw ValidationException::withMessages([
+                'kotizacija_iban' => 'IBAN nije u ispravnom formatu.',
+            ]);
+        }
+
+        if ($iban !== null && $primatelj === null && $clan instanceof Clanovi) {
+            $primatelj = trim((string) $clan->Ime.' '.(string) $clan->Prezime);
+        }
+
+        if ($primatelj !== null && $iban === null) {
+            throw ValidationException::withMessages([
+                'kotizacija_iban' => 'Za primatelja kotizacije potrebno je upisati i IBAN.',
+            ]);
+        }
+
+        return [
+            'primatelj' => $primatelj,
+            'iban' => $iban,
+        ];
+    }
 
 }

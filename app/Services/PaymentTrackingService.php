@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Clanovi;
+use App\Models\clanoviFunkcije;
 use App\Models\ClanPaymentCharge;
 use App\Models\ClanPaymentProfile;
 use App\Models\Klub;
@@ -1111,21 +1112,15 @@ class PaymentTrackingService
             return null;
         }
 
-        $klub = Klub::query()->first();
-        if ($klub === null) {
+        $recipient = $this->hubRecipientForCharge($charge);
+        if ($recipient === null) {
             return null;
         }
 
-        $iban = $this->normalizeIban((string) ($klub->racun ?? ''));
-        if ($iban === null) {
-            return null;
-        }
-
-        [$receiverAddressRaw, $receiverCityRaw] = $this->splitAddress((string) ($klub->adresa ?? ''));
-
-        $receiverName = $this->sanitizeHubPayloadText((string) ($klub->naziv ?? ''));
-        $receiverAddress = $this->sanitizeHubPayloadText($receiverAddressRaw);
-        $receiverCity = $this->sanitizeHubPayloadText($receiverCityRaw);
+        $iban = (string) $recipient['iban'];
+        $receiverName = $this->sanitizeHubPayloadText((string) $recipient['name']);
+        $receiverAddress = $this->sanitizeHubPayloadText((string) ($recipient['address'] ?? ''));
+        $receiverCity = $this->sanitizeHubPayloadText((string) ($recipient['city'] ?? ''));
         $payerName = $this->sanitizeHubPayloadText(trim($clan->Ime.' '.$clan->Prezime));
         $payerAddress = '';
         $payerCity = '';
@@ -1142,6 +1137,7 @@ class PaymentTrackingService
         // Keep purpose code empty (same behavior as parepristizu.com default),
         // because some mobile banking apps reject non-matching purpose codes.
         $intent = '';
+        $receiverAddressLabel = trim($receiverAddress.($receiverAddress !== '' && $receiverCity !== '' ? ', ' : '').$receiverCity);
 
         $lines = [
             'HRVHUB30',
@@ -1166,12 +1162,26 @@ class PaymentTrackingService
                 'iznos' => number_format($amount, 2, ',', '.'),
                 'iban' => $iban,
                 'primatelj' => $receiverName,
-                'adresa' => $receiverAddress.', '.$receiverCity,
+                'adresa' => $receiverAddressLabel,
                 'opis' => $descriptionFull,
                 'poziv_na_broj' => $callNumber,
                 'model' => 'HR'.$model,
             ],
         ];
+    }
+
+    /**
+     * Provjerava ide li odabrana stavka na klupski račun.
+     */
+    public function usesClubBankAccountForCharge(ClanPaymentCharge $charge): bool
+    {
+        if ($this->isCashCollectionForCharge($charge)) {
+            return false;
+        }
+
+        $recipient = $this->hubRecipientForCharge($charge);
+
+        return is_array($recipient) && ($recipient['source'] ?? '') === 'club';
     }
 
     /**
@@ -2060,7 +2070,72 @@ class PaymentTrackingService
     }
 
     /**
-     * Validira ulaz i sprema promjene prema pravilima modula članarina članova.
+     * Određuje primatelja HUB naloga; kotizacije mogu imati primatelja različitog od kluba.
+     *
+     * @return array{name: string, address: string, city: string, iban: string, source: string}|null
+     */
+    private function hubRecipientForCharge(ClanPaymentCharge $charge): ?array
+    {
+        $metadata = is_array($charge->metadata) ? $charge->metadata : [];
+        if ($charge->source === self::SOURCE_TOURNAMENT_FEE) {
+            $recipientFunctionId = isset($metadata['payment_recipient_function_id'])
+                ? (int) $metadata['payment_recipient_function_id']
+                : 0;
+            if ($recipientFunctionId > 0) {
+                $recipientFunction = clanoviFunkcije::query()->find($recipientFunctionId);
+                $recipientFunctionIban = $recipientFunction instanceof clanoviFunkcije
+                    ? $this->normalizeIban($recipientFunction->kotizacija_iban)
+                    : null;
+                if ($recipientFunction instanceof clanoviFunkcije && $recipientFunction->imaPodatkeZaKotizacije() && $recipientFunctionIban !== null) {
+                    return [
+                        'name' => $recipientFunction->kotizacijaPrimateljLabel(),
+                        'address' => '',
+                        'city' => '',
+                        'iban' => $recipientFunctionIban,
+                        'source' => 'custom',
+                    ];
+                }
+            }
+
+            if ($recipientFunctionId <= 0) {
+                $recipientName = $this->normalizeText($metadata['payment_recipient_name'] ?? null);
+                $recipientIban = $this->normalizeIban($metadata['payment_recipient_iban'] ?? null);
+
+                if ($recipientName !== null && $recipientIban !== null) {
+                    return [
+                        'name' => $recipientName,
+                        'address' => '',
+                        'city' => '',
+                        'iban' => $recipientIban,
+                        'source' => 'custom',
+                    ];
+                }
+            }
+        }
+
+        $klub = Klub::query()->first();
+        if ($klub === null) {
+            return null;
+        }
+
+        $iban = $this->normalizeIban((string) ($klub->racun ?? ''));
+        if ($iban === null) {
+            return null;
+        }
+
+        [$receiverAddressRaw, $receiverCityRaw] = $this->splitAddress((string) ($klub->adresa ?? ''));
+
+        return [
+            'name' => (string) ($klub->naziv ?? ''),
+            'address' => $receiverAddressRaw,
+            'city' => $receiverCityRaw,
+            'iban' => $iban,
+            'source' => 'club',
+        ];
+    }
+
+    /**
+     * Razdvaja adresu primatelja na ulicu i mjesto za HUB nalog.
      */
     private function splitAddress(string $address): array
     {

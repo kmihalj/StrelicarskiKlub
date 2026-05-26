@@ -11,7 +11,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class clanoviFunkcije extends Model
 {
 
-    protected $fillable = ['klub_id', 'clan_id', 'funkcija', 'redniBroj'];
+    protected $fillable = [
+        'klub_id',
+        'clan_id',
+        'funkcija',
+        'redniBroj',
+        'kotizacija_primatelj',
+        'kotizacija_iban',
+    ];
 
     /**
      * Funkcija člana u klubu je povezan s jednim zapisom: klub.
@@ -27,5 +34,26 @@ class clanoviFunkcije extends Model
     public function clan(): BelongsTo
     {
         return $this->belongsTo(Clanovi::class, 'clan_id');
+    }
+
+    public function kotizacijaPrimateljLabel(): string
+    {
+        $primatelj = trim((string) $this->kotizacija_primatelj);
+        if ($primatelj !== '') {
+            return $primatelj;
+        }
+
+        $clan = $this->clan;
+        if ($clan instanceof Clanovi) {
+            return trim((string) $clan->Ime.' '.(string) $clan->Prezime);
+        }
+
+        return '';
+    }
+
+    public function imaPodatkeZaKotizacije(): bool
+    {
+        return trim((string) $this->kotizacija_iban) !== ''
+            && $this->kotizacijaPrimateljLabel() !== '';
     }
 }

@@ -88,7 +88,7 @@ class NadolazeciTurniriController extends Controller
         $this->obrisiProsleTurnireBezAktivnihPrijava($danas);
 
         $baseQuery = NadolazeciTurnir::query()
-            ->with('tipTurnira')
+            ->with(['tipTurnira', 'kotizacijaPrimateljFunkcija.clan'])
             ->with([
                 'prijave' => fn ($query) => $query
                     ->where('status', PrijavaTurnira::STATUS_ACTIVE)
@@ -116,16 +116,20 @@ class NadolazeciTurniriController extends Controller
             ->withQueryString();
 
         $tipoviTurnira = TipoviTurnira::query()->orderBy('naziv')->get();
+        $kotizacijaPrimatelji = $this->kotizacijaPrimatelji();
         $urediTurnir = null;
         $urediId = (int) $request->query('uredi', 0);
         if ($urediId > 0) {
-            $urediTurnir = NadolazeciTurnir::query()->find($urediId);
+            $urediTurnir = NadolazeciTurnir::query()
+                ->with('kotizacijaPrimateljFunkcija.clan')
+                ->find($urediId);
         }
 
         return view('admin.nadolazeciTurniri.index', [
             'nadolazeciTurniri' => $nadolazeciTurniri,
             'prosliTurniri' => $prosliTurniri,
             'tipoviTurnira' => $tipoviTurnira,
+            'kotizacijaPrimatelji' => $kotizacijaPrimatelji,
             'urediTurnir' => $urediTurnir,
         ]);
     }
@@ -1213,6 +1217,7 @@ class NadolazeciTurniriController extends Controller
             'kotizacija_nacin' => ['nullable', 'in:undefined,bank,cash'],
             'kotizacija_iznos' => ['nullable', 'string', 'max:32'],
             'kotizacija_rok_uplate' => ['nullable', 'date'],
+            'kotizacija_primatelj_funkcija_id' => ['nullable', 'integer'],
             'poziv_pdf' => ['nullable', 'file', 'mimes:pdf', 'max:15360'],
             'obrisi_poziv_pdf' => ['nullable', 'boolean'],
         ], [
@@ -1220,10 +1225,14 @@ class NadolazeciTurniriController extends Controller
         ]);
 
         $nacin = trim((string) ($validated['kotizacija_nacin'] ?? 'undefined'));
+        $primateljId = isset($validated['kotizacija_primatelj_funkcija_id']) && $validated['kotizacija_primatelj_funkcija_id'] !== ''
+            ? (int) $validated['kotizacija_primatelj_funkcija_id']
+            : null;
         if ($nacin === '' || $nacin === 'undefined') {
             $validated['kotizacija_nacin'] = null;
             $validated['kotizacija_iznos'] = null;
             $validated['kotizacija_rok_uplate'] = null;
+            $validated['kotizacija_primatelj_funkcija_id'] = null;
         }
 
         $iznos = $this->normalizirajIznos($validated['kotizacija_iznos'] ?? null);
@@ -1234,13 +1243,30 @@ class NadolazeciTurniriController extends Controller
                 ]);
             }
             $validated['kotizacija_iznos'] = $iznos;
+            if ($primateljId !== null) {
+                $primatelj = $this->pronadiPrimateljaKotizacije($primateljId);
+                if (! ($primatelj instanceof clanoviFunkcije)) {
+                    throw ValidationException::withMessages([
+                        'kotizacija_primatelj_funkcija_id' => 'Odabrani primatelj kotizacije nije dostupan.',
+                    ]);
+                }
+
+                if (! $primatelj->imaPodatkeZaKotizacije()) {
+                    throw ValidationException::withMessages([
+                        'kotizacija_primatelj_funkcija_id' => 'Odabrani primatelj nema upisan IBAN i ime za uplatu kotizacije.',
+                    ]);
+                }
+            }
+            $validated['kotizacija_primatelj_funkcija_id'] = $primateljId;
         } elseif ($nacin === 'cash') {
             $validated['kotizacija_iznos'] = $iznos;
             $validated['kotizacija_rok_uplate'] = null;
+            $validated['kotizacija_primatelj_funkcija_id'] = null;
         } else {
             $validated['kotizacija_nacin'] = null;
             $validated['kotizacija_iznos'] = null;
             $validated['kotizacija_rok_uplate'] = null;
+            $validated['kotizacija_primatelj_funkcija_id'] = null;
         }
 
         if (! empty($validated['prijave_otvorene_do']) && ! empty($validated['datum'])) {
@@ -1265,6 +1291,7 @@ class NadolazeciTurniriController extends Controller
 
         if (($validated['kotizacija_nacin'] ?? null) !== 'bank') {
             $validated['kotizacija_rok_uplate'] = null;
+            $validated['kotizacija_primatelj_funkcija_id'] = null;
         }
 
         return $validated;
@@ -1295,6 +1322,9 @@ class NadolazeciTurniriController extends Controller
         $turnir->kotizacija_iznos = $validated['kotizacija_iznos'] ?? null;
         $turnir->kotizacija_rok_uplate = ! empty($validated['kotizacija_rok_uplate'])
             ? Carbon::parse((string) $validated['kotizacija_rok_uplate'])->toDateString()
+            : null;
+        $turnir->kotizacija_primatelj_funkcija_id = ! empty($validated['kotizacija_primatelj_funkcija_id'])
+            ? (int) $validated['kotizacija_primatelj_funkcija_id']
             : null;
         if (! $turnir->exists) {
             $turnir->created_by = (int) auth()->id();
@@ -1329,6 +1359,7 @@ class NadolazeciTurniriController extends Controller
     private function syncKotizacijeZaTurnir(NadolazeciTurnir $turnir, int $adminUserId): void
     {
         $turnir->loadMissing([
+            'kotizacijaPrimateljFunkcija.clan',
             'prijave' => fn ($query) => $query
                 ->where('status', PrijavaTurnira::STATUS_ACTIVE)
                 ->with(['clan', 'turnir', 'paymentCharge']),
@@ -1462,6 +1493,7 @@ class NadolazeciTurniriController extends Controller
         $metadata['tournament_date'] = $turnir->datum?->toDateString();
         $metadata['registration_id'] = (int) $prijava->id;
         $metadata['hub_description'] = $this->opisKotizacijeZaHub($clan, $turnir);
+        $metadata = $this->upisiPrimateljaKotizacijeUMetadata($metadata, $turnir);
         $charge->metadata = $metadata;
         $charge->updated_by = $actorUserId > 0 ? $actorUserId : $charge->updated_by;
         $charge->save();
@@ -1519,6 +1551,72 @@ class NadolazeciTurniriController extends Controller
 
         return 'Kotizacija za: '.$imePrezime.'; za turnir: '.$turnir->naziv
             .' u '.$turnir->mjesto.' dana '.$datum;
+    }
+
+    /**
+     * Vraća predsjednika kluba i trenere koji mogu biti primatelji kotizacija.
+     */
+    private function kotizacijaPrimatelji(): Collection
+    {
+        return clanoviFunkcije::query()
+            ->with('clan')
+            ->whereIn('funkcija', ['Predsjednik kluba', 'Trener'])
+            ->get()
+            ->sortBy(function (clanoviFunkcije $funkcija): array {
+                $clan = $funkcija->clan;
+                $ime = $clan instanceof Clanovi
+                    ? trim((string) $clan->Prezime.' '.(string) $clan->Ime)
+                    : '';
+
+                return [
+                    $funkcija->funkcija === 'Predsjednik kluba' ? 0 : 1,
+                    Str::ascii(mb_strtolower($ime, 'UTF-8')),
+                    (int) $funkcija->id,
+                ];
+            })
+            ->values();
+    }
+
+    /**
+     * Dohvaća dozvoljenog primatelja kotizacije iz funkcija kluba.
+     */
+    private function pronadiPrimateljaKotizacije(int $funkcijaId): ?clanoviFunkcije
+    {
+        return clanoviFunkcije::query()
+            ->with('clan')
+            ->whereIn('funkcija', ['Predsjednik kluba', 'Trener'])
+            ->whereKey($funkcijaId)
+            ->first();
+    }
+
+    /**
+     * Upisuje podatke odabranog primatelja u metadata stavke kotizacije.
+     */
+    private function upisiPrimateljaKotizacijeUMetadata(array $metadata, NadolazeciTurnir $turnir): array
+    {
+        foreach ([
+            'payment_recipient_function_id',
+            'payment_recipient_role',
+            'payment_recipient_clan_id',
+            'payment_recipient_name',
+            'payment_recipient_iban',
+        ] as $key) {
+            unset($metadata[$key]);
+        }
+
+        $turnir->loadMissing('kotizacijaPrimateljFunkcija.clan');
+        $primatelj = $turnir->kotizacijaPrimateljFunkcija;
+        if (! ($primatelj instanceof clanoviFunkcije) || ! $primatelj->imaPodatkeZaKotizacije()) {
+            return $metadata;
+        }
+
+        $metadata['payment_recipient_function_id'] = (int) $primatelj->id;
+        $metadata['payment_recipient_role'] = (string) $primatelj->funkcija;
+        $metadata['payment_recipient_clan_id'] = (int) $primatelj->clan_id;
+        $metadata['payment_recipient_name'] = $primatelj->kotizacijaPrimateljLabel();
+        $metadata['payment_recipient_iban'] = strtoupper(str_replace(' ', '', (string) $primatelj->kotizacija_iban));
+
+        return $metadata;
     }
 
     /**
