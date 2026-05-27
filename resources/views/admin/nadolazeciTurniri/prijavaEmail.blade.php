@@ -68,6 +68,7 @@
 
     @include('admin.nadolazeciTurniri.partials.prijavaDokumentTabela', [
         'redovi' => $podaci['redovi'],
+        'kolone' => $podaci['kolone'],
         'tableClass' => 'prijava-tablica',
     ])
 

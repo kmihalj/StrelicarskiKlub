@@ -79,6 +79,39 @@ class NadolazeciTurniriController extends Controller
         'napomena_clana',
     ];
 
+    private const PRIJAVA_DOKUMENT_STALNE_KOLONE = [
+        'rb',
+        'licenca',
+        'ime',
+        'prezime',
+        'stil',
+        'kategorija',
+        'lijecnicki',
+    ];
+
+    private const PRIJAVA_DOKUMENT_OPCIONALNA_POLJA = [
+        'kup' => 'KUP',
+        'smjena' => 'Smjena/dan',
+        'obrok' => 'Obrok',
+        'napomena' => 'Napomena',
+    ];
+
+    private const PRIJAVA_DOKUMENT_KOLONE = [
+        'rb' => ['label' => 'R. br.', 'width' => 500, 'align' => 'center'],
+        'licenca' => ['label' => 'Licenca', 'width' => 850, 'align' => 'center'],
+        'ime' => ['label' => 'Ime', 'width' => 1100, 'align' => 'start'],
+        'prezime' => ['label' => 'Prezime', 'width' => 1300, 'align' => 'start'],
+        'stil' => ['label' => 'Stil', 'width' => 1600, 'align' => 'start'],
+        'kategorija' => ['label' => 'Kategorija', 'width' => 1500, 'align' => 'start'],
+        'lijecnicki' => ['label' => 'Liječnički pregled', 'width' => 1500, 'align' => 'center'],
+        'kup' => ['label' => 'Kup', 'width' => 700, 'align' => 'center'],
+        'smjena' => ['label' => 'Smjena/dan', 'width' => 1200, 'align' => 'center'],
+        'obrok' => ['label' => 'Obrok', 'width' => 1100, 'align' => 'start'],
+        'napomena' => ['label' => 'Napomena', 'width' => 2600, 'align' => 'start'],
+    ];
+
+    private const PRIJAVA_DOKUMENT_TARGET_WIDTH = 14500;
+
     /**
      * Prikazuje administratorski popis nadolazećih turnira i formu za unos/izmjenu.
      */
@@ -269,6 +302,7 @@ class NadolazeciTurniriController extends Controller
             'csvPoljaPrijava' => self::CSV_EXPORT_POLJA_PRIJAVA,
             'csvZadanaPoljaPrijava' => self::CSV_EXPORT_ZADANA_POLJA_PRIJAVA,
             'dokumentPrijava' => $dokumentPrijava,
+            'prijavaDokumentOpcionalnaPolja' => self::PRIJAVA_DOKUMENT_OPCIONALNA_POLJA,
             'emailDefaultSubject' => $emailDefaultSubject,
             'adminClanoviZaPrijavu' => $adminClanoviZaPrijavu,
             'adminStiloviZaPrijavu' => $this->stiloviZaPrijavu(),
@@ -511,9 +545,9 @@ class NadolazeciTurniriController extends Controller
     /**
      * Preuzima prijavnicu turnira u DOCX formatu.
      */
-    public function adminDownloadPrijavaDocx(NadolazeciTurnir $turnir)
+    public function adminDownloadPrijavaDocx(Request $request, NadolazeciTurnir $turnir)
     {
-        $podaci = $this->podaciZaPrijavaDokument($turnir);
+        $podaci = $this->podaciZaPrijavaDokument($turnir, $this->odabranaPrijavaDokumentPolja($request));
         $docxSadrzaj = $this->generirajPrijavaDocxSadrzaj($podaci);
         $nazivDatoteke = $this->nazivDatotekePrijave($turnir, 'docx');
 
@@ -527,9 +561,9 @@ class NadolazeciTurniriController extends Controller
     /**
      * Preuzima prijavnicu turnira u PDF formatu.
      */
-    public function adminDownloadPrijavaPdf(NadolazeciTurnir $turnir)
+    public function adminDownloadPrijavaPdf(Request $request, NadolazeciTurnir $turnir)
     {
-        $podaci = $this->podaciZaPrijavaDokument($turnir);
+        $podaci = $this->podaciZaPrijavaDokument($turnir, $this->odabranaPrijavaDokumentPolja($request));
         $pdf = Pdf::loadView('admin.nadolazeciTurniri.prijavaDokumentPdf', $podaci)
             ->setPaper('a4', 'landscape');
 
@@ -542,12 +576,13 @@ class NadolazeciTurniriController extends Controller
     public function adminPosaljiPrijavaEmail(Request $request, NadolazeciTurnir $turnir): RedirectResponse
     {
         $validated = $request->validate([
-            'email_to' => ['required', 'email:rfc', 'max:191'],
+            'email_to' => ['required', 'string', 'max:1000'],
             'email_subject' => ['required', 'string', 'max:191'],
             'email_poruka' => ['nullable', 'string', 'max:5000'],
         ]);
 
-        $podaci = $this->podaciZaPrijavaDokument($turnir);
+        $emailPrimatelji = $this->emailPrimateljiIzUnosa((string) $validated['email_to']);
+        $podaci = $this->podaciZaPrijavaDokument($turnir, $this->odabranaPrijavaDokumentPolja($request));
         $docxNaziv = $this->nazivDatotekePrijave($turnir, 'docx');
         $pdfNaziv = $this->nazivDatotekePrijave($turnir, 'pdf');
         $docxSadrzaj = $this->generirajPrijavaDocxSadrzaj($podaci);
@@ -564,9 +599,9 @@ class NadolazeciTurniriController extends Controller
         $imapAppendOk = false;
 
         try {
-            Mail::send([], [], function ($message) use ($validated, $htmlTijelo, $docxNaziv, $docxSadrzaj, $pdfNaziv, $pdfSadrzaj, &$symfonyMessage): void {
+            Mail::send([], [], function ($message) use ($validated, $emailPrimatelji, $htmlTijelo, $docxNaziv, $docxSadrzaj, $pdfNaziv, $pdfSadrzaj, &$symfonyMessage): void {
                 $message
-                    ->to((string) $validated['email_to'])
+                    ->to($emailPrimatelji)
                     ->subject((string) $validated['email_subject'])
                     ->html($htmlTijelo);
 
@@ -2055,6 +2090,7 @@ class NadolazeciTurniriController extends Controller
      *     potpisSvgInline:?string,
      *     potpisPredsjednikPath:?string,
      *     pecatKlubaPath:?string,
+     *     kolone:array<int, array{key:string,label:string,width:int,align:string}>,
      *     redovi:array<int, array{
      *         rb:int,
      *         licenca:string,
@@ -2064,13 +2100,16 @@ class NadolazeciTurniriController extends Controller
      *         kategorija:string,
      *         lijecnicki:string,
      *         kup:string,
+     *         smjena:string,
      *         obrok:string,
      *         napomena:string
      *     }>
      * }
      */
-    private function podaciZaPrijavaDokument(NadolazeciTurnir $turnir): array
+    private function podaciZaPrijavaDokument(NadolazeciTurnir $turnir, ?array $odabranaOpcionalnaPolja = null): array
     {
+        $kolone = $this->prijavaDokumentKolone($odabranaOpcionalnaPolja ?? array_keys(self::PRIJAVA_DOKUMENT_OPCIONALNA_POLJA));
+
         $turnir->loadMissing([
             'prijave' => fn ($query) => $query
                 ->where('status', PrijavaTurnira::STATUS_ACTIVE)
@@ -2119,6 +2158,7 @@ class NadolazeciTurniriController extends Controller
                 'kategorija' => trim((string) ($prijava->kategorija?->naziv ?? '')),
                 'lijecnicki' => $lijecnicki,
                 'kup' => $prijava->sudjelujem_u_kupu ? 'DA' : '',
+                'smjena' => trim((string) $prijava->terminPrijaveLabel()),
                 'obrok' => $prijava->obrokLabel(),
                 'napomena' => trim((string) ($prijava->napomena_clana ?? '')),
             ];
@@ -2135,6 +2175,7 @@ class NadolazeciTurniriController extends Controller
                 'kategorija' => '',
                 'lijecnicki' => '',
                 'kup' => '',
+                'smjena' => '',
                 'obrok' => '',
                 'napomena' => '',
             ];
@@ -2181,6 +2222,7 @@ class NadolazeciTurniriController extends Controller
             'potpisSvgInline' => $potpisSvgInline,
             'potpisPredsjednikPath' => $potpisPredsjednikPath,
             'pecatKlubaPath' => $pecatKlubaPath,
+            'kolone' => $kolone,
             'redovi' => $redovi,
         ];
     }
@@ -2379,31 +2421,26 @@ class NadolazeciTurniriController extends Controller
             ]);
 
             $table = $section->addTable('PrijavnicaTable');
-            $sirineKolona = [500, 900, 1200, 1400, 1700, 1700, 1600, 900, 1500, 3200];
-            $zaglavlja = ['R. br.', 'Licenca', 'Ime', 'Prezime', 'Stil', 'Kategorija', 'Liječnički pregled', 'Kup', 'Obrok', 'Napomena'];
+            $kolone = (array) ($podaci['kolone'] ?? $this->prijavaDokumentKolone(array_keys(self::PRIJAVA_DOKUMENT_OPCIONALNA_POLJA)));
             $headerCellStyle = ['valign' => 'center'];
             $bodyCellStyle = ['valign' => 'center'];
             $headerFont = ['bold' => true, 'size' => 9, 'color' => '111827'];
             $bodyFont = ['size' => 9, 'color' => '111827'];
 
             $table->addRow(480);
-            foreach ($zaglavlja as $index => $zaglavlje) {
-                $table->addCell($sirineKolona[$index], $headerCellStyle)
-                    ->addText($zaglavlje, $headerFont, ['alignment' => Jc::CENTER]);
+            foreach ($kolone as $kolona) {
+                $table->addCell((int) ($kolona['width'] ?? 1000), $headerCellStyle)
+                    ->addText((string) ($kolona['label'] ?? ''), $headerFont, ['alignment' => Jc::CENTER]);
             }
 
             foreach ((array) ($podaci['redovi'] ?? []) as $red) {
                 $table->addRow(360);
-                $table->addCell($sirineKolona[0], $bodyCellStyle)->addText((string) ($red['rb'] ?? ''), $bodyFont, ['alignment' => Jc::CENTER]);
-                $table->addCell($sirineKolona[1], $bodyCellStyle)->addText((string) ($red['licenca'] ?? ''), $bodyFont, ['alignment' => Jc::CENTER]);
-                $table->addCell($sirineKolona[2], $bodyCellStyle)->addText((string) ($red['ime'] ?? ''), $bodyFont, ['alignment' => Jc::START]);
-                $table->addCell($sirineKolona[3], $bodyCellStyle)->addText((string) ($red['prezime'] ?? ''), $bodyFont, ['alignment' => Jc::START]);
-                $table->addCell($sirineKolona[4], $bodyCellStyle)->addText((string) ($red['stil'] ?? ''), $bodyFont, ['alignment' => Jc::START]);
-                $table->addCell($sirineKolona[5], $bodyCellStyle)->addText((string) ($red['kategorija'] ?? ''), $bodyFont, ['alignment' => Jc::START]);
-                $table->addCell($sirineKolona[6], $bodyCellStyle)->addText((string) ($red['lijecnicki'] ?? ''), $bodyFont, ['alignment' => Jc::CENTER]);
-                $table->addCell($sirineKolona[7], $bodyCellStyle)->addText((string) ($red['kup'] ?? ''), $bodyFont, ['alignment' => Jc::CENTER]);
-                $table->addCell($sirineKolona[8], $bodyCellStyle)->addText((string) ($red['obrok'] ?? ''), $bodyFont, ['alignment' => Jc::START]);
-                $table->addCell($sirineKolona[9], $bodyCellStyle)->addText((string) ($red['napomena'] ?? ''), $bodyFont, ['alignment' => Jc::START]);
+                foreach ($kolone as $kolona) {
+                    $kljuc = (string) ($kolona['key'] ?? '');
+                    $poravnanje = (string) ($kolona['align'] ?? 'start') === 'center' ? Jc::CENTER : Jc::START;
+                    $table->addCell((int) ($kolona['width'] ?? 1000), $bodyCellStyle)
+                        ->addText((string) ($red[$kljuc] ?? ''), $bodyFont, ['alignment' => $poravnanje]);
+                }
             }
 
             $section->addTextBreak(1);
@@ -2452,6 +2489,108 @@ class NadolazeciTurniriController extends Controller
         $ext = ltrim(trim($ekstenzija), '.');
 
         return 'prijava_'.$slug.'_'.$datum.'.'.$ext;
+    }
+
+    /**
+     * Vraća opcionalna polja koja se prikazuju u generiranoj prijavnici.
+     *
+     * @return array<int, string>
+     */
+    private function odabranaPrijavaDokumentPolja(Request $request): array
+    {
+        if (! $request->boolean('document_fields_submitted')) {
+            return array_keys(self::PRIJAVA_DOKUMENT_OPCIONALNA_POLJA);
+        }
+
+        $trazenaPolja = array_map('strval', (array) $request->input('document_fields', []));
+        $odabranaPolja = [];
+
+        foreach (array_keys(self::PRIJAVA_DOKUMENT_OPCIONALNA_POLJA) as $polje) {
+            if (in_array($polje, $trazenaPolja, true)) {
+                $odabranaPolja[] = $polje;
+            }
+        }
+
+        return $odabranaPolja;
+    }
+
+    /**
+     * Slaže metapodatke stupaca prijavnice i skalira širine na raspoloživu širinu stranice.
+     *
+     * @param  array<int, string>  $odabranaOpcionalnaPolja
+     * @return array<int, array{key:string,label:string,width:int,align:string}>
+     */
+    private function prijavaDokumentKolone(array $odabranaOpcionalnaPolja): array
+    {
+        $kljucevi = self::PRIJAVA_DOKUMENT_STALNE_KOLONE;
+        foreach (array_keys(self::PRIJAVA_DOKUMENT_OPCIONALNA_POLJA) as $polje) {
+            if (in_array($polje, $odabranaOpcionalnaPolja, true)) {
+                $kljucevi[] = $polje;
+            }
+        }
+
+        $kolone = [];
+        $ukupnaSirina = 0;
+        foreach ($kljucevi as $kljuc) {
+            $definicija = self::PRIJAVA_DOKUMENT_KOLONE[$kljuc] ?? null;
+            if (! is_array($definicija)) {
+                continue;
+            }
+
+            $sirina = (int) ($definicija['width'] ?? 0);
+            $ukupnaSirina += $sirina;
+            $kolone[] = [
+                'key' => $kljuc,
+                'label' => (string) ($definicija['label'] ?? $kljuc),
+                'width' => $sirina,
+                'align' => (string) ($definicija['align'] ?? 'start'),
+            ];
+        }
+
+        if ($ukupnaSirina <= 0) {
+            return $kolone;
+        }
+
+        foreach ($kolone as &$kolona) {
+            $kolona['width'] = max(450, (int) round(((int) $kolona['width'] * self::PRIJAVA_DOKUMENT_TARGET_WIDTH) / $ukupnaSirina));
+        }
+        unset($kolona);
+
+        return $kolone;
+    }
+
+    /**
+     * Parsira e-mail primatelje odvojene točka-zarezom.
+     *
+     * @return array<int, string>
+     */
+    private function emailPrimateljiIzUnosa(string $unos): array
+    {
+        $adrese = preg_split('/;/', $unos) ?: [];
+        $primatelji = [];
+        $neispravneAdrese = [];
+
+        foreach ($adrese as $adresa) {
+            $email = mb_strtolower(trim((string) $adresa), 'UTF-8');
+            if ($email === '') {
+                continue;
+            }
+
+            if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $neispravneAdrese[] = $email;
+                continue;
+            }
+
+            $primatelji[$email] = $email;
+        }
+
+        if ($primatelji === [] || $neispravneAdrese !== []) {
+            throw ValidationException::withMessages([
+                'email_to' => 'Upišite ispravne e-mail adrese odvojene znakom ;',
+            ]);
+        }
+
+        return array_values($primatelji);
     }
 
     /**

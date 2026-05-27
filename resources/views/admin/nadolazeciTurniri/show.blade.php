@@ -6,6 +6,11 @@
         $turnirJeProsao = $turnir->datum?->copy()->startOfDay()?->lte(now()->startOfDay()) ?? false;
         $otvoriPrijavaEmailModal = $errors->any() && old('_form_context') === 'prijava_email';
         $otvoriAdminDodajModal = $errors->any() && old('_form_context') === 'admin_dodaj_prijavu';
+        $prijavaDokumentOpcionalnaPolja = $prijavaDokumentOpcionalnaPolja ?? [];
+        $oldPrijavaDokumentPolja = $otvoriPrijavaEmailModal && old('document_fields_submitted') !== null
+            ? array_map('strval', (array) old('document_fields', []))
+            : array_keys($prijavaDokumentOpcionalnaPolja);
+        $odabranaPrijavaDokumentPolja = array_values(array_intersect(array_keys($prijavaDokumentOpcionalnaPolja), $oldPrijavaDokumentPolja));
     @endphp
     <style>
         .section-collapse-toggle .when-open,
@@ -19,6 +24,39 @@
 
         .section-collapse-toggle[aria-expanded="false"] .when-open {
             display: none;
+        }
+
+        .prijava-scrollable-modal {
+            height: calc(100vh - 2rem);
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .prijava-scrollable-modal .modal-content {
+            max-height: 100%;
+            overflow: hidden;
+        }
+
+        .prijava-scrollable-modal .prijava-modal-form {
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .prijava-scrollable-modal .modal-body {
+            min-height: 0;
+            overflow-y: auto;
+        }
+
+        .prijava-scrollable-modal .modal-footer {
+            flex-shrink: 0;
+        }
+
+        @media (max-height: 700px) {
+            .prijava-scrollable-modal {
+                height: calc(100vh - 1rem);
+                margin-top: .5rem;
+                margin-bottom: .5rem;
+            }
         }
     </style>
     <div class="container-xxl bg-white shadow mb-3">
@@ -64,8 +102,8 @@
                         </button>
                     </div>
                     <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 ms-auto">
-                        <a href="{{ route('admin.nadolazeci_turniri.prijava_docx', $turnir) }}" class="btn btn-sm btn-primary">Prijava .docx</a>
-                        <a href="{{ route('admin.nadolazeci_turniri.prijava_pdf', $turnir) }}" class="btn btn-sm btn-primary">Prijava .pdf</a>
+                        <a href="{{ route('admin.nadolazeci_turniri.prijava_docx', $turnir) }}" class="btn btn-sm btn-primary js-prijava-document-export-link">Prijava .docx</a>
+                        <a href="{{ route('admin.nadolazeci_turniri.prijava_pdf', $turnir) }}" class="btn btn-sm btn-primary js-prijava-document-export-link">Prijava .pdf</a>
                         <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#posaljiPrijavaEmailModal">
                             Pošalji prijavu e-mailom
                         </button>
@@ -77,6 +115,21 @@
                         @endif
                         <a href="{{ route('admin.nadolazeci_turniri.index') }}" class="btn btn-sm btn-secondary">Povratak</a>
                     </div>
+                </div>
+            </div>
+            <div class="col-12 mb-3">
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="fw-semibold">Stupci u prijavnici:</span>
+                    @foreach($prijavaDokumentOpcionalnaPolja as $polje => $nazivPolja)
+                        <div class="form-check mb-0">
+                            <input class="form-check-input js-prijava-document-field"
+                                   type="checkbox"
+                                   value="{{ $polje }}"
+                                   id="prijava-dokument-polje-{{ $polje }}"
+                                @checked(in_array($polje, $odabranaPrijavaDokumentPolja, true))>
+                            <label class="form-check-label" for="prijava-dokument-polje-{{ $polje }}">{{ $nazivPolja }}</label>
+                        </div>
+                    @endforeach
                 </div>
             </div>
             <div class="col-12 table-responsive">
@@ -327,7 +380,7 @@
     </div>
 
     <div class="modal fade" id="adminDodajPrijavuModal" tabindex="-1" aria-labelledby="adminDodajPrijavuTitle" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable prijava-scrollable-modal">
             <div class="modal-content">
                 <div class="modal-header bg-danger">
                     <h5 class="modal-title text-white" id="adminDodajPrijavuTitle">Administratorski unos prijave</h5>
@@ -336,7 +389,7 @@
                 @php
                     $adminOdabraniClanId = (int) old('clan_id', (int) ($adminClanoviZaPrijavu->first()->id ?? 0));
                 @endphp
-                <form action="{{ route('admin.nadolazeci_turniri.prijave.admin_dodaj', $turnir) }}" method="POST" class="d-flex flex-column h-100" id="admin-dodaj-prijavu-form">
+                <form action="{{ route('admin.nadolazeci_turniri.prijave.admin_dodaj', $turnir) }}" method="POST" class="d-flex flex-column flex-grow-1 prijava-modal-form" id="admin-dodaj-prijavu-form">
                     @csrf
                     <input type="hidden" name="_form_context" value="admin_dodaj_prijavu">
                     <div class="modal-body overflow-auto">
@@ -463,27 +516,36 @@
     </div>
 
     <div class="modal fade" id="posaljiPrijavaEmailModal" tabindex="-1" aria-labelledby="posaljiPrijavaEmailTitle" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable prijava-scrollable-modal">
             <div class="modal-content">
                 <div class="modal-header bg-danger">
                     <h5 class="modal-title text-white" id="posaljiPrijavaEmailTitle">Slanje prijavnice e-mailom</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Zatvori"></button>
                 </div>
-                <form action="{{ route('admin.nadolazeci_turniri.prijava_email', $turnir) }}" method="POST" class="d-flex flex-column h-100">
+                <form action="{{ route('admin.nadolazeci_turniri.prijava_email', $turnir) }}" method="POST" class="d-flex flex-column flex-grow-1 prijava-modal-form" id="prijava-email-form">
                     @csrf
                     <input type="hidden" name="_form_context" value="prijava_email">
+                    <input type="hidden" name="document_fields_submitted" value="1">
+                    <div id="prijava-email-document-fields">
+                        @foreach($odabranaPrijavaDokumentPolja as $polje)
+                            <input type="hidden" name="document_fields[]" value="{{ $polje }}">
+                        @endforeach
+                    </div>
                     <div class="modal-body overflow-auto">
                         <div class="row g-3">
                             <div class="col-lg-6">
                                 <label for="email_to" class="form-label fw-semibold mb-1">E-mail primatelja</label>
-                                <input type="email"
-                                       class="form-control"
+                                <input type="text"
+                                       class="form-control @error('email_to') is-invalid @enderror"
                                        id="email_to"
                                        name="email_to"
-                                       maxlength="191"
+                                       maxlength="1000"
                                        value="{{ old('email_to') }}"
-                                       placeholder="npr. prijave@domena.hr"
+                                       placeholder="npr. prijave@domena.hr; druga@domena.hr"
                                        required>
+                                @error('email_to')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
                             </div>
                             <div class="col-lg-6">
                                 <label for="email_subject" class="form-label fw-semibold mb-1">Naslov poruke</label>
@@ -516,6 +578,7 @@
                                 <div class="table-responsive">
                                     @include('admin.nadolazeciTurniri.partials.prijavaDokumentTabela', [
                                         'redovi' => $dokumentPrijava['redovi'],
+                                        'kolone' => $dokumentPrijava['kolone'],
                                     ])
                                 </div>
                             </div>
@@ -562,6 +625,89 @@
             </div>
         </div>
     </div>
+
+    <script>
+        (function () {
+            const optionalFields = @json(array_keys($prijavaDokumentOpcionalnaPolja));
+            const fieldCheckboxes = Array.from(document.querySelectorAll('.js-prijava-document-field'))
+                .filter((element) => element instanceof HTMLInputElement);
+            const exportLinks = Array.from(document.querySelectorAll('.js-prijava-document-export-link'))
+                .filter((element) => element instanceof HTMLAnchorElement);
+            const emailFormElement = document.getElementById('prijava-email-form');
+            const emailForm = emailFormElement instanceof HTMLFormElement ? emailFormElement : null;
+            const hiddenFieldsContainer = document.getElementById('prijava-email-document-fields');
+
+            if (fieldCheckboxes.length === 0) {
+                return;
+            }
+
+            function selectedFields() {
+                return fieldCheckboxes
+                    .filter((checkbox) => checkbox.checked)
+                    .map((checkbox) => String(checkbox.value || ''))
+                    .filter((value) => optionalFields.includes(value));
+            }
+
+            function syncPreviewColumns() {
+                const selected = new Set(selectedFields());
+                document.querySelectorAll('[data-document-field]').forEach((element) => {
+                    const field = String(element.getAttribute('data-document-field') || '');
+                    if (!optionalFields.includes(field)) {
+                        return;
+                    }
+
+                    element.classList.toggle('d-none', !selected.has(field));
+                });
+            }
+
+            function syncEmailHiddenFields() {
+                if (!(hiddenFieldsContainer instanceof HTMLElement)) {
+                    return;
+                }
+
+                hiddenFieldsContainer.innerHTML = '';
+                selectedFields().forEach((field) => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'document_fields[]';
+                    input.value = field;
+                    hiddenFieldsContainer.appendChild(input);
+                });
+            }
+
+            function appendFieldsToUrl(url) {
+                url.searchParams.set('document_fields_submitted', '1');
+                url.searchParams.delete('document_fields');
+                url.searchParams.delete('document_fields[]');
+
+                selectedFields().forEach((field) => {
+                    url.searchParams.append('document_fields[]', field);
+                });
+            }
+
+            fieldCheckboxes.forEach((checkbox) => {
+                checkbox.addEventListener('change', function () {
+                    syncPreviewColumns();
+                    syncEmailHiddenFields();
+                });
+            });
+
+            exportLinks.forEach((link) => {
+                link.addEventListener('click', function () {
+                    const url = new URL(link.href, window.location.href);
+                    appendFieldsToUrl(url);
+                    link.href = url.toString();
+                });
+            });
+
+            if (emailForm instanceof HTMLFormElement) {
+                emailForm.addEventListener('submit', syncEmailHiddenFields);
+            }
+
+            syncPreviewColumns();
+            syncEmailHiddenFields();
+        })();
+    </script>
 
     <script>
         (function () {

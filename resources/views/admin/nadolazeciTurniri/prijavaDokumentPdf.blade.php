@@ -146,6 +146,7 @@
 
 @include('admin.nadolazeciTurniri.partials.prijavaDokumentTabela', [
     'redovi' => $redovi,
+    'kolone' => $kolone,
     'tableClass' => '',
 ])
 
