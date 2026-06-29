@@ -9,12 +9,18 @@ use DOMDocument;
 use DOMElement;
 use DOMXPath;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 class ImportArcheryKalendarTurniri extends Command
 {
+    private const DEFAULT_SOURCE_URL = 'https://www.archery.hr/kalendar.php?lang=hr&module=1';
+
+    private const TITLE_UPDATE_SIMILARITY_THRESHOLD = 50.0;
+
     protected $signature = 'turniri:import-archery
-        {--url=https://www.archery.hr/kalendar : URL izvora kalendara}
+        {--url= : URL izvora kalendara}
         {--year=* : Godina(e) za import, npr. --year=2026}
         {--include-past : Uključi i prošle turnire}
         {--dry-run : Samo pregled bez spremanja u bazu}
@@ -25,7 +31,7 @@ class ImportArcheryKalendarTurniri extends Command
 
     public function handle(): int
     {
-        $url = trim((string) $this->option('url'));
+        $url = trim((string) ($this->option('url') ?: self::DEFAULT_SOURCE_URL));
         if ($url === '') {
             $this->error('URL izvora ne može biti prazan.');
 
@@ -84,6 +90,7 @@ class ImportArcheryKalendarTurniri extends Command
         $processed = 0;
         $skippedNoTipDetails = [];
         $skippedInvalidDateDetails = [];
+        $similarityUpdateDetails = [];
 
         foreach ($records as $record) {
             $parsedDate = $this->parseDateRange((string) $record['datum_raw'], (int) $record['year']);
@@ -107,7 +114,7 @@ class ImportArcheryKalendarTurniri extends Command
                 continue;
             }
 
-            $tipId = $this->resolveTipTurniraId((string) $record['disciplina'], $tipovi);
+            $tipId = $this->resolveTipTurniraId((string) $record['disciplina'], $tipovi, (string) $record['naziv']);
             if ($tipId === null && $fallbackTipId !== null) {
                 $tipId = $fallbackTipId;
             }
@@ -122,19 +129,27 @@ class ImportArcheryKalendarTurniri extends Command
             }
 
             $processed++;
+            $match = $this->findExistingTurnirForImport(
+                $datumOd,
+                (string) $record['naziv'],
+                (string) $record['mjesto'],
+            );
+            $turnir = $match['turnir'];
+            $matchType = $match['type'];
+            $matchSimilarity = $match['similarity'];
+
             if ($dryRun) {
-                $this->line('[DRY-RUN] '.$datumOd->format('d.m.Y.')
+                $this->line('[DRY-RUN] '.$this->describeImportAction(
+                    $turnir,
+                    $matchType,
+                    $matchSimilarity,
+                    $skipExisting,
+                ).' | '.$datumOd->format('d.m.Y.')
                     .($datumDo ? ' - '.$datumDo->format('d.m.Y.') : '')
                     .' | '.$record['naziv'].' | '.$record['disciplina'].' -> tip ID '.$tipId);
 
                 continue;
             }
-
-            $turnir = NadolazeciTurnir::query()
-                ->whereDate('datum', $datumOd->toDateString())
-                ->where('naziv', (string) $record['naziv'])
-                ->where('mjesto', (string) $record['mjesto'])
-                ->first();
 
             if (! $turnir instanceof NadolazeciTurnir) {
                 $turnir = new NadolazeciTurnir;
@@ -147,6 +162,9 @@ class ImportArcheryKalendarTurniri extends Command
                 }
 
                 $updated++;
+                if ($matchType === 'similarity') {
+                    $similarityUpdateDetails[] = $this->formatSimilarityUpdateDetail($turnir, (string) $record['naziv'], $matchSimilarity);
+                }
             }
 
             $turnir->naziv = trim((string) $record['naziv']);
@@ -171,6 +189,14 @@ class ImportArcheryKalendarTurniri extends Command
         $this->line('Preskočeno (datum nevažeći): '.$skippedInvalidDate);
         $this->line('Preskočeno (postojeći zapisi): '.$skippedExisting);
 
+        if (count($similarityUpdateDetails) > 0) {
+            $this->newLine();
+            $this->warn('Ažurirano po istom datumu i sličnosti naziva:');
+            foreach ($similarityUpdateDetails as $detail) {
+                $this->line('- '.$detail);
+            }
+        }
+
         if (count($skippedNoTipDetails) > 0) {
             $this->newLine();
             $this->warn('Popis turnira preskočenih zbog nepoznate discipline:');
@@ -191,16 +217,229 @@ class ImportArcheryKalendarTurniri extends Command
     }
 
     /**
+     * @return array{turnir:?NadolazeciTurnir,type:?string,similarity:float}
+     */
+    private function findExistingTurnirForImport(Carbon $datumOd, string $naziv, string $mjesto): array
+    {
+        $exact = NadolazeciTurnir::query()
+            ->whereDate('datum', $datumOd->toDateString())
+            ->where('naziv', $naziv)
+            ->where('mjesto', $mjesto)
+            ->first();
+        if ($exact instanceof NadolazeciTurnir) {
+            return [
+                'turnir' => $exact,
+                'type' => 'exact',
+                'similarity' => 100.0,
+            ];
+        }
+
+        $sourceTitle = $this->normalizeTitleForMatch($naziv);
+        if ($sourceTitle === '') {
+            return [
+                'turnir' => null,
+                'type' => null,
+                'similarity' => 0.0,
+            ];
+        }
+
+        $bestTurnir = null;
+        $bestSimilarity = 0.0;
+        $candidates = NadolazeciTurnir::query()
+            ->whereDate('datum', $datumOd->toDateString())
+            ->get(['id', 'naziv', 'mjesto', 'datum']);
+
+        foreach ($candidates as $candidate) {
+            if (! $candidate instanceof NadolazeciTurnir) {
+                continue;
+            }
+
+            $candidateTitle = $this->normalizeTitleForMatch((string) $candidate->naziv);
+            if ($candidateTitle === '') {
+                continue;
+            }
+
+            $similarity = $this->titleSimilarityPercent($sourceTitle, $candidateTitle);
+            if ($similarity > $bestSimilarity) {
+                $bestSimilarity = $similarity;
+                $bestTurnir = $candidate;
+            }
+        }
+
+        if ($bestTurnir instanceof NadolazeciTurnir && $bestSimilarity >= self::TITLE_UPDATE_SIMILARITY_THRESHOLD) {
+            return [
+                'turnir' => $bestTurnir,
+                'type' => 'similarity',
+                'similarity' => $bestSimilarity,
+            ];
+        }
+
+        return [
+            'turnir' => null,
+            'type' => null,
+            'similarity' => $bestSimilarity,
+        ];
+    }
+
+    private function describeImportAction(?NadolazeciTurnir $turnir, ?string $matchType, float $similarity, bool $skipExisting): string
+    {
+        if (! $turnir instanceof NadolazeciTurnir) {
+            return 'CREATE';
+        }
+
+        if ($skipExisting) {
+            return 'SKIP existing';
+        }
+
+        if ($matchType === 'similarity') {
+            return 'UPDATE similarity '.round($similarity).'% (postojeći ID '.$turnir->id.': '.$turnir->naziv.')';
+        }
+
+        return 'UPDATE exact (postojeći ID '.$turnir->id.')';
+    }
+
+    private function formatSimilarityUpdateDetail(NadolazeciTurnir $turnir, string $sourceTitle, float $similarity): string
+    {
+        return round($similarity).'% | postojeći ID '.$turnir->id.': '.$turnir->naziv.' -> '.$sourceTitle;
+    }
+
+    /**
      * @return array<int, array{year:int,naziv:string,organizator:string,mjesto:string,datum_raw:string,disciplina:string}>
      */
     private function parseRowsFromHtml(string $html, ?array $yearFilter = null): array
     {
-        $dom = new DOMDocument;
+        $dom = new DOMDocument('1.0', 'UTF-8');
         libxml_use_internal_errors(true);
-        $dom->loadHTML($html);
+        $dom->loadHTML('<?xml encoding="UTF-8">'.$html);
         libxml_clear_errors();
 
         $xpath = new DOMXPath($dom);
+        $rows = $this->parseRowsFromKalendarModule($xpath, $yearFilter);
+        if (count($rows) > 0) {
+            return $rows;
+        }
+
+        return $this->parseRowsFromLegacyTables($xpath, $dom, $yearFilter);
+    }
+
+    /**
+     * @return array<int, array{year:int,naziv:string,organizator:string,mjesto:string,datum_raw:string,disciplina:string}>
+     */
+    private function parseRowsFromKalendarModule(DOMXPath $xpath, ?array $yearFilter = null): array
+    {
+        $yearBlocks = $xpath->query("//*[contains(concat(' ', normalize-space(@class), ' '), ' kal-godina-blok ')]");
+        if ($yearBlocks === false || $yearBlocks->length === 0) {
+            return [];
+        }
+
+        $rows = [];
+        /** @var DOMElement $yearBlock */
+        foreach ($yearBlocks as $yearBlock) {
+            $year = (int) $yearBlock->getAttribute('data-godina');
+            if ($year <= 0) {
+                continue;
+            }
+
+            if (is_array($yearFilter) && ! in_array($year, $yearFilter, true)) {
+                continue;
+            }
+
+            $items = $xpath->query(".//*[contains(concat(' ', normalize-space(@class), ' '), ' kal-accordion-item ')]", $yearBlock);
+            if ($items === false) {
+                continue;
+            }
+
+            /** @var DOMElement $item */
+            foreach ($items as $item) {
+                $titleNodes = $xpath->query(".//*[contains(concat(' ', normalize-space(@class), ' '), ' kal-accordion-title ')]", $item);
+                $titleNode = $titleNodes !== false ? $titleNodes->item(0) : null;
+                $naziv = $titleNode instanceof DOMElement ? $this->extractKalendarModuleTitle($titleNode) : null;
+                $meta = $this->extractKalendarModuleMeta($xpath, $item);
+
+                $organizator = $meta['organizator'] ?? '';
+                $mjesto = $meta['mjesto'] ?? null;
+                $datumRaw = $meta['datum'] ?? null;
+                $disciplina = $meta['format'] ?? $meta['disciplina'] ?? null;
+
+                if ($naziv === null || $mjesto === null || $datumRaw === null || $disciplina === null) {
+                    continue;
+                }
+
+                $rows[] = [
+                    'year' => $year,
+                    'naziv' => $naziv,
+                    'organizator' => $organizator,
+                    'mjesto' => $mjesto,
+                    'datum_raw' => $datumRaw,
+                    'disciplina' => $disciplina,
+                ];
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function extractKalendarModuleMeta(DOMXPath $xpath, DOMElement $item): array
+    {
+        $meta = [];
+        $metaItems = $xpath->query(".//*[contains(concat(' ', normalize-space(@class), ' '), ' kal-meta-item ')]", $item);
+        if ($metaItems === false) {
+            return $meta;
+        }
+
+        /** @var DOMElement $metaItem */
+        foreach ($metaItems as $metaItem) {
+            $labelNodes = $xpath->query(".//*[contains(concat(' ', normalize-space(@class), ' '), ' kal-meta-label ')]", $metaItem);
+            $valueNodes = $xpath->query(".//*[contains(concat(' ', normalize-space(@class), ' '), ' kal-meta-value ')]", $metaItem);
+            $labelNode = $labelNodes !== false ? $labelNodes->item(0) : null;
+            $valueNode = $valueNodes !== false ? $valueNodes->item(0) : null;
+
+            if (! $labelNode instanceof DOMElement || ! $valueNode instanceof DOMElement) {
+                continue;
+            }
+
+            $label = $this->normalizeMetaLabel((string) $labelNode->textContent);
+            $value = $this->normalizeText((string) $valueNode->textContent);
+            if ($label === '' || $value === null) {
+                continue;
+            }
+
+            if (str_contains($label, 'organizator')) {
+                $meta['organizator'] = $value;
+            } elseif (str_contains($label, 'mjesto')) {
+                $meta['mjesto'] = $value;
+            } elseif (str_contains($label, 'datum')) {
+                $meta['datum'] = $value;
+            } elseif (str_contains($label, 'format')) {
+                $meta['format'] = $value;
+            } elseif (str_contains($label, 'disciplina')) {
+                $meta['disciplina'] = $value;
+            }
+        }
+
+        return $meta;
+    }
+
+    private function extractKalendarModuleTitle(DOMElement $titleNode): ?string
+    {
+        $text = '';
+        foreach ($titleNode->childNodes as $childNode) {
+            if ($childNode->nodeType === XML_TEXT_NODE) {
+                $text .= ' '.$childNode->textContent;
+            }
+        }
+
+        return $this->normalizeText($text);
+    }
+
+    /**
+     * @return array<int, array{year:int,naziv:string,organizator:string,mjesto:string,datum_raw:string,disciplina:string}>
+     */
+    private function parseRowsFromLegacyTables(DOMXPath $xpath, DOMDocument $dom, ?array $yearFilter = null): array
+    {
         $tables = $xpath->query("//table[starts-with(@id, 'tbl_')]");
         if ($tables === false) {
             return [];
@@ -253,6 +492,16 @@ class ImportArcheryKalendarTurniri extends Command
         }
 
         return $rows;
+    }
+
+    private function normalizeMetaLabel(string $value): string
+    {
+        $normalized = $this->normalizeText($value);
+        if ($normalized === null) {
+            return '';
+        }
+
+        return mb_strtolower($normalized, 'UTF-8');
     }
 
     private function extractDateCellText(?\DOMNode $node, DOMDocument $dom): ?string
@@ -416,7 +665,7 @@ class ImportArcheryKalendarTurniri extends Command
         }
     }
 
-    private function resolveTipTurniraId(string $disciplina, \Illuminate\Support\Collection $tipovi): ?int
+    private function resolveTipTurniraId(string $disciplina, Collection $tipovi, string $naziv = ''): ?int
     {
         $disciplineNorm = $this->normalizeDiscipline($disciplina);
         if ($disciplineNorm === '') {
@@ -442,6 +691,10 @@ class ImportArcheryKalendarTurniri extends Command
 
         if (str_contains($disciplineNorm, '2X25') && str_contains($disciplineNorm, '2X18')) {
             return $findByContains('2X25+2X18') ?? $findByContains('2X25') ?? $findByContains('2X18');
+        }
+
+        if ($disciplineNorm === 'WA' && str_contains($this->normalizeDiscipline($naziv), 'BOŽI')) {
+            return $findByContains('2X18');
         }
 
         if (str_contains($disciplineNorm, '1440')) {
@@ -483,6 +736,39 @@ class ImportArcheryKalendarTurniri extends Command
         $normalized = is_string($normalized) ? trim($normalized) : '';
 
         return $normalized === '' ? null : $normalized;
+    }
+
+    private function normalizeTitleForMatch(string $value): string
+    {
+        $ascii = Str::ascii($value, 'hr');
+        $upper = mb_strtoupper($ascii, 'UTF-8');
+        $upper = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $upper);
+        $upper = is_string($upper) ? preg_replace('/\s+/u', ' ', trim($upper)) : '';
+
+        return is_string($upper) ? trim($upper) : '';
+    }
+
+    private function titleSimilarityPercent(string $left, string $right): float
+    {
+        if ($left === '' || $right === '') {
+            return 0.0;
+        }
+
+        if ($left === $right) {
+            return 100.0;
+        }
+
+        similar_text($left, $right, $sequencePercent);
+
+        $leftTokens = array_values(array_unique(array_filter(explode(' ', $left))));
+        $rightTokens = array_values(array_unique(array_filter(explode(' ', $right))));
+        $tokenPercent = 0.0;
+        if (count($leftTokens) > 0 && count($rightTokens) > 0) {
+            $intersection = count(array_intersect($leftTokens, $rightTokens));
+            $tokenPercent = (2 * $intersection / (count($leftTokens) + count($rightTokens))) * 100;
+        }
+
+        return max((float) $sequencePercent, $tokenPercent);
     }
 
     private static function normalizeDiscipline(string $value): string

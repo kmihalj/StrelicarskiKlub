@@ -72,9 +72,13 @@ Bootstrap admin je samo privremeni račun za inicijalni handover.
 
 ## Uvoz nadolazećih turnira (archery.hr)
 
+Import koristi novi HSS kalendar na `https://www.archery.hr/kalendar.php?lang=hr&module=1`.
+
 ```bash
 php artisan turniri:import-archery
 ```
+
+Ako zapis s istim datumom i nazivom već postoji, import ga ažurira. Ako točan naziv nije pronađen, ali na isti datum postoji turnir s barem 50% sličnim nazivom, import ažurira taj postojeći zapis umjesto da kreira duplikat. U `--dry-run` načinu ispisuje se hoće li zapis biti `CREATE`, `UPDATE exact` ili `UPDATE similarity`.
 
 Primjeri:
 
@@ -83,4 +87,5 @@ php artisan turniri:import-archery --year=2026 --dry-run
 php artisan turniri:import-archery --year=2026
 php artisan turniri:import-archery --year=2026 --skip-existing
 php artisan turniri:import-archery --year=2026 --include-past
+php artisan turniri:import-archery --url="https://www.archery.hr/kalendar.php?lang=hr&module=1" --year=2026 --dry-run
 ```

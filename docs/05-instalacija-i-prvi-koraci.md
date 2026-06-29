@@ -131,11 +131,13 @@ Ako deploy pipeline odvojeno rješava migracije/seed, prilagodi naredbe prema pr
 
 ## 7. Uvoz nadolazećih turnira (archery.hr)
 
-Za uvoz kalendara koristi artisan komandu:
+Za uvoz kalendara koristi artisan komandu. Zadani izvor je novi HSS kalendar na `https://www.archery.hr/kalendar.php?lang=hr&module=1`.
 
 ```bash
 php artisan turniri:import-archery
 ```
+
+Import prvo traži postojeći zapis s istim datumom, nazivom i mjestom. Ako ga ne nađe, na istom datumu traži najbolji naziv s barem 50% sličnosti i ažurira taj postojeći zapis umjesto stvaranja duplikata. U `--dry-run` načinu ispisuje se planirana akcija: `CREATE`, `UPDATE exact` ili `UPDATE similarity`.
 
 Česti primjeri:
 
@@ -151,6 +153,9 @@ php artisan turniri:import-archery --year=2026 --skip-existing
 
 # uključi i prošle turnire
 php artisan turniri:import-archery --year=2026 --include-past
+
+# ručno zadani izvor kalendara
+php artisan turniri:import-archery --url="https://www.archery.hr/kalendar.php?lang=hr&module=1" --year=2026 --dry-run
 ```
 
 ## 8. Kratka provjera nakon instalacije
@@ -161,4 +166,3 @@ Instalacija se smatra uspješnom kada su ispunjena sva četiri uvjeta:
 2. stvarni korisnik je promoviran u admina,
 3. bootstrap admin više ne postoji,
 4. `Admin` izbornik je vidljiv novom administratoru.
-
