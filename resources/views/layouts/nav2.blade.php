@@ -90,9 +90,9 @@
                     </span>
                     <ul class="dropdown-menu">
                         @isset($menu['Obavijesti'])
-                            @if($menu['Obavijesti']->count() != 0)
+                            @if(count($menu['Obavijesti']) != 0)
                                 @foreach($menu['Obavijesti'] as $obavijest)
-                                    <li><a class="dropdown-item" href="{{ route('javno.clanci.prikaz_clanka', $obavijest) }}">{{ $obavijest->menu_naslov }}</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('javno.clanci.prikaz_clanka', $obavijest['id']) }}">{{ $obavijest['menu_naslov'] }}</a></li>
                                 @endforeach
                             @endif
                         @endisset
@@ -143,9 +143,9 @@
                             @endif
                         @endauth
                         @isset($menu['O nama'])
-                            @if($menu['O nama']->count() != 0)
+                            @if(count($menu['O nama']) != 0)
                                 @foreach($menu['O nama'] as $oNama)
-                                    <li><a class="dropdown-item" href="{{ route('javno.clanci.prikaz_clanka', $oNama) }}">{{ $oNama->menu_naslov }}</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('javno.clanci.prikaz_clanka', $oNama['id']) }}">{{ $oNama['menu_naslov'] }}</a></li>
                                 @endforeach
                             @endif
                         @endisset
@@ -160,9 +160,9 @@
                     </span>
                     <ul class="dropdown-menu">
                         @isset($menu['Strelicarstvo'])
-                            @if($menu['Strelicarstvo']->count() != 0)
+                            @if(count($menu['Strelicarstvo']) != 0)
                                 @foreach($menu['Strelicarstvo'] as $strelicarstvo)
-                                    <li><a class="dropdown-item" href="{{ route('javno.clanci.prikaz_clanka', $strelicarstvo) }}">{{ $strelicarstvo->menu_naslov }}</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('javno.clanci.prikaz_clanka', $strelicarstvo['id']) }}">{{ $strelicarstvo['menu_naslov'] }}</a></li>
                                 @endforeach
                             @endif
                         @endisset

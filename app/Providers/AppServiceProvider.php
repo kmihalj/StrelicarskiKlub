@@ -40,17 +40,23 @@ class AppServiceProvider extends ServiceProvider
         });
 
         View::composer('layouts.nav2', function ($view) {
-            $menu = Cache::remember('nav2_menu_items_v1', now()->addMinutes(10), function (): array {
+            // U cache spremamo samo jednostavne podatke, bez serijaliziranih Eloquent objekata.
+            $menu = Cache::remember('nav2_menu_items_v2', now()->addMinutes(10), function (): array {
                 $stavke = Clanci::query()
                     ->where('menu', '1')
                     ->whereIn('vrsta', ['Obavijest', 'O nama', 'Streličarstvo'])
                     ->orderByDesc('datum')
-                    ->get(['id', 'menu_naslov', 'vrsta']);
+                    ->get(['id', 'menu_naslov', 'vrsta'])
+                    ->map(fn (Clanci $clanak): array => [
+                        'id' => $clanak->id,
+                        'menu_naslov' => $clanak->menu_naslov,
+                        'vrsta' => $clanak->vrsta,
+                    ]);
 
                 return [
-                    'Obavijesti' => $stavke->where('vrsta', 'Obavijest')->values(),
-                    'O nama' => $stavke->where('vrsta', 'O nama')->values(),
-                    'Strelicarstvo' => $stavke->where('vrsta', 'Streličarstvo')->values(),
+                    'Obavijesti' => $stavke->where('vrsta', 'Obavijest')->values()->all(),
+                    'O nama' => $stavke->where('vrsta', 'O nama')->values()->all(),
+                    'Strelicarstvo' => $stavke->where('vrsta', 'Streličarstvo')->values()->all(),
                 ];
             });
 

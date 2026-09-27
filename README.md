@@ -22,7 +22,7 @@ Aktualna dokumentacija je u `docs`:
 
 ## Preduvjeti
 
-1. PHP 8.2+
+1. PHP 8.4+
 2. Composer 2+
 3. MySQL 8+
 4. Node.js 18+ i npm
