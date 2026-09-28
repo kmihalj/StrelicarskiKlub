@@ -93,6 +93,7 @@
 
                     @php
                         $brojAktivnihClanova = $clanovi->filter(fn ($clan) => (int)$clan->aktivan === 1)->count();
+                        $brojNeaktivnihClanova = $clanovi->count() - $brojAktivnihClanova;
                     @endphp
 
                     <div class="col-lg-12 justify-content-center m-3 js-clanovi-table-wrap">
@@ -102,9 +103,18 @@
                                 <input type="text" id="pretraga-clanova-aktivni" class="form-control form-control-sm js-clanovi-search"
                                        placeholder="Upišite ime ili prezime">
                             </div>
-                            <div class="col-12 col-lg-8">
+                            @if($jeAdmin)
+                                <div class="col-12 col-lg-4">
+                                    @include('javno.partials.clanoviFilterSelect', ['filterId' => 'filter-clanova-aktivni'])
+                                </div>
+                            @endif
+                            <div class="col-12 {{ $jeAdmin ? 'col-lg-4' : 'col-lg-8' }}">
                                 <div class="d-flex flex-wrap justify-content-lg-end align-items-end gap-2">
-                                    <span class="fw-semibold">Br. članova: {{ $brojAktivnihClanova }}</span>
+                                    @if($jeAdmin)
+                                        <span class="fw-semibold">Prikazano: <span class="js-clanovi-visible-count">{{ $brojAktivnihClanova }}</span> / {{ $brojAktivnihClanova }}</span>
+                                    @else
+                                        <span class="fw-semibold">Br. članova: {{ $brojAktivnihClanova }}</span>
+                                    @endif
                                     @if($jeAdmin)
                                         <button type="button" class="btn btn-success btn-sm"
                                                 data-bs-toggle="modal" data-bs-target="#CsvExportClanova_modal">
@@ -184,7 +194,7 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div class="small text-muted mt-2 js-clanovi-no-results d-none">Nema rezultata za traženu pretragu.</div>
+                        <div class="small text-muted mt-2 js-clanovi-no-results d-none" role="status">Nema rezultata za traženu pretragu.</div>
                     </div>
                 </div>
             </div>
@@ -218,6 +228,12 @@
                                     <label for="pretraga-clanova-neaktivni" class="form-label mb-1">Pretraga (ime/prezime)</label>
                                     <input type="text" id="pretraga-clanova-neaktivni" class="form-control form-control-sm js-clanovi-search"
                                            placeholder="Upišite ime ili prezime">
+                                </div>
+                                <div class="col-12 col-lg-4">
+                                    @include('javno.partials.clanoviFilterSelect', ['filterId' => 'filter-clanova-neaktivni'])
+                                </div>
+                                <div class="col-12 col-lg-4 text-lg-end">
+                                    <span class="fw-semibold">Prikazano: <span class="js-clanovi-visible-count">{{ $brojNeaktivnihClanova }}</span> / {{ $brojNeaktivnihClanova }}</span>
                                 </div>
                             </div>
 
@@ -286,7 +302,7 @@
                                     </tbody>
                                 </table>
                             </div>
-                            <div class="small text-muted mt-2 js-clanovi-no-results d-none">Nema rezultata za traženu pretragu.</div>
+                            <div class="small text-muted mt-2 js-clanovi-no-results d-none" role="status">Nema rezultata za traženu pretragu.</div>
                         </div>
                     </div>
                 </div>
@@ -397,10 +413,12 @@
                     tableWrappers.forEach((wrapper) => {
                         const controls = wrapper.querySelector('.js-clanovi-controls');
                         const searchInput = wrapper.querySelector('.js-clanovi-search');
+                        const filterSelect = wrapper.querySelector('.js-clanovi-filter');
                         const sortButtons = Array.from(wrapper.querySelectorAll('.js-clanovi-sort-btn'));
                         const nameOrderButton = wrapper.querySelector('.js-clanovi-name-order-btn');
                         const tableBody = wrapper.querySelector('.js-clanovi-body');
                         const noResults = wrapper.querySelector('.js-clanovi-no-results');
+                        const visibleCount = wrapper.querySelector('.js-clanovi-visible-count');
                         const nameHeaderLabel = wrapper.querySelector('.js-clanovi-name-header-label');
 
                         if (!searchInput || sortButtons.length === 0 || !nameOrderButton || !tableBody) {
@@ -498,8 +516,21 @@
                             sortedRows.forEach((row) => tableBody.appendChild(row));
                         };
 
-                        const applySearch = () => {
+                        const matchesFilter = (row, filter) => {
+                            switch (filter) {
+                                case 'licensed': return row.dataset.licensed === '1';
+                                case 'unlicensed': return row.dataset.licensed === '0';
+                                case 'unpaid': return row.dataset.paymentState === 'debt';
+                                case 'paid': return row.dataset.paymentState === 'paid';
+                                case 'medical_invalid': return row.dataset.medicalValid === '0';
+                                case 'medical_valid': return row.dataset.medicalValid === '1';
+                                default: return true;
+                            }
+                        };
+
+                        const applyFilters = () => {
                             const term = normalize(searchInput.value);
+                            const selectedFilter = filterSelect ? filterSelect.value : '';
                             let visibleRows = 0;
 
                             allRows.forEach((row) => {
@@ -508,11 +539,12 @@
                                 const prezimeIme = `${prezime} ${ime}`.trim();
                                 const imePrezime = `${ime} ${prezime}`.trim();
 
-                                const isMatch = term === ''
-                                    || ime.includes(term)
-                                    || prezime.includes(term)
-                                    || prezimeIme.includes(term)
-                                    || imePrezime.includes(term);
+                                const isMatch = term !== ''
+                                    ? ime.includes(term)
+                                        || prezime.includes(term)
+                                        || prezimeIme.includes(term)
+                                        || imePrezime.includes(term)
+                                    : matchesFilter(row, selectedFilter);
 
                                 row.classList.toggle('d-none', !isMatch);
                                 if (isMatch) {
@@ -521,18 +553,41 @@
                             });
 
                             if (noResults) {
-                                noResults.classList.toggle('d-none', term === '' || visibleRows > 0);
+                                noResults.textContent = term !== ''
+                                    ? 'Nema rezultata za traženu pretragu.'
+                                    : 'Nema članova za odabrani filter.';
+                                noResults.classList.toggle('d-none', (term === '' && selectedFilter === '') || visibleRows > 0);
+                            }
+
+                            if (visibleCount) {
+                                visibleCount.textContent = String(visibleRows);
                             }
                         };
 
                         const renderTable = () => {
                             applyNameOrder();
                             sortRows();
-                            applySearch();
+                            if (filterSelect && normalize(searchInput.value) !== '') {
+                                filterSelect.value = '';
+                            }
+                            applyFilters();
                             updateSortButtons();
                         };
 
-                        searchInput.addEventListener('input', applySearch);
+                        searchInput.addEventListener('input', () => {
+                            if (filterSelect) {
+                                filterSelect.value = '';
+                            }
+                            applyFilters();
+                        });
+                        if (filterSelect) {
+                            filterSelect.addEventListener('change', () => {
+                                if (filterSelect.value !== '') {
+                                    searchInput.value = '';
+                                }
+                                applyFilters();
+                            });
+                        }
                         sortButtons.forEach((button) => {
                             button.addEventListener('click', () => {
                                 const clickedField = button.dataset.sortField || 'name';
@@ -546,14 +601,14 @@
 
                                 updateSortButtons();
                                 sortRows();
-                                applySearch();
+                                applyFilters();
                             });
                         });
                         nameOrderButton.addEventListener('click', () => {
                             state.nameOrder = state.nameOrder === 'prezime_ime' ? 'ime_prezime' : 'prezime_ime';
                             applyNameOrder();
                             sortRows();
-                            applySearch();
+                            applyFilters();
                         });
 
                         renderTable();

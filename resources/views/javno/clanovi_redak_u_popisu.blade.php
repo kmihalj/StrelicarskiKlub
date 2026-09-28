@@ -12,10 +12,21 @@
     $granicaPunoljetnosti = strtotime(date('Y-m-d', strtotime('-18 years')));
     $jeMaloljetan = $datumRodjenjaTimestamp !== null && $datumRodjenjaTimestamp > $granicaPunoljetnosti;
     $datumRodjenjaPrikaz = $datumRodjenjaTimestamp !== null ? date('d.m.Y.', $datumRodjenjaTimestamp) : '-';
+    $brojLicence = trim((string) $clan->broj_licence);
+    $imaLicencu = $brojLicence !== '' && mb_strtolower($brojLicence, 'UTF-8') !== 'nema licencu';
+    $imaVazeciLijecnicki = !empty($clan->lijecnicki_do)
+        && \Carbon\Carbon::parse((string) $clan->lijecnicki_do)->startOfDay()->gte(today());
 @endphp
 <tr class="js-clan-row"
     data-ime="{{ trim((string) $clan->Ime) }}"
     data-prezime="{{ trim((string) $clan->Prezime) }}"
+    @if(auth()->check() && (int) auth()->user()->rola === 1)
+        data-licensed="{{ $imaLicencu ? '1' : '0' }}"
+        data-medical-valid="{{ $imaVazeciLijecnicki ? '1' : '0' }}"
+        @if($showPaymentColumn)
+            data-payment-state="{{ is_array($paymentStatus) ? ($paymentStatus['state'] ?? '') : '' }}"
+        @endif
+    @endif
     data-datum-rodjenja="{{ $datumRodjenjaTimestamp ?? '' }}"
     data-godina-registracije="{{ is_null($clan->clan_od) ? '' : (int) $clan->clan_od }}"
     data-lijecnicki-do="{{ $clan->lijecnicki_do ? strtotime($clan->lijecnicki_do) : '' }}"
