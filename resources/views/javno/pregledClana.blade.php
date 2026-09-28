@@ -115,6 +115,9 @@
                     $paymentNoticeTitle = (string)($paymentNotice['title'] ?? '');
                     $paymentNoticeMessage = trim((string)($paymentNotice['message'] ?? ''));
                     $showPaymentDueNotice = !empty($paymentNotice) && str_starts_with($paymentNoticeTitle, 'Potrebna uplata');
+                    $futurePaidMembershipCharges = collect($paymentSummary['paidCharges'] ?? [])
+                        ->filter(fn ($charge) => $charge->source === \App\Services\PaymentTrackingService::SOURCE_AUTO
+                            && $charge->period_start?->toDateString() > now()->toDateString());
                     $korisnikPlacanjaBtnClass = match ($paymentNoticeVariant) {
                         'danger', 'warning' => 'btn-danger',
                         'success' => 'btn-success',
@@ -240,6 +243,16 @@
                                         Pregled treninga
                                     </button>
                                 </div>
+                            </div>
+                        @endif
+                        @if($futurePaidMembershipCharges->isNotEmpty())
+                            <div class="mt-2 d-flex flex-wrap gap-2">
+                                @foreach($futurePaidMembershipCharges as $charge)
+                                    <a href="{{ route('javno.clanovi.placanja', $clan) }}"
+                                       class="badge bg-success text-white text-decoration-none">
+                                        {{ $charge->title }} — plaćeno unaprijed
+                                    </a>
+                                @endforeach
                             </div>
                         @endif
                     </div>

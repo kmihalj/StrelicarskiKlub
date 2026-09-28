@@ -150,7 +150,9 @@
                                                                 <td>{{ number_format((float)$charge->amount, 2, ',', '.') }} EUR</td>
                                                                 <td>
                                                                     @if($isPaid)
-                                                                        <span class="badge bg-success">Plaćeno</span>
+                                                                        <span class="badge bg-success">
+                                                                            {{ $charge->source === PaymentTrackingService::SOURCE_AUTO && $charge->period_start?->toDateString() > now()->toDateString() ? 'Plaćeno unaprijed' : 'Plaćeno' }}
+                                                                        </span>
                                                                     @else
                                                                         <span class="badge bg-danger">Nije plaćeno</span>
                                                                     @endif

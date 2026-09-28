@@ -12,7 +12,7 @@
         $paymentTrackingEnabled = (bool)($paymentSetup['paymentTrackingEnabled'] ?? false);
         $paymentOptions = $paymentSetup['paymentOptions'] ?? collect();
         $paymentProfile = $paymentSummary['profile'] ?? null;
-        $paymentCharges = $paymentSummary['charges'] ?? collect();
+        $paymentCharges = $paymentSummary['adminCharges'] ?? collect();
     @endphp
     <style>
         .admin-collapse-toggle .when-open,
@@ -373,6 +373,8 @@
                                                     $statusFormId = 'status_placanja_' . $charge->id;
                                                     $deleteFormId = 'obrisi_placanje_' . $charge->id;
                                                     $isPaid = $charge->status === $paymentService::STATUS_PAID;
+                                                    $isFuturePeriod = $charge->source === $paymentService::SOURCE_AUTO
+                                                        && $charge->period_start?->toDateString() > now()->toDateString();
                                                     $canDeleteCharge = true;
                                                     $variantOptions = $paymentService->availableVariantsForCharge($charge);
                                                     $selectedVariant = $paymentService->selectedVariantForCharge($charge, !$isPaid);
@@ -418,7 +420,9 @@
                                                     </td>
                                                     <td>
                                                         @if($isPaid)
-                                                            <span class="badge bg-success">Plaćeno</span>
+                                                            <span class="badge bg-success">{{ $isFuturePeriod ? 'Plaćeno unaprijed' : 'Plaćeno' }}</span>
+                                                        @elseif($isFuturePeriod)
+                                                            <span class="badge bg-info text-dark">Buduće razdoblje</span>
                                                         @else
                                                             <span class="badge bg-danger">Nije plaćeno</span>
                                                         @endif

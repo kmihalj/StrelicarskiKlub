@@ -353,6 +353,10 @@ class PlacanjaController extends Controller
             abort(404);
         }
 
+        if (! $this->paymentTrackingService->isChargeVisibleToMember($charge)) {
+            abort(404);
+        }
+
         $validated = $request->validate([
             'payment_variant' => ['nullable', 'string', 'max:64'],
         ]);
@@ -518,6 +522,7 @@ class PlacanjaController extends Controller
             ])
             ->where('status', '!=', PaymentTrackingService::STATUS_DELETED)
             ->get()
+            ->filter(fn (ClanPaymentCharge $charge): bool => $this->paymentTrackingService->isChargeVisibleToMember($charge))
             ->map(fn (ClanPaymentCharge $charge): array => $this->mapClanChargeForReport($charge));
 
         $schoolRows = PolaznikPaymentCharge::query()

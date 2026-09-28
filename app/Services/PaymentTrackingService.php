@@ -840,7 +840,10 @@ class PaymentTrackingService
                 continue;
             }
 
-            $unpaidCharges = $charges->filter(fn (ClanPaymentCharge $charge): bool => $charge->status === self::STATUS_OPEN);
+            $unpaidCharges = $charges->filter(
+                fn (ClanPaymentCharge $charge): bool => $charge->status === self::STATUS_OPEN
+                    && $this->isChargeVisibleToMember($charge)
+            );
             $totalOpenAmount = round((float) $unpaidCharges->sum(
                 fn (ClanPaymentCharge $charge): float => $this->resolvedChargeAmount($charge, true)
             ), 2);
@@ -870,6 +873,17 @@ class PaymentTrackingService
     }
 
     /**
+     * Neplaćena buduća članarina vidljiva je samo administratoru; unaprijed plaćena vidljiva je članu.
+     */
+    public function isChargeVisibleToMember(ClanPaymentCharge $charge): bool
+    {
+        return $charge->source !== self::SOURCE_AUTO
+            || $charge->status !== self::STATUS_OPEN
+            || $charge->period_start === null
+            || $charge->period_start->toDateString() <= now()->toDateString();
+    }
+
+    /**
      * Sastavlja cjeloviti sažetak stanja plaćanja za člana (otvoreno, plaćeno, tekuće, dugovanja).
      */
     private function buildMemberSummary(Clanovi $clan, bool $syncBeforeRead): array
@@ -881,6 +895,7 @@ class PaymentTrackingService
                 'enabled' => false,
                 'profile' => null,
                 'charges' => collect(),
+                'adminCharges' => collect(),
                 'unpaidCharges' => collect(),
                 'paidCharges' => collect(),
                 'currentCharges' => collect(),
@@ -903,13 +918,17 @@ class PaymentTrackingService
             $this->syncOpeningDebtCharge($profile, (int) ($profile->updated_by ?? $profile->created_by ?? 0));
         }
 
-        $charges = ClanPaymentCharge::query()
+        $adminCharges = ClanPaymentCharge::query()
             ->with('paymentOption')
             ->where('clan_id', (int) $clan->id)
             ->where('status', '!=', self::STATUS_DELETED)
             ->orderByRaw('COALESCE(period_start, due_date, created_at) DESC')
             ->orderByDesc('id')
             ->get();
+
+        $charges = $adminCharges
+            ->filter(fn (ClanPaymentCharge $charge): bool => $this->isChargeVisibleToMember($charge))
+            ->values();
 
         $today = now()->startOfDay();
 
@@ -970,6 +989,7 @@ class PaymentTrackingService
             'enabled' => true,
             'profile' => $profile,
             'charges' => $charges,
+            'adminCharges' => $adminCharges,
             'unpaidCharges' => $unpaidCharges,
             'paidCharges' => $paidCharges,
             'currentCharges' => $currentCharges,
@@ -1475,31 +1495,31 @@ class PaymentTrackingService
         $month = (int) $today->format('n');
 
         if ($option->period_type === 'monthly') {
-            return $today->copy()->endOfMonth();
+            return $today->copy()->addMonthNoOverflow()->endOfMonth();
         }
 
         if ($option->period_type === 'seasonal') {
             if ($month >= 10) {
-                return Carbon::create($year + 1, 3, 31)->endOfDay();
+                return Carbon::create($year + 1, 9, 30)->endOfDay();
             }
 
             if ($month >= 4) {
-                return Carbon::create($year, 9, 30)->endOfDay();
+                return Carbon::create($year + 1, 3, 31)->endOfDay();
             }
 
-            return Carbon::create($year, 3, 31)->endOfDay();
+            return Carbon::create($year, 9, 30)->endOfDay();
         }
 
         if ($option->period_type === 'annual') {
             if ((string) $option->period_anchor === 'oct') {
                 $startYear = $month >= 10 ? $year : $year - 1;
 
-                return Carbon::create($startYear + 1, 9, 30)->endOfDay();
+                return Carbon::create($startYear + 2, 9, 30)->endOfDay();
             }
 
             $startYear = $month >= 4 ? $year : $year - 1;
 
-            return Carbon::create($startYear + 1, 3, 31)->endOfDay();
+            return Carbon::create($startYear + 2, 3, 31)->endOfDay();
         }
 
         return $today->copy()->endOfDay();
