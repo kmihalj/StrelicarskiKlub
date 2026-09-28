@@ -31,9 +31,9 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.2"
+          php-version: "8.4"
           coverage: none
-          extensions: mbstring, dom, fileinfo, pdo_mysql
+          extensions: mbstring, dom, fileinfo, gd, pdo_mysql
 
       - name: Copy environment
         run: cp .env.example .env
