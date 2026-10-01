@@ -857,6 +857,78 @@ class PaymentTrackingService
     }
 
     /**
+     * Prije administratorskog popisa dopunjava tekuće automatske članarine aktivnih članova.
+     */
+    public function syncCurrentChargesForActiveClanIds(iterable $clanIds): void
+    {
+        if (! $this->isEnabled() || ! $this->supportsPaymentTracking()) {
+            return;
+        }
+
+        $activeIds = Clanovi::query()
+            ->whereIn('id', collect($clanIds)->map(static fn ($id): int => (int) $id)->filter()->unique())
+            ->where('aktivan', 1)
+            ->pluck('id');
+        if ($activeIds->isEmpty()) {
+            return;
+        }
+
+        $today = now()->startOfDay();
+        $profiles = ClanPaymentProfile::query()
+            ->with('paymentOption')
+            ->whereIn('clan_id', $activeIds)
+            ->get()
+            ->filter(fn (ClanPaymentProfile $profile): bool => $profile->paymentOption !== null
+                && $profile->paymentOption->period_type !== 'exempt'
+                && ($profile->start_date === null || $profile->start_date->lte($today)));
+
+        $periodKeysByClan = $profiles
+            ->mapWithKeys(fn (ClanPaymentProfile $profile): array => [
+                (int) $profile->clan_id => $this->currentAutoChargePeriodKey($profile->paymentOption, $today),
+            ])
+            ->filter();
+        if ($periodKeysByClan->isEmpty()) {
+            return;
+        }
+
+        $existing = ClanPaymentCharge::query()
+            ->whereIn('clan_id', $periodKeysByClan->keys())
+            ->where('source', self::SOURCE_AUTO)
+            ->whereIn('period_key', $periodKeysByClan->values()->unique())
+            ->get(['clan_id', 'period_key'])
+            ->mapWithKeys(fn (ClanPaymentCharge $charge): array => [
+                (int) $charge->clan_id.':'.$charge->period_key => true,
+            ]);
+
+        foreach ($profiles as $profile) {
+            $periodKey = $periodKeysByClan->get((int) $profile->clan_id);
+            if ($periodKey === null || $existing->has((int) $profile->clan_id.':'.$periodKey)) {
+                continue;
+            }
+
+            $this->syncProfileCharges($profile, false);
+            $this->syncOpeningDebtCharge($profile, (int) ($profile->updated_by ?? $profile->created_by ?? 0));
+        }
+    }
+
+    private function currentAutoChargePeriodKey(MembershipPaymentOption $option, Carbon $today): ?string
+    {
+        $year = (int) $today->format('Y');
+        $month = (int) $today->format('n');
+
+        return match ($option->period_type) {
+            'monthly' => 'monthly-'.$today->format('Y-m'),
+            'seasonal' => $month >= 10
+                ? 'season-oct-'.$year
+                : ($month >= 4 ? 'season-apr-'.$year : 'season-oct-'.($year - 1)),
+            'annual' => $option->period_anchor === 'oct'
+                ? 'annual-oct-'.($month >= 10 ? $year : $year - 1)
+                : 'annual-apr-'.($month >= 4 ? $year : $year - 1),
+            default => null,
+        };
+    }
+
+    /**
      * Sastavlja cjeloviti sažetak stanja plaćanja za člana uz automatsku sinkronizaciju stavki.
      */
     public function memberSummary(Clanovi $clan): array

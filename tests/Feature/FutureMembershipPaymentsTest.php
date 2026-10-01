@@ -139,6 +139,8 @@ class FutureMembershipPaymentsTest extends TestCase
             ->assertSee('plaćeno unaprijed');
 
         $this->travelTo(now()->setDate(2026, 10, 1)->startOfDay());
+        $this->actingAs($admin)->get(route('javno.clanovi'))->assertOk();
+        $this->assertSame(PaymentTrackingService::STATUS_PAID, $future->fresh()->status);
         $afterSeasonStart = $service->memberSummary($clan);
         $this->assertTrue($afterSeasonStart['currentCharges']->contains('id', $future->id));
         $this->assertFalse($afterSeasonStart['currentUnpaidCharges']->contains('id', $future->id));
@@ -173,6 +175,63 @@ class FutureMembershipPaymentsTest extends TestCase
             ->assertSee('Plaćeno unaprijed');
     }
 
+    public function test_admin_member_list_adds_missing_current_season_to_existing_debt(): void
+    {
+        $this->travelTo(now()->setDate(2026, 9, 28)->startOfDay());
+        [$clan, $admin] = $this->seasonalMember();
+        $service = app(PaymentTrackingService::class);
+        $future = $service->memberSummary($clan)['adminCharges']->firstWhere('period_key', 'season-oct-2026');
+
+        $this->assertInstanceOf(ClanPaymentCharge::class, $future);
+        $future->delete(); // Simulira profil kojem dvoranska sezona još nije generirana.
+
+        $this->travelTo(now()->setDate(2026, 10, 1)->startOfDay());
+        $this->assertEquals(90.0, $service->listStatusForClanIds([$clan->id])[$clan->id]['amount']);
+
+        $this->actingAs($admin)->get(route('javno.clanovi'))
+            ->assertOk()
+            ->assertSee('180,00 EUR');
+
+        $current = ClanPaymentCharge::query()
+            ->where('clan_id', $clan->id)
+            ->where('period_key', 'season-oct-2026')
+            ->firstOrFail();
+        $this->assertSame(PaymentTrackingService::STATUS_OPEN, $current->status);
+        $this->assertEquals(180.0, $service->listStatusForClanIds([$clan->id])[$clan->id]['amount']);
+
+        $notice = $service->noticeForClan($clan);
+        $this->assertStringContainsString('Tekuće razdoblje nije podmireno', $notice['message']);
+        $this->assertStringContainsString('postoje dugovanja iz ranijih razdoblja', $notice['message']);
+
+        $this->actingAs($admin)->get(route('javno.clanovi'))->assertOk();
+        $this->assertSame(1, ClanPaymentCharge::query()
+            ->where('clan_id', $clan->id)
+            ->where('period_key', 'season-oct-2026')
+            ->count());
+    }
+
+    public function test_admin_member_list_does_not_create_new_debt_for_inactive_member(): void
+    {
+        $this->travelTo(now()->setDate(2026, 9, 28)->startOfDay());
+        [$clan, $admin] = $this->seasonalMember();
+        $future = app(PaymentTrackingService::class)
+            ->memberSummary($clan)['adminCharges']
+            ->firstWhere('period_key', 'season-oct-2026');
+
+        $this->assertInstanceOf(ClanPaymentCharge::class, $future);
+        $future->delete();
+        $clan->aktivan = 0;
+        $clan->save();
+
+        $this->travelTo(now()->setDate(2026, 10, 1)->startOfDay());
+        $this->actingAs($admin)->get(route('javno.clanovi'))->assertOk();
+
+        $this->assertFalse(ClanPaymentCharge::query()
+            ->where('clan_id', $clan->id)
+            ->where('period_key', 'season-oct-2026')
+            ->exists());
+    }
+
     private function seasonalMember(): array
     {
         $settings = SiteSetting::query()->firstOrCreate([], [
@@ -188,6 +247,7 @@ class FutureMembershipPaymentsTest extends TestCase
             'datum_rodjenja' => '1990-01-01',
             'spol' => 'M',
             'oib' => (string) random_int(10000000000, 99999999999),
+            'aktivan' => 1,
         ]);
         $admin = User::query()->create([
             'name' => 'Test admin',

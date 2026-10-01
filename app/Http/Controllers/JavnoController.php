@@ -409,6 +409,7 @@ class JavnoController extends Controller
 
         $paymentStatusByClan = [];
         if ($showPaymentColumn) {
+            $paymentService->syncCurrentChargesForActiveClanIds($clanovi->pluck('id')->all());
             $paymentStatusByClan = $paymentService->listStatusForClanIds($clanovi->pluck('id')->all());
         }
 
