@@ -35,6 +35,8 @@ class NadolazeciTurnir extends Model
         'kotizacija_primatelj_funkcija_id',
         'created_by',
         'updated_by',
+        'archived_at',
+        'rezultatski_turnir_id',
     ];
 
     protected $casts = [
@@ -49,6 +51,8 @@ class NadolazeciTurnir extends Model
         'kotizacija_primatelj_funkcija_id' => 'integer',
         'created_by' => 'integer',
         'updated_by' => 'integer',
+        'archived_at' => 'datetime',
+        'rezultatski_turnir_id' => 'integer',
     ];
 
     /**
@@ -65,6 +69,14 @@ class NadolazeciTurnir extends Model
     public function prijave(): HasMany
     {
         return $this->hasMany(PrijavaTurnira::class, 'nadolazeci_turnir_id', 'id');
+    }
+
+    /**
+     * Turnir rezultata nastao iz ovog turnira za prijave, ako je kreiran.
+     */
+    public function rezultatskiTurnir(): BelongsTo
+    {
+        return $this->belongsTo(Turniri::class, 'rezultatski_turnir_id', 'id');
     }
 
     /**

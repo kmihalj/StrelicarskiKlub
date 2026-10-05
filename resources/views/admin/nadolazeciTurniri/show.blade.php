@@ -108,12 +108,22 @@
                             Pošalji prijavu e-mailom
                         </button>
                         @if($turnirJeProsao)
-                            <form action="{{ route('admin.nadolazeci_turniri.kreiraj_rezultate', $turnir) }}" method="POST" class="m-0">
-                                @csrf
-                                <button type="submit" class="btn btn-sm btn-warning">Kreiraj rezultate</button>
-                            </form>
+                            @if($turnir->rezultatski_turnir_id)
+                                <a href="{{ route('admin.rezultati.unosRezultata', $turnir->rezultatski_turnir_id) }}" class="btn btn-sm btn-warning">Otvori rezultate</a>
+                            @else
+                                <form action="{{ route('admin.nadolazeci_turniri.kreiraj_rezultate', $turnir) }}" method="POST" class="m-0">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-warning">Kreiraj rezultate</button>
+                                </form>
+                            @endif
+                            @if(!$turnir->archived_at)
+                                <form action="{{ route('admin.nadolazeci_turniri.archive', $turnir) }}" method="POST" class="m-0">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-secondary">Arhiviraj</button>
+                                </form>
+                            @endif
                         @endif
-                        <a href="{{ route('admin.nadolazeci_turniri.index') }}" class="btn btn-sm btn-secondary">Povratak</a>
+                        <a href="{{ $turnir->archived_at ? route('admin.nadolazeci_turniri.archive_index') : route('admin.nadolazeci_turniri.index') }}" class="btn btn-sm btn-secondary">Povratak</a>
                     </div>
                 </div>
             </div>

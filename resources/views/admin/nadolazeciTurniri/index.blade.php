@@ -19,6 +19,9 @@
             <div class="col-lg-12 text-white d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <span>Administracija nadolazećih turnira</span>
                 <div class="d-inline-flex flex-wrap align-items-center gap-2">
+                    <a href="{{ route('admin.nadolazeci_turniri.archive_index') }}" class="btn btn-sm btn-light">
+                        Arhivirani turniri ({{ $brojArhiviranihTurnira }})
+                    </a>
                     <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#noviNadolazeciTurnirModal">
                         Novi nadolazeći turnir
                     </button>
@@ -494,6 +497,10 @@
                                         <button type="submit" class="btn btn-sm btn-warning">Kreiraj rezultate</button>
                                     </form>
                                     <a href="{{ route('admin.nadolazeci_turniri.index', ['uredi' => $turnir->id]) }}" class="btn btn-sm btn-success">Uredi</a>
+                                    <form action="{{ route('admin.nadolazeci_turniri.archive', $turnir) }}" method="POST" class="m-0">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-secondary">Arhiviraj</button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>

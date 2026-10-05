@@ -107,8 +107,11 @@ Route::prefix('admin/')->group(function () {
     Route::post('turniri/urediTurnir/spremi', [TurniriController::class, 'updateTurnir'])->name('admin.rezultati.updateTurnir')->middleware(['auth', 'admin']);
     Route::post('turniri/turnir/{turnir}/obrisi', [TurniriController::class, 'obrisiTurnir'])->name('admin.rezultati.obrisiTurnir')->middleware(['auth', 'admin']);
     Route::get('nadolazeci-turniri', [NadolazeciTurniriController::class, 'adminIndex'])->name('admin.nadolazeci_turniri.index')->middleware(['auth', 'admin']);
+    Route::get('nadolazeci-turniri/arhiva', [NadolazeciTurniriController::class, 'adminArchiveIndex'])->name('admin.nadolazeci_turniri.archive_index')->middleware(['auth', 'admin']);
     Route::post('nadolazeci-turniri/import-archery', [NadolazeciTurniriController::class, 'adminImportArchery'])->name('admin.nadolazeci_turniri.import_archery')->middleware(['auth', 'admin']);
     Route::post('nadolazeci-turniri', [NadolazeciTurniriController::class, 'adminStore'])->name('admin.nadolazeci_turniri.store')->middleware(['auth', 'admin']);
+    Route::post('nadolazeci-turniri/{turnir}/arhiviraj', [NadolazeciTurniriController::class, 'adminArchive'])->name('admin.nadolazeci_turniri.archive')->middleware(['auth', 'admin']);
+    Route::post('nadolazeci-turniri/{turnir}/vrati', [NadolazeciTurniriController::class, 'adminRestore'])->name('admin.nadolazeci_turniri.restore')->middleware(['auth', 'admin']);
     Route::post('nadolazeci-turniri/{turnir}/update', [NadolazeciTurniriController::class, 'adminUpdate'])->name('admin.nadolazeci_turniri.update')->middleware(['auth', 'admin']);
     Route::post('nadolazeci-turniri/{turnir}/obrisi', [NadolazeciTurniriController::class, 'adminDestroy'])->name('admin.nadolazeci_turniri.destroy')->middleware(['auth', 'admin']);
     Route::post('nadolazeci-turniri/{turnir}/kreiraj-rezultate', [NadolazeciTurniriController::class, 'adminKreirajRezultate'])->name('admin.nadolazeci_turniri.kreiraj_rezultate')->middleware(['auth', 'admin']);

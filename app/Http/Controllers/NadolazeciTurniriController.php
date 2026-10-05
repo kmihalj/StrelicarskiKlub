@@ -118,7 +118,6 @@ class NadolazeciTurniriController extends Controller
     public function adminIndex(Request $request): View
     {
         $danas = now()->startOfDay()->toDateString();
-        $this->obrisiProsleTurnireBezAktivnihPrijava($danas);
 
         $baseQuery = NadolazeciTurnir::query()
             ->with(['tipTurnira', 'kotizacijaPrimateljFunkcija.clan'])
@@ -135,6 +134,7 @@ class NadolazeciTurniriController extends Controller
             ]);
 
         $nadolazeciTurniri = (clone $baseQuery)
+            ->whereNull('archived_at')
             ->whereDate('datum', '>', $danas)
             ->orderBy('datum')
             ->orderBy('id')
@@ -142,6 +142,7 @@ class NadolazeciTurniriController extends Controller
             ->withQueryString();
 
         $prosliTurniri = (clone $baseQuery)
+            ->whereNull('archived_at')
             ->whereDate('datum', '<=', $danas)
             ->orderByDesc('datum')
             ->orderByDesc('id')
@@ -154,6 +155,7 @@ class NadolazeciTurniriController extends Controller
         $urediId = (int) $request->query('uredi', 0);
         if ($urediId > 0) {
             $urediTurnir = NadolazeciTurnir::query()
+                ->whereNull('archived_at')
                 ->with('kotizacijaPrimateljFunkcija.clan')
                 ->find($urediId);
         }
@@ -164,7 +166,59 @@ class NadolazeciTurniriController extends Controller
             'tipoviTurnira' => $tipoviTurnira,
             'kotizacijaPrimatelji' => $kotizacijaPrimatelji,
             'urediTurnir' => $urediTurnir,
+            'brojArhiviranihTurnira' => NadolazeciTurnir::query()->whereNotNull('archived_at')->count(),
         ]);
+    }
+
+    /**
+     * Prikazuje arhivu prošlih turnira uz njihove prijave i povezane rezultate.
+     */
+    public function adminArchiveIndex(): View
+    {
+        $arhiviraniTurniri = NadolazeciTurnir::query()
+            ->with(['tipTurnira', 'rezultatskiTurnir'])
+            ->withCount([
+                'prijave as aktivne_prijave_count' => fn ($query) => $query->where('status', PrijavaTurnira::STATUS_ACTIVE),
+            ])
+            ->whereNotNull('archived_at')
+            ->orderByDesc('datum')
+            ->orderByDesc('id')
+            ->paginate(20);
+
+        return view('admin.nadolazeciTurniri.archive', compact('arhiviraniTurniri'));
+    }
+
+    /**
+     * Ručno arhivira prošli turnir bez brisanja prijava ili rezultata.
+     */
+    public function adminArchive(NadolazeciTurnir $turnir): RedirectResponse
+    {
+        if ($turnir->datum?->copy()->startOfDay()->gt(now()->startOfDay())) {
+            return redirect()->route('admin.nadolazeci_turniri.index')
+                ->with('error', 'Budući turnir nije moguće arhivirati.');
+        }
+
+        if ($turnir->archived_at === null) {
+            $turnir->archived_at = now();
+            $turnir->save();
+        }
+
+        return redirect()->route('admin.nadolazeci_turniri.index')
+            ->with('success', 'Turnir je premješten u arhivu.');
+    }
+
+    /**
+     * Vraća arhivirani turnir na popis prošlih turnira.
+     */
+    public function adminRestore(NadolazeciTurnir $turnir): RedirectResponse
+    {
+        if ($turnir->archived_at !== null) {
+            $turnir->archived_at = null;
+            $turnir->save();
+        }
+
+        return redirect()->route('admin.nadolazeci_turniri.archive_index')
+            ->with('success', 'Turnir je vraćen na popis prošlih turnira.');
     }
 
     /**
@@ -481,6 +535,9 @@ class NadolazeciTurniriController extends Controller
                 }
 
                 $rezultatiTurnirId = (int) $rezultatiTurnir->id;
+                $turnir->rezultatski_turnir_id = $rezultatiTurnirId;
+                $turnir->archived_at = $turnir->archived_at ?? now();
+                $turnir->save();
             });
         } catch (Throwable $e) {
             report($e);
@@ -1410,6 +1467,13 @@ class NadolazeciTurniriController extends Controller
      */
     private function pronadiIliKreirajRezultatskiTurnir(NadolazeciTurnir $nadolazeciTurnir): Turniri
     {
+        if ($nadolazeciTurnir->rezultatski_turnir_id !== null) {
+            $povezani = Turniri::query()->find((int) $nadolazeciTurnir->rezultatski_turnir_id);
+            if ($povezani instanceof Turniri) {
+                return $povezani;
+            }
+        }
+
         $datumTurnira = $nadolazeciTurnir->datum?->toDateString();
         if (! is_string($datumTurnira) || trim($datumTurnira) === '') {
             throw new \RuntimeException('Nedostaje datum nadolazećeg turnira.');
@@ -1996,24 +2060,6 @@ class NadolazeciTurniriController extends Controller
         }
 
         return null;
-    }
-
-    /**
-     * Briše prošle turnire (datum početka danas ili ranije) koji nemaju aktivnih prijava.
-     */
-    private function obrisiProsleTurnireBezAktivnihPrijava(string $danas): void
-    {
-        $turniriZaBrisanje = NadolazeciTurnir::query()
-            ->whereDate('datum', '<=', $danas)
-            ->whereDoesntHave('prijave', fn ($query) => $query->where('status', PrijavaTurnira::STATUS_ACTIVE))
-            ->get();
-
-        foreach ($turniriZaBrisanje as $turnir) {
-            if (! empty($turnir->poziv_pdf_path) && Storage::disk('public')->exists($turnir->poziv_pdf_path)) {
-                Storage::disk('public')->delete($turnir->poziv_pdf_path);
-            }
-            $turnir->delete();
-        }
     }
 
     /**
