@@ -23,6 +23,11 @@ fail() {
 }
 
 build_frontend_assets() {
+    # Shared hosting may report more CPUs than its per-account thread limit allows.
+    export ROLLDOWN_WORKER_THREADS="${ROLLDOWN_WORKER_THREADS:-1}"
+    export RAYON_NUM_THREADS="${RAYON_NUM_THREADS:-1}"
+    log "Frontend worker limits: ROLLDOWN_WORKER_THREADS=${ROLLDOWN_WORKER_THREADS}, RAYON_NUM_THREADS=${RAYON_NUM_THREADS}"
+
     local thread_limit
     thread_limit="$(ulimit -u 2>/dev/null || true)"
     local use_low_thread_mode="${DEPLOY_LOW_THREAD_BUILD:-auto}"
