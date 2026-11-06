@@ -5,6 +5,11 @@
         "dev": "vite",
         "build": "vite build"
     },
+    "allowScripts": {
+        "@parcel/watcher@2.5.6": true,
+        "esbuild@0.21.5": true,
+        "fsevents@2.3.3": true
+    },
     "devDependencies": {
         "@popperjs/core": "^2.11.6",
         "axios": "^1.13.6",

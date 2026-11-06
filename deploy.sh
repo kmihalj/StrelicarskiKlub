@@ -76,6 +76,7 @@ require_cmd php
 
 if [[ -z "$NODE_BIN_DIR" ]]; then
     for candidate in \
+        "${HOME}/.local/share/skdubrava/node-toolchain/bin" \
         "/opt/alt/alt-nodejs22/root/usr/bin" \
         "/opt/alt/alt-nodejs20/root/usr/bin" \
         "/opt/alt/alt-nodejs18/root/usr/bin"; do
@@ -98,6 +99,8 @@ fi
 if [[ "$BUILD_FRONTEND" == "1" ]]; then
     require_cmd node
     require_cmd npm
+    log "Node.js $(node --version) ($(command -v node))"
+    log "npm $(npm --version) ($(command -v npm))"
 fi
 
 if [[ -z "$COMPOSER_BIN" ]]; then
