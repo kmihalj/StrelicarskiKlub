@@ -24,6 +24,11 @@
                 @if(!empty($prijava->napomena_clana))
                     <div><span class="fw-semibold">Napomena člana:</span> {{ $prijava->napomena_clana }}</div>
                 @endif
+                <div><span class="fw-semibold">Kategorija:</span> {{ $prijava->kategorija?->naziv }}</div>
+                <div><span class="fw-semibold">Stil luka:</span> {{ $prijava->stil?->naziv }}</div>
+                <div><span class="fw-semibold">Kotizacija za ovu prijavu:</span>
+                    <span id="registration-fee">{{ $prijava->iznosKotizacije() !== null ? number_format($prijava->iznosKotizacije(), 2, ',', '.') . ' EUR' : 'Nije definirana' }}</span>
+                </div>
                 <div><span class="fw-semibold">Tip turnira:</span> {{ $turnir->tipTurnira->naziv ?? '-' }}</div>
                 @if(!empty($turnir->napomena))
                     <div><span class="fw-semibold">Napomena:</span> {{ $turnir->napomena }}</div>
@@ -96,7 +101,7 @@
                             <label for="kategorija_id" class="form-label fw-semibold mb-1">Kategorija</label>
                             <select class="form-select" id="kategorija_id" name="kategorija_id" @disabled(!$mozeUredjivati) required>
                                 @foreach($kategorije as $kategorija)
-                                    <option value="{{ $kategorija->id }}"
+                                    <option value="{{ $kategorija->id }}" data-fee-group="{{ \App\Support\TournamentFeeCategories::groupFor($kategorija) }}"
                                         @selected((int) old('kategorija_id', $prijava->kategorija_id) === (int) $kategorija->id)>
                                         {{ $kategorija->naziv }}
                                     </option>
@@ -206,4 +211,16 @@
             </div>
         </div>
     </div>
+    <script src="{{ asset('js/tournament-fees.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const select = document.getElementById('kategorija_id');
+            const label = document.getElementById('registration-fee');
+            const rates = @json($turnir->kotizacijaRazredi());
+            if (select && label) select.addEventListener('change', () => {
+                const amount = window.SKDEntryFees.amount(rates, select.selectedOptions[0]?.dataset.feeGroup || '');
+                label.textContent = window.SKDEntryFees.label(amount) || 'Nije definirana';
+            });
+        });
+    </script>
 @endsection

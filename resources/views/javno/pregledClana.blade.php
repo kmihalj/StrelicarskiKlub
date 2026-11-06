@@ -293,7 +293,7 @@
                                     $rowspan = $imaWarning ? 3 : 2;
                                     $charge = $prijavaTurnira->paymentCharge;
                                     $nacinKotizacije = $prijavaTurnira->turnir?->kotizacija_nacin;
-                                    $iznosKotizacije = $prijavaTurnira->turnir?->kotizacija_iznos;
+                                    $iznosKotizacije = $prijavaTurnira->iznosKotizacije();
                                     $jePlaceno = $charge && $charge->status === \App\Services\PaymentTrackingService::STATUS_PAID;
                                     $nijePlaceno = $charge && $charge->status === \App\Services\PaymentTrackingService::STATUS_OPEN;
                                     $urlPlacanja = null;

@@ -506,6 +506,7 @@
                                 </div>
                                 <div class="form-text">*ako se boduje za KUP</div>
                             </div>
+                            <div class="col-12 small text-muted">Za drugi stil luka unesite novu prijavu. Svaka prijava ima zasebnu kotizaciju.</div>
                             <div class="col-12 d-none" id="admin-prijava-status-wrap">
                                 <div class="alert alert-warning py-2 mb-0" id="admin-prijava-status-text"></div>
                             </div>
@@ -725,6 +726,7 @@
             const clanSelect = clanSelectElement instanceof HTMLSelectElement ? clanSelectElement : null;
             const kategorijaSelectElement = document.getElementById('admin_kategorija_id');
             const kategorijaSelect = kategorijaSelectElement instanceof HTMLSelectElement ? kategorijaSelectElement : null;
+            const stilSelect = document.getElementById('admin_stil_id');
             const statusWrap = document.getElementById('admin-prijava-status-wrap');
             const statusText = document.getElementById('admin-prijava-status-text');
             const submitButtonElement = document.getElementById('admin-dodaj-prijavu-submit');
@@ -736,7 +738,7 @@
 
             const kategorijePoClanu = @json($adminKategorijePoClanu);
             const clanoviMetaZaKategoriju = @json($adminClanoviMetaZaKategoriju);
-            const aktivniClanIdsTurnira = new Set((@json($adminAktivniClanIdsTurnira)).map(String));
+            const aktivniStiloviPoClanu = @json($adminAktivniStiloviPoClanu);
             const oldKategorijaId = String(kategorijaSelect.dataset.oldValue || '');
             const turnirDatum = @json($turnir->datum?->toDateString());
             let inicijalnaKategorijaPrimijenjena = false;
@@ -890,17 +892,26 @@
                     return;
                 }
 
-                const vecPrijavljen = aktivniClanIdsTurnira.has(clanId);
-
-                if (vecPrijavljen) {
+                const prijavljeniStilovi = (aktivniStiloviPoClanu[clanId] || []).map(String);
+                if (stilSelect instanceof HTMLSelectElement) {
+                    Array.from(stilSelect.options).forEach(option => {
+                        option.disabled = prijavljeniStilovi.includes(String(option.value));
+                    });
+                    if (stilSelect.selectedOptions[0]?.disabled) stilSelect.value = '';
+                }
+                const nemaSlobodnogStila = stilSelect instanceof HTMLSelectElement
+                    && !Array.from(stilSelect.options).some(option => option.value !== '' && !option.disabled);
+                if (prijavljeniStilovi.length > 0) {
                     if (statusWrap instanceof HTMLElement) {
                         statusWrap.classList.remove('d-none');
                     }
                     if (statusText instanceof HTMLElement) {
-                        statusText.textContent = 'Odabrani član već ima aktivnu prijavu na ovom turniru.';
+                        statusText.textContent = nemaSlobodnogStila
+                            ? 'Član je već prijavljen u svim dostupnim stilovima luka.'
+                            : 'Član već ima prijavu na ovom turniru. Za dodatnu prijavu odaberite drugi stil luka.';
                     }
                     if (submitButton instanceof HTMLButtonElement) {
-                        submitButton.disabled = true;
+                        submitButton.disabled = nemaSlobodnogStila;
                     }
 
                     return;

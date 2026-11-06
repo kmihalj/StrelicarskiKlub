@@ -103,7 +103,7 @@
                         <input type="file" class="form-control" name="poziv_pdf" accept="application/pdf">
                     </div>
 
-                    <div class="col-lg-3">
+                    <div class="col-lg-4">
                         <label class="form-label fw-semibold mb-1">Kotizacija</label>
                         @php
                             $kotizacijaNacin = old('kotizacija_nacin', $urediTurnir->kotizacija_nacin ?? 'undefined');
@@ -124,19 +124,13 @@
                             </option>
                         </select>
                     </div>
-                    <div class="col-lg-3">
-                        <label class="form-label fw-semibold mb-1">Iznos kotizacije (EUR)</label>
-                        <input type="text" class="form-control" name="kotizacija_iznos"
-                               value="{{ old('kotizacija_iznos', isset($urediTurnir?->kotizacija_iznos) ? number_format((float)$urediTurnir->kotizacija_iznos, 2, '.', '') : '') }}"
-                               placeholder="npr. 15.00">
-                    </div>
-                    <div class="col-lg-3">
+                    <div class="col-lg-4">
                         <label class="form-label fw-semibold mb-1">Rok uplate</label>
                         <input type="date" class="form-control" name="kotizacija_rok_uplate"
                                value="{{ old('kotizacija_rok_uplate', isset($urediTurnir?->kotizacija_rok_uplate) ? $urediTurnir->kotizacija_rok_uplate->format('Y-m-d') : '') }}">
                         <div class="form-text">Vrijedi samo za plaćanje preko računa.</div>
                     </div>
-                    <div class="col-lg-3">
+                    <div class="col-lg-4">
                         <label class="form-label fw-semibold mb-1">Primatelj kotizacije</label>
                         @php
                             $kotizacijaPrimateljId = old('kotizacija_primatelj_funkcija_id', $urediTurnir->kotizacija_primatelj_funkcija_id ?? '');
@@ -159,6 +153,7 @@
                         </select>
                         <div class="form-text">Dodatne račune upišite na stranici Podaci o klubu.</div>
                     </div>
+                    @include('admin.nadolazeciTurniri.partials.kotizacijaRazredi', ['feeTurnir' => $urediTurnir, 'feeContext' => 'edit_turnir'])
                     <div class="col-lg-3 d-flex align-items-end">
                         @if(!empty($urediTurnir?->poziv_pdf_path))
                             <div class="form-check">
@@ -321,8 +316,8 @@
                             <td>
                                 @if($turnir->kotizacija_nacin === 'bank')
                                     Plaćanje preko računa / barkod
-                                    @if($turnir->kotizacija_iznos !== null)
-                                        - {{ number_format((float)$turnir->kotizacija_iznos, 2, ',', '.') }} EUR
+                                    @if($turnir->kotizacijaRazredi() !== [])
+                                        - {{ $turnir->kotizacijaCjenikLabel() }}
                                     @else
                                         - iznos nije definiran
                                     @endif
@@ -337,8 +332,8 @@
                                     </div>
                                 @elseif($turnir->kotizacija_nacin === 'cash')
                                     Plaćanje gotovinom
-                                    @if($turnir->kotizacija_iznos !== null)
-                                        - {{ number_format((float)$turnir->kotizacija_iznos, 2, ',', '.') }} EUR
+                                    @if($turnir->kotizacijaRazredi() !== [])
+                                        - {{ $turnir->kotizacijaCjenikLabel() }}
                                     @else
                                         - iznos nije definiran
                                     @endif
@@ -457,8 +452,8 @@
                             <td>
                                 @if($turnir->kotizacija_nacin === 'bank')
                                     Plaćanje preko računa / barkod
-                                    @if($turnir->kotizacija_iznos !== null)
-                                        - {{ number_format((float)$turnir->kotizacija_iznos, 2, ',', '.') }} EUR
+                                    @if($turnir->kotizacijaRazredi() !== [])
+                                        - {{ $turnir->kotizacijaCjenikLabel() }}
                                     @else
                                         - iznos nije definiran
                                     @endif
@@ -473,8 +468,8 @@
                                     </div>
                                 @elseif($turnir->kotizacija_nacin === 'cash')
                                     Plaćanje gotovinom
-                                    @if($turnir->kotizacija_iznos !== null)
-                                        - {{ number_format((float)$turnir->kotizacija_iznos, 2, ',', '.') }} EUR
+                                    @if($turnir->kotizacijaRazredi() !== [])
+                                        - {{ $turnir->kotizacijaCjenikLabel() }}
                                     @else
                                         - iznos nije definiran
                                     @endif
@@ -587,7 +582,7 @@
                                 <label class="form-label fw-semibold mb-1">Poziv (PDF)</label>
                                 <input type="file" class="form-control" name="poziv_pdf" accept="application/pdf">
                             </div>
-                            <div class="col-lg-3">
+                            <div class="col-lg-4">
                                 <label class="form-label fw-semibold mb-1">Kotizacija</label>
                                 @php
                                     $kotizacijaNacinNovi = old('kotizacija_nacin', 'undefined');
@@ -599,20 +594,12 @@
                                     <option value="cash" @selected($kotizacijaNacinNovi === 'cash')>Plaćanje gotovinom</option>
                                 </select>
                             </div>
-                            <div class="col-lg-3">
-                                <label class="form-label fw-semibold mb-1">Iznos kotizacije (EUR)</label>
-                                <input type="text"
-                                       class="form-control"
-                                       name="kotizacija_iznos"
-                                       value="{{ old('kotizacija_iznos') }}"
-                                       placeholder="npr. 15.00">
-                            </div>
-                            <div class="col-lg-3">
+                            <div class="col-lg-4">
                                 <label class="form-label fw-semibold mb-1">Rok uplate</label>
                                 <input type="date" class="form-control" name="kotizacija_rok_uplate" value="{{ old('kotizacija_rok_uplate') }}">
                                 <div class="form-text">Vrijedi samo za plaćanje preko računa.</div>
                             </div>
-                            <div class="col-lg-3">
+                            <div class="col-lg-4">
                                 <label class="form-label fw-semibold mb-1">Primatelj kotizacije</label>
                                 @php
                                     $kotizacijaPrimateljNoviId = old('kotizacija_primatelj_funkcija_id', '');
@@ -635,6 +622,7 @@
                                 </select>
                                 <div class="form-text">Dodatne račune upišite na stranici Podaci o klubu.</div>
                             </div>
+                            @include('admin.nadolazeciTurniri.partials.kotizacijaRazredi', ['feeTurnir' => null, 'feeContext' => 'create_turnir'])
                             <div class="col-lg-3 d-flex align-items-end">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" value="1" id="is_zakljucan_novi" name="is_zakljucan"
@@ -691,6 +679,7 @@
         </div>
     </div>
 
+    <script src="{{ asset('js/tournament-fees.js') }}"></script>
     @if($trebaOtvoritiImportModal)
         <button type="button"
                 id="archeryImportReportAutoOpen"

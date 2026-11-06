@@ -18,6 +18,7 @@ use App\Models\Turniri;
 use App\Models\User;
 use App\Services\ImapSentFolderService;
 use App\Services\PaymentTrackingService;
+use App\Support\TournamentFeeCategories;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\View\View;
@@ -29,6 +30,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use PhpOffice\PhpWord\IOFactory as PhpWordIOFactory;
 use PhpOffice\PhpWord\PhpWord;
@@ -333,16 +335,13 @@ class NadolazeciTurniriController extends Controller
         $uklonjenePrijave = $svePrijave
             ->filter(fn (PrijavaTurnira $prijava): bool => $prijava->status === PrijavaTurnira::STATUS_REMOVED)
             ->values();
-        $adminAktivniClanIdsTurnira = $svePrijave
+        $adminAktivniStiloviPoClanu = $svePrijave
             ->filter(fn (PrijavaTurnira $prijava): bool => $prijava->status === PrijavaTurnira::STATUS_ACTIVE)
-            ->pluck('clan_id')
-            ->map(static fn ($id): int => (int) $id)
-            ->unique()
-            ->values()
+            ->groupBy('clan_id')
+            ->map(fn (Collection $prijave): array => $prijave->pluck('stil_id')->map(fn ($id): int => (int) $id)->all())
             ->all();
         $adminClanoviZaPrijavu = Clanovi::query()
             ->where('aktivan', true)
-            ->whereNotIn('id', $adminAktivniClanIdsTurnira)
             ->orderBy('Prezime')
             ->orderBy('Ime')
             ->get(['id', 'Ime', 'Prezime', 'spol', 'datum_rodjenja', 'aktivan']);
@@ -366,7 +365,7 @@ class NadolazeciTurniriController extends Controller
             'adminObrokOpcije' => PrijavaTurnira::obrokOpcije(),
             'adminTurnirJeVisednevni' => $this->turnirJeVisednevni($turnir),
             'adminOdabirDanaOpcije' => $this->odabirDanaOpcijeZaTurnir($turnir),
-            'adminAktivniClanIdsTurnira' => $adminAktivniClanIdsTurnira,
+            'adminAktivniStiloviPoClanu' => $adminAktivniStiloviPoClanu,
         ]);
     }
 
@@ -412,44 +411,49 @@ class NadolazeciTurniriController extends Controller
             $validated['odabrani_dan'] ?? null
         );
 
-        $prijava = PrijavaTurnira::query()->firstOrNew([
-            'nadolazeci_turnir_id' => (int) $turnir->id,
-            'clan_id' => (int) $clan->id,
-        ]);
+        return DB::transaction(function () use ($request, $validated, $clan, $kategorija, $stil, $turnir, $terminPrijave, $admin): RedirectResponse {
+            Clanovi::query()->whereKey($clan->id)->lockForUpdate()->firstOrFail();
 
-        if ($prijava->exists && $prijava->status === PrijavaTurnira::STATUS_ACTIVE) {
+            $prijava = PrijavaTurnira::query()->firstOrNew([
+                'nadolazeci_turnir_id' => (int) $turnir->id,
+                'clan_id' => (int) $clan->id,
+                'stil_id' => (int) $stil->id,
+            ]);
+
+            if ($prijava->exists && $prijava->status === PrijavaTurnira::STATUS_ACTIVE) {
+                return redirect()
+                    ->route('admin.nadolazeci_turniri.show', $turnir)
+                    ->withInput()
+                    ->with('error', 'Član je već prijavljen na ovaj turnir u odabranom stilu luka.');
+            }
+
+            $prijava->prijavio_user_id = $this->odrediPrijaviteljaZaAdminskuPrijavu($clan, (int) $admin->id);
+            $prijava->kategorija_id = (int) $kategorija->id;
+            $prijava->stil_id = (int) $stil->id;
+            $prijava->sudjelujem_u_kupu = $request->boolean('sudjelujem_u_kupu');
+            $prijava->smjena = $terminPrijave['smjena'];
+            $prijava->odabrani_dan = $terminPrijave['odabrani_dan'];
+            $prijava->obrok = $this->normalizirajObrok($validated['obrok'] ?? null);
+            $prijava->napomena_clana = $this->normalizirajNapomenuClana($validated['napomena_clana'] ?? null);
+            $prijava->status = PrijavaTurnira::STATUS_ACTIVE;
+            $prijava->napomena_admin = null;
+            $prijava->removed_by = null;
+            $prijava->removed_at = null;
+            $prijava->cancelled_at = null;
+            $prijava->save();
+
+            $this->syncKotizacijaZaPrijavu($prijava, $turnir, (int) $admin->id);
+
+            $warning = $this->lijecnickoUpozorenje($clan, $turnir);
+            $poruka = 'Prijava je spremljena.';
+            if ($warning !== null) {
+                $poruka .= ' '.$warning;
+            }
+
             return redirect()
                 ->route('admin.nadolazeci_turniri.show', $turnir)
-                ->withInput()
-                ->with('error', 'Član je već prijavljen na odabrani turnir.');
-        }
-
-        $prijava->prijavio_user_id = $this->odrediPrijaviteljaZaAdminskuPrijavu($clan, (int) $admin->id);
-        $prijava->kategorija_id = (int) $kategorija->id;
-        $prijava->stil_id = (int) $stil->id;
-        $prijava->sudjelujem_u_kupu = $request->boolean('sudjelujem_u_kupu');
-        $prijava->smjena = $terminPrijave['smjena'];
-        $prijava->odabrani_dan = $terminPrijave['odabrani_dan'];
-        $prijava->obrok = $this->normalizirajObrok($validated['obrok'] ?? null);
-        $prijava->napomena_clana = $this->normalizirajNapomenuClana($validated['napomena_clana'] ?? null);
-        $prijava->status = PrijavaTurnira::STATUS_ACTIVE;
-        $prijava->napomena_admin = null;
-        $prijava->removed_by = null;
-        $prijava->removed_at = null;
-        $prijava->cancelled_at = null;
-        $prijava->save();
-
-        $this->syncKotizacijaZaPrijavu($prijava, $turnir, (int) $admin->id);
-
-        $warning = $this->lijecnickoUpozorenje($clan, $turnir);
-        $poruka = 'Prijava je spremljena.';
-        if ($warning !== null) {
-            $poruka .= ' '.$warning;
-        }
-
-        return redirect()
-            ->route('admin.nadolazeci_turniri.show', $turnir)
-            ->with('success', $poruka);
+                ->with('success', $poruka);
+        });
     }
 
     /**
@@ -810,15 +814,15 @@ class NadolazeciTurniriController extends Controller
             ->values();
 
         $aktivnoPoClanuTurniru = PrijavaTurnira::query()
-            ->select(['clan_id', 'nadolazeci_turnir_id'])
+            ->select(['clan_id', 'nadolazeci_turnir_id', 'stil_id'])
             ->whereIn('clan_id', $clanIds)
             ->where('status', PrijavaTurnira::STATUS_ACTIVE)
             ->get()
             ->groupBy('clan_id')
             ->map(static function (Collection $stavke): array {
                 return $stavke
-                    ->pluck('nadolazeci_turnir_id')
-                    ->map(fn ($id): int => (int) $id)
+                    ->groupBy('nadolazeci_turnir_id')
+                    ->map(fn (Collection $prijave): array => $prijave->pluck('stil_id')->map(fn ($id): int => (int) $id)->all())
                     ->all();
             })
             ->all();
@@ -944,54 +948,59 @@ class NadolazeciTurniriController extends Controller
             $validated['odabrani_dan'] ?? null
         );
 
-        $prijava = PrijavaTurnira::query()->firstOrNew([
-            'nadolazeci_turnir_id' => (int) $turnir->id,
-            'clan_id' => (int) $clan->id,
-        ]);
+        return DB::transaction(function () use ($request, $validated, $clan, $kategorija, $stil, $turnir, $terminPrijave, $korisnik): RedirectResponse {
+            Clanovi::query()->whereKey($clan->id)->lockForUpdate()->firstOrFail();
 
-        if ($prijava->exists && $prijava->status === PrijavaTurnira::STATUS_ACTIVE) {
-            return redirect()
-                ->route('javno.prijave_turnira.index')
-                ->with('error', 'Član je već prijavljen na odabrani turnir.');
-        }
+            $prijava = PrijavaTurnira::query()->firstOrNew([
+                'nadolazeci_turnir_id' => (int) $turnir->id,
+                'clan_id' => (int) $clan->id,
+                'stil_id' => (int) $stil->id,
+            ]);
 
-        if ($prijava->exists && $prijava->status === PrijavaTurnira::STATUS_REMOVED) {
-            $poruka = 'Administrator je maknuo ovu prijavu.';
-            if (! empty($prijava->napomena_admin)) {
-                $poruka .= ' Napomena: '.$prijava->napomena_admin;
+            if ($prijava->exists && $prijava->status === PrijavaTurnira::STATUS_ACTIVE) {
+                return redirect()
+                    ->route('javno.prijave_turnira.index')
+                    ->with('error', 'Član je već prijavljen na ovaj turnir u odabranom stilu luka.');
+            }
+
+            if ($prijava->exists && $prijava->status === PrijavaTurnira::STATUS_REMOVED) {
+                $poruka = 'Administrator je maknuo ovu prijavu.';
+                if (! empty($prijava->napomena_admin)) {
+                    $poruka .= ' Napomena: '.$prijava->napomena_admin;
+                }
+
+                return redirect()
+                    ->route('javno.prijave_turnira.index')
+                    ->with('error', $poruka);
+            }
+
+            $prijava->prijavio_user_id = (int) $korisnik->id;
+            $prijava->kategorija_id = (int) $kategorija->id;
+            $prijava->stil_id = (int) $stil->id;
+            $prijava->sudjelujem_u_kupu = $request->boolean('sudjelujem_u_kupu');
+            $prijava->smjena = $terminPrijave['smjena'];
+            $prijava->odabrani_dan = $terminPrijave['odabrani_dan'];
+            $prijava->obrok = $this->normalizirajObrok($validated['obrok'] ?? null);
+            $prijava->napomena_clana = $this->normalizirajNapomenuClana($validated['napomena_clana'] ?? null);
+            $prijava->status = PrijavaTurnira::STATUS_ACTIVE;
+            $prijava->napomena_admin = null;
+            $prijava->removed_by = null;
+            $prijava->removed_at = null;
+            $prijava->cancelled_at = null;
+            $prijava->save();
+
+            $this->syncKotizacijaZaPrijavu($prijava, $turnir, (int) $korisnik->id);
+
+            $warning = $this->lijecnickoUpozorenje($clan, $turnir);
+            $poruka = 'Prijava je spremljena.';
+            if ($warning !== null) {
+                $poruka .= ' '.$warning;
             }
 
             return redirect()
-                ->route('javno.prijave_turnira.index')
-                ->with('error', $poruka);
-        }
-
-        $prijava->prijavio_user_id = (int) $korisnik->id;
-        $prijava->kategorija_id = (int) $kategorija->id;
-        $prijava->stil_id = (int) $stil->id;
-        $prijava->sudjelujem_u_kupu = $request->boolean('sudjelujem_u_kupu');
-        $prijava->smjena = $terminPrijave['smjena'];
-        $prijava->odabrani_dan = $terminPrijave['odabrani_dan'];
-        $prijava->obrok = $this->normalizirajObrok($validated['obrok'] ?? null);
-        $prijava->napomena_clana = $this->normalizirajNapomenuClana($validated['napomena_clana'] ?? null);
-        $prijava->status = PrijavaTurnira::STATUS_ACTIVE;
-        $prijava->napomena_admin = null;
-        $prijava->removed_by = null;
-        $prijava->removed_at = null;
-        $prijava->cancelled_at = null;
-        $prijava->save();
-
-        $this->syncKotizacijaZaPrijavu($prijava, $turnir, (int) $korisnik->id);
-
-        $warning = $this->lijecnickoUpozorenje($clan, $turnir);
-        $poruka = 'Prijava je spremljena.';
-        if ($warning !== null) {
-            $poruka .= ' '.$warning;
-        }
-
-        return redirect()
-            ->route('javno.prijave_turnira.show', $prijava)
-            ->with('success', $poruka);
+                ->route('javno.prijave_turnira.show', $prijava)
+                ->with('success', $poruka);
+        });
     }
 
     /**
@@ -1114,26 +1123,40 @@ class NadolazeciTurniriController extends Controller
                 ->with('error', 'Odabrana kategorija ne odgovara spolu člana.');
         }
 
-        $terminPrijave = $this->odrediTerminPrijave(
-            $turnir,
-            $validated['smjena'] ?? null,
-            $validated['odabrani_dan'] ?? null
-        );
+        return DB::transaction(function () use ($request, $validated, $prijava, $clan, $turnir, $kategorija, $stil, $korisnik): RedirectResponse {
+            Clanovi::query()->whereKey($clan->id)->lockForUpdate()->firstOrFail();
+            $terminPrijave = $this->odrediTerminPrijave(
+                $turnir,
+                $validated['smjena'] ?? null,
+                $validated['odabrani_dan'] ?? null
+            );
 
-        $prijava->kategorija_id = (int) $kategorija->id;
-        $prijava->stil_id = (int) $stil->id;
-        $prijava->sudjelujem_u_kupu = $request->boolean('sudjelujem_u_kupu');
-        $prijava->smjena = $terminPrijave['smjena'];
-        $prijava->odabrani_dan = $terminPrijave['odabrani_dan'];
-        $prijava->obrok = $this->normalizirajObrok($validated['obrok'] ?? null);
-        $prijava->napomena_clana = $this->normalizirajNapomenuClana($validated['napomena_clana'] ?? null);
-        $prijava->save();
+            if (PrijavaTurnira::query()->where('nadolazeci_turnir_id', $turnir->id)
+                ->where('clan_id', $clan->id)->where('stil_id', $stil->id)
+                ->where('id', '!=', $prijava->id)->exists()) {
+                throw ValidationException::withMessages(['stil_id' => 'Za ovaj stil već postoji prijava. Otvorite postojeću prijavu za taj stil.']);
+            }
+            if ((int) $kategorija->id !== (int) $prijava->kategorija_id
+                && $prijava->paymentCharge?->status === PaymentTrackingService::STATUS_PAID
+                && $turnir->kotizacijaZaKategoriju($kategorija) !== (float) $prijava->paymentCharge->amount) {
+                throw ValidationException::withMessages(['kategorija_id' => 'Kotizacija je već plaćena. Promjenu kategorije s drugim iznosom dogovorite s administratorom.']);
+            }
 
-        $this->syncKotizacijaZaPrijavu($prijava, $turnir, (int) $korisnik->id);
+            $prijava->kategorija_id = (int) $kategorija->id;
+            $prijava->stil_id = (int) $stil->id;
+            $prijava->sudjelujem_u_kupu = $request->boolean('sudjelujem_u_kupu');
+            $prijava->smjena = $terminPrijave['smjena'];
+            $prijava->odabrani_dan = $terminPrijave['odabrani_dan'];
+            $prijava->obrok = $this->normalizirajObrok($validated['obrok'] ?? null);
+            $prijava->napomena_clana = $this->normalizirajNapomenuClana($validated['napomena_clana'] ?? null);
+            $prijava->save();
 
-        return redirect()
-            ->route('javno.prijave_turnira.show', $prijava)
-            ->with('success', 'Prijava je ažurirana.');
+            $this->syncKotizacijaZaPrijavu($prijava, $turnir, (int) $korisnik->id);
+
+            return redirect()
+                ->route('javno.prijave_turnira.show', $prijava)
+                ->with('success', 'Prijava je ažurirana.');
+        });
     }
 
     /**
@@ -1308,6 +1331,11 @@ class NadolazeciTurniriController extends Controller
             'is_zakljucan' => ['nullable', 'boolean'],
             'kotizacija_nacin' => ['nullable', 'in:undefined,bank,cash'],
             'kotizacija_iznos' => ['nullable', 'string', 'max:32'],
+            'kotizacija_razredi' => ['nullable', 'array', 'min:1', 'max:7'],
+            'kotizacija_razredi.*' => ['required', 'array:iznos,kategorije'],
+            'kotizacija_razredi.*.iznos' => ['nullable', 'string', 'max:32'],
+            'kotizacija_razredi.*.kategorije' => ['required', 'array', 'min:1', 'max:7'],
+            'kotizacija_razredi.*.kategorije.*' => ['required', 'string', Rule::in(array_keys(TournamentFeeCategories::LABELS))],
             'kotizacija_rok_uplate' => ['nullable', 'date'],
             'kotizacija_primatelj_funkcija_id' => ['nullable', 'integer'],
             'poziv_pdf' => ['nullable', 'file', 'mimes:pdf', 'max:15360'],
@@ -1327,7 +1355,11 @@ class NadolazeciTurniriController extends Controller
             $validated['kotizacija_primatelj_funkcija_id'] = null;
         }
 
-        $iznos = $this->normalizirajIznos($validated['kotizacija_iznos'] ?? null);
+        $validated['kotizacija_razredi'] = in_array($nacin, ['bank', 'cash'], true) && $request->has('kotizacija_razredi')
+            ? TournamentFeeCategories::validateRates($validated['kotizacija_razredi'] ?? [])
+            : null;
+        $iznos = $validated['kotizacija_razredi'][0]['iznos']
+            ?? $this->normalizirajIznos($validated['kotizacija_iznos'] ?? null);
         if ($nacin === 'bank') {
             if ($iznos !== null && $iznos <= 0) {
                 throw ValidationException::withMessages([
@@ -1412,6 +1444,7 @@ class NadolazeciTurniriController extends Controller
         $turnir->is_zakljucan = $request->boolean('is_zakljucan');
         $turnir->kotizacija_nacin = $validated['kotizacija_nacin'] ?? null;
         $turnir->kotizacija_iznos = $validated['kotizacija_iznos'] ?? null;
+        $turnir->kotizacija_razredi = $validated['kotizacija_razredi'] ?? null;
         $turnir->kotizacija_rok_uplate = ! empty($validated['kotizacija_rok_uplate'])
             ? Carbon::parse((string) $validated['kotizacija_rok_uplate'])->toDateString()
             : null;
@@ -1539,7 +1572,7 @@ class NadolazeciTurniriController extends Controller
      */
     private function syncKotizacijaZaPrijavu(PrijavaTurnira $prijava, NadolazeciTurnir $turnir, int $actorUserId): void
     {
-        $prijava->loadMissing(['clan', 'turnir', 'paymentCharge']);
+        $prijava->loadMissing(['clan', 'turnir', 'kategorija', 'stil', 'paymentCharge']);
 
         if (! $turnir->trebaKotizacijaNaRacun()) {
             $this->ukloniKotizacijuAkoMoguce($prijava, $actorUserId);
@@ -1552,13 +1585,22 @@ class NadolazeciTurniriController extends Controller
             return;
         }
 
-        $periodKey = 'turnir-'.(int) $turnir->id;
+        $iznos = $turnir->kotizacijaZaKategoriju($prijava->kategorija);
+        if ($iznos === null || $iznos <= 0) {
+            throw ValidationException::withMessages(['kategorija_id' => 'Za odabranu kategoriju nije određena kotizacija.']);
+        }
+
+        $periodKey = $prijava->kotizacijaPeriodKey();
         $charge = $prijava->paymentCharge;
         if (! ($charge instanceof ClanPaymentCharge)) {
             $charge = ClanPaymentCharge::query()
                 ->where('clan_id', (int) $clan->id)
                 ->where('source', PaymentTrackingService::SOURCE_TOURNAMENT_FEE)
-                ->where('period_key', $periodKey)
+                ->where(function ($query) use ($periodKey, $turnir, $prijava): void {
+                    $query->where('period_key', $periodKey)
+                        ->orWhere(fn ($legacy) => $legacy->where('period_key', 'turnir-'.(int) $turnir->id)
+                            ->where('metadata->registration_id', (int) $prijava->id));
+                })
                 ->first();
         }
 
@@ -1572,12 +1614,15 @@ class NadolazeciTurniriController extends Controller
             $charge->created_by = $actorUserId > 0 ? $actorUserId : null;
         }
 
-        $charge->title = 'Kotizacija - '.$turnir->naziv;
+        $charge->period_key = $periodKey;
+        $charge->title = Str::limit('Kotizacija - '.$turnir->naziv.' - '.($prijava->stil?->naziv ?? ''), 191, '');
         $charge->description = 'Kotizacija za turnir '.$turnir->naziv.' ('.$turnir->mjesto.', '.$turnir->datumRasponLabel().')';
-        $charge->amount = round((float) $turnir->kotizacija_iznos, 2);
-        $charge->due_date = $turnir->kotizacija_rok_uplate?->toDateString();
-        $charge->period_start = $charge->due_date;
-        $charge->period_end = $charge->due_date;
+        if ($charge->status !== PaymentTrackingService::STATUS_PAID) {
+            $charge->amount = round($iznos, 2);
+            $charge->due_date = $turnir->kotizacija_rok_uplate?->toDateString();
+            $charge->period_start = $charge->due_date;
+            $charge->period_end = $charge->due_date;
+        }
 
         if ($charge->status === PaymentTrackingService::STATUS_DELETED) {
             $charge->status = PaymentTrackingService::STATUS_OPEN;
@@ -1586,12 +1631,21 @@ class NadolazeciTurniriController extends Controller
         }
 
         $metadata = is_array($charge->metadata) ? $charge->metadata : [];
+        if ($charge->status !== PaymentTrackingService::STATUS_PAID) {
+            // Prikaz plaćanja, HUB barkod i potvrda koriste isti ažurirani osnovni iznos.
+            $metadata['base_amount'] = round($iznos, 2);
+            $metadata['base_title'] = $charge->title;
+        }
         $metadata['tournament_id'] = (int) $turnir->id;
         $metadata['tournament_name'] = (string) $turnir->naziv;
         $metadata['tournament_place'] = (string) $turnir->mjesto;
         $metadata['tournament_date'] = $turnir->datum?->toDateString();
         $metadata['registration_id'] = (int) $prijava->id;
-        $metadata['hub_description'] = $this->opisKotizacijeZaHub($clan, $turnir);
+        $metadata['style_id'] = (int) $prijava->stil_id;
+        $metadata['style_name'] = $prijava->stil?->naziv;
+        $metadata['category_id'] = (int) $prijava->kategorija_id;
+        $metadata['category_name'] = $prijava->kategorija?->naziv;
+        $metadata['hub_description'] = $this->opisKotizacijeZaHub($clan, $turnir).' - '.($prijava->stil?->naziv ?? '');
         $metadata = $this->upisiPrimateljaKotizacijeUMetadata($metadata, $turnir);
         $charge->metadata = $metadata;
         $charge->updated_by = $actorUserId > 0 ? $actorUserId : $charge->updated_by;
@@ -1625,11 +1679,15 @@ class NadolazeciTurniriController extends Controller
             return;
         }
 
-        $periodKey = 'turnir-'.(int) $prijava->nadolazeci_turnir_id;
+        $periodKey = $prijava->kotizacijaPeriodKey();
         $postojeca = ClanPaymentCharge::query()
             ->where('clan_id', (int) $prijava->clan_id)
             ->where('source', PaymentTrackingService::SOURCE_TOURNAMENT_FEE)
-            ->where('period_key', $periodKey)
+            ->where(function ($query) use ($periodKey, $prijava): void {
+                $query->where('period_key', $periodKey)
+                    ->orWhere(fn ($legacy) => $legacy->where('period_key', 'turnir-'.(int) $prijava->nadolazeci_turnir_id)
+                        ->where('metadata->registration_id', (int) $prijava->id));
+            })
             ->where('status', PaymentTrackingService::STATUS_OPEN)
             ->first();
 
@@ -1910,6 +1968,7 @@ class NadolazeciTurniriController extends Controller
             $poSpolu[$spol][] = [
                 'id' => (int) $kategorija->id,
                 'naziv' => (string) $kategorija->naziv,
+                'kotizacija_grupa' => TournamentFeeCategories::groupFor($kategorija),
             ];
         }
 

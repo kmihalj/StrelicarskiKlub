@@ -53,6 +53,7 @@
                                                 data-zakljucan="{{ $locked ? '1' : '0' }}"
                                                 data-kotizacija-nacin="{{ $turnir->kotizacija_nacin ?? 'undefined' }}"
                                                 data-kotizacija-iznos="{{ $turnir->kotizacija_iznos ?? '' }}"
+                                                data-kotizacija-razredi="{{ json_encode($turnir->kotizacijaRazredi()) }}"
                                                 data-kotizacija-rok="{{ $turnir->kotizacija_rok_uplate?->format('d.m.Y.') ?? '' }}"
                                                 data-datum="{{ $turnir->datum?->toDateString() ?? '' }}"
                                                 data-datum-do="{{ $turnir->datum_do?->toDateString() ?? '' }}"
@@ -89,6 +90,7 @@
                                                 data-zakljucan="{{ $locked ? '1' : '0' }}"
                                                 data-kotizacija-nacin="{{ $turnir->kotizacija_nacin ?? 'undefined' }}"
                                                 data-kotizacija-iznos="{{ $turnir->kotizacija_iznos ?? '' }}"
+                                                data-kotizacija-razredi="{{ json_encode($turnir->kotizacijaRazredi()) }}"
                                                 data-kotizacija-rok="{{ $turnir->kotizacija_rok_uplate?->format('d.m.Y.') ?? '' }}"
                                                 data-datum="{{ $turnir->datum?->toDateString() ?? '' }}"
                                                 data-datum-do="{{ $turnir->datum_do?->toDateString() ?? '' }}"
@@ -174,6 +176,7 @@
                             </div>
                         </div>
 
+                        <div class="col-12 small text-muted">Za drugi stil luka napravite novu prijavu. Svaka prijava ima zasebnu kotizaciju.</div>
                         <div class="col-12" id="kotizacija-info-wrap">
                             <div class="alert alert-warning mb-0 py-2" id="kotizacija-info-text"></div>
                         </div>
@@ -214,7 +217,7 @@
                             $warning = $lijecnickiUpozorenja[(int) $prijava->id] ?? null;
                             $charge = $prijava->paymentCharge;
                             $nacinKotizacije = $prijava->turnir?->kotizacija_nacin;
-                            $iznosKotizacije = $prijava->turnir?->kotizacija_iznos;
+                            $iznosKotizacije = $prijava->iznosKotizacije();
                             $jePlaceno = $charge && $charge->status === \App\Services\PaymentTrackingService::STATUS_PAID;
                             $nijePlaceno = $charge && $charge->status === \App\Services\PaymentTrackingService::STATUS_OPEN;
                             $urlPlacanja = null;
@@ -326,7 +329,7 @@
                             @php
                                 $charge = $prijava->paymentCharge;
                                 $nacinKotizacije = $prijava->turnir?->kotizacija_nacin;
-                                $iznosKotizacije = $prijava->turnir?->kotizacija_iznos;
+                                $iznosKotizacije = $prijava->iznosKotizacije();
                                 $jePlaceno = $charge && $charge->status === \App\Services\PaymentTrackingService::STATUS_PAID;
                                 $nijePlaceno = $charge && $charge->status === \App\Services\PaymentTrackingService::STATUS_OPEN;
                                 $urlPlacanja = null;
@@ -398,6 +401,7 @@
         </div>
     </div>
 
+    <script src="{{ asset('js/tournament-fees.js') }}"></script>
     <script>
         (function () {
             const clanSelectElement = document.getElementById('clan_id');
@@ -583,6 +587,7 @@
                     const option = document.createElement('option');
                     option.value = String(kategorija.id || '');
                     option.textContent = String(kategorija.naziv || '');
+                    option.dataset.feeGroup = String(kategorija.kotizacija_grupa || '');
                     if (oldValue !== '' && oldValue === option.value) {
                         option.selected = true;
                         odabrano = true;
@@ -606,13 +611,13 @@
             function formatTurnirOption(option, alreadyRegistered) {
                 const baseLabel = option.dataset.label || option.textContent || '';
                 const locked = option.dataset.zakljucan === '1';
-                option.disabled = locked || alreadyRegistered;
+                option.disabled = locked;
                 if (locked) {
                     option.textContent = baseLabel + ' - zaključano';
                     return;
                 }
                 if (alreadyRegistered) {
-                    option.textContent = baseLabel + ' - već prijavljen';
+                    option.textContent = baseLabel + ' - prijavljen, moguć drugi stil';
                     return;
                 }
                 option.textContent = baseLabel;
@@ -620,7 +625,7 @@
 
             function updateTurniri() {
                 const clanId = currentClanId();
-                const prijavljeniTurniri = Array.isArray(aktivnoPoClanuTurniru[clanId]) ? aktivnoPoClanuTurniru[clanId].map(String) : [];
+                const prijavljeniTurniri = aktivnoPoClanuTurniru[clanId] || {};
                 let selectedStillAvailable = false;
 
                 Array.from(turnirSelect.options).forEach((option, index) => {
@@ -628,7 +633,7 @@
                         return;
                     }
                     const turnirId = String(option.value || '');
-                    const alreadyRegistered = prijavljeniTurniri.includes(turnirId);
+                    const alreadyRegistered = Object.prototype.hasOwnProperty.call(prijavljeniTurniri, turnirId);
                     formatTurnirOption(option, alreadyRegistered);
                     if (turnirId !== '' && turnirId === turnirSelect.value && !option.disabled) {
                         selectedStillAvailable = true;
@@ -638,6 +643,16 @@
                 if (!selectedStillAvailable) {
                     turnirSelect.value = '';
                 }
+            }
+
+            function updateStilovi() {
+                const select = document.getElementById('stil_id');
+                if (!(select instanceof HTMLSelectElement)) return;
+                const registered = (aktivnoPoClanuTurniru[currentClanId()] || {})[turnirSelect.value] || [];
+                Array.from(select.options).forEach(option => {
+                    option.disabled = registered.map(String).includes(String(option.value));
+                });
+                if (select.selectedOptions[0]?.disabled) select.value = '';
             }
 
             function postaviDostupneDaneZaTurnir() {
@@ -751,7 +766,10 @@
                 const selected = turnirSelect.selectedOptions.length > 0 ? turnirSelect.selectedOptions[0] : null;
                 const hasTurnir = selected instanceof HTMLOptionElement && selected.value !== '';
                 const nacinKotizacije = hasTurnir ? (selected.dataset.kotizacijaNacin || 'undefined') : 'undefined';
-                const iznos = hasTurnir ? (selected.dataset.kotizacijaIznos || '') : '';
+                const rates = hasTurnir ? JSON.parse(selected.dataset.kotizacijaRazredi || '[]') : [];
+                const group = kategorijaSelect.selectedOptions[0]?.dataset.feeGroup || '';
+                const amount = window.SKDEntryFees.amount(rates, group);
+                const iznos = window.SKDEntryFees.label(amount);
                 const rok = hasTurnir ? (selected.dataset.kotizacijaRok || '') : '';
 
                 if (!kotizacijaInfoWrap || !kotizacijaInfoText) {
@@ -764,10 +782,15 @@
                     return;
                 }
 
+                if (rates.length > 1 && !group) {
+                    kotizacijaInfoText.textContent = 'Odaberite kategoriju za prikaz iznosa kotizacije za ovu prijavu.';
+                    return;
+                }
+
                 if (nacinKotizacije === 'bank') {
                     if (iznos !== '') {
-                        kotizacijaInfoText.textContent = 'Kotizacija se plaća preko računa u iznosu '
-                            + iznos + ' EUR' + (rok !== '' ? '. Rok uplate: ' + rok + '.' : '.');
+                        kotizacijaInfoText.textContent = 'Kotizacija za ovu prijavu plaća se preko računa u iznosu '
+                            + iznos + (rok !== '' ? '. Rok uplate: ' + rok + '.' : '.');
                         return;
                     }
 
@@ -778,7 +801,7 @@
 
                 if (nacinKotizacije === 'cash') {
                     kotizacijaInfoText.textContent = iznos !== ''
-                        ? 'Kotizacija se plaća gotovinom u iznosu ' + iznos + ' EUR.'
+                        ? 'Kotizacija za ovu prijavu plaća se gotovinom u iznosu ' + iznos + '.'
                         : 'Kotizacija se plaća gotovinom. Iznos kotizacije još nije definiran.';
                     return;
                 }
@@ -792,18 +815,23 @@
                     postaviDostupneDaneZaTurnir();
                     updateKategorije(true);
                     updatePrijavljeniClanovi();
+                    updateStilovi();
                     updateKotizacijaInfo();
                 });
             }
+
+            kategorijaSelect.addEventListener('change', updateKotizacijaInfo);
 
             turnirSelect.addEventListener('change', () => {
                 postaviDostupneDaneZaTurnir();
                 updateKategorije(true);
                 updatePrijavljeniClanovi();
+                updateStilovi();
                 updateKotizacijaInfo();
             });
 
             updateTurniri();
+            updateStilovi();
             postaviDostupneDaneZaTurnir();
             updateKategorije(true);
             updatePrijavljeniClanovi();

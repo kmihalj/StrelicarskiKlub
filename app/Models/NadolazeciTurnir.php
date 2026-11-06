@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\TournamentFeeCategories;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
@@ -31,6 +32,7 @@ class NadolazeciTurnir extends Model
         'poziv_pdf_path',
         'kotizacija_nacin',
         'kotizacija_iznos',
+        'kotizacija_razredi',
         'kotizacija_rok_uplate',
         'kotizacija_primatelj_funkcija_id',
         'created_by',
@@ -47,6 +49,7 @@ class NadolazeciTurnir extends Model
         'prijave_otvorene_do' => 'date',
         'is_zakljucan' => 'boolean',
         'kotizacija_iznos' => 'decimal:2',
+        'kotizacija_razredi' => 'array',
         'kotizacija_rok_uplate' => 'date',
         'kotizacija_primatelj_funkcija_id' => 'integer',
         'created_by' => 'integer',
@@ -131,8 +134,51 @@ class NadolazeciTurnir extends Model
     public function trebaKotizacijaNaRacun(): bool
     {
         return $this->kotizacija_nacin === 'bank'
-            && $this->kotizacija_iznos !== null
-            && (float) $this->kotizacija_iznos > 0;
+            && count($this->kotizacijaRazredi()) > 0;
+    }
+
+    /** Vraća cjenik, uključujući starije turnire s jednom kotizacijom. */
+    public function kotizacijaRazredi(): array
+    {
+        if (is_array($this->kotizacija_razredi) && $this->kotizacija_razredi !== []) {
+            return $this->kotizacija_razredi;
+        }
+
+        return $this->kotizacija_iznos !== null
+            ? [['kategorije' => array_keys(TournamentFeeCategories::LABELS), 'iznos' => (string) $this->kotizacija_iznos]]
+            : [];
+    }
+
+    /** Određuje kotizaciju po odabranoj kategoriji, zajednički za M i W. */
+    public function kotizacijaZaKategoriju(?Kategorije $category): ?float
+    {
+        $rates = $this->kotizacijaRazredi();
+        if (count($rates) === 1 && count($rates[0]['kategorije']) === count(TournamentFeeCategories::LABELS)) {
+            return (float) $rates[0]['iznos'];
+        }
+        $group = TournamentFeeCategories::groupFor($category);
+        foreach ($rates as $rate) {
+            if ($group !== null && in_array($group, $rate['kategorije'], true)) {
+                return (float) $rate['iznos'];
+            }
+        }
+
+        return null;
+    }
+
+    /** Priprema čitljiv cjenik svih iznosa i pripadajućih kategorija. */
+    public function kotizacijaCjenikLabel(): string
+    {
+        $rates = $this->kotizacijaRazredi();
+
+        return collect($rates)->map(function (array $rate) use ($rates): string {
+            $label = number_format((float) $rate['iznos'], 2, ',', '.').' EUR';
+            if (count($rates) > 1) {
+                $label .= ' ('.implode(', ', array_map(fn ($group) => TournamentFeeCategories::LABELS[$group] ?? $group, $rate['kategorije'])).')';
+            }
+
+            return $label;
+        })->implode('; ');
     }
 
     /**

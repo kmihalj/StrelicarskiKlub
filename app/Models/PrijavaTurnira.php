@@ -123,6 +123,23 @@ class PrijavaTurnira extends Model
         return $this->status === self::STATUS_ACTIVE;
     }
 
+    /** Svaka prijava/stil ima vlastiti ključ zaduženja. */
+    public function kotizacijaPeriodKey(): string
+    {
+        return 'turnir-'.$this->nadolazeci_turnir_id.'-prijava-'.$this->id;
+    }
+
+    /** Za plaćenu stavku prikazuje stvarno evidentiran iznos. */
+    public function iznosKotizacije(): ?float
+    {
+        $charge = $this->paymentCharge;
+        if ($charge instanceof ClanPaymentCharge && $charge->status !== \App\Services\PaymentTrackingService::STATUS_DELETED) {
+            return (float) $charge->amount;
+        }
+
+        return $this->turnir?->kotizacijaZaKategoriju($this->kategorija);
+    }
+
     /**
      * Vraća oznaku termina prijave (smjena ili odabrani dan kod višednevnog turnira).
      */

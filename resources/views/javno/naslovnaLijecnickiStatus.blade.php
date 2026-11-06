@@ -86,7 +86,7 @@
                                 $prijavljeniClanovi = collect($prijavljeniClanoviPoTurniru[$turnirId] ?? []);
                                 $charge = $prijava->paymentCharge;
                                 $nacinKotizacije = $prijava->turnir?->kotizacija_nacin;
-                                $iznosKotizacije = $prijava->turnir?->kotizacija_iznos;
+                                $iznosKotizacije = $prijava->iznosKotizacije();
                                 $jePlaceno = $charge && $charge->status === \App\Services\PaymentTrackingService::STATUS_PAID;
                                 $nijePlaceno = $charge && $charge->status === \App\Services\PaymentTrackingService::STATUS_OPEN;
                                 $urlPlacanja = null;
