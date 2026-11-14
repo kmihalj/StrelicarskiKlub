@@ -9,6 +9,7 @@ export function mountAttendanceScanner(scanner) {
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d', { willReadFrequently: true });
+    let audio = null;
     let camera = null;
     let timer = null;
     let cameraAttempt = 0;
@@ -20,6 +21,37 @@ export function mountAttendanceScanner(scanner) {
     function show(message, variant = 'secondary') {
         feedback.textContent = message;
         feedback.className = `alert alert-${variant}`;
+    }
+
+    function enableSound() {
+        // Mobile browsers require a user gesture to enable Web Audio.
+        try {
+            audio ??= new AudioContext();
+            if (audio.state !== 'running') void audio.resume().catch(() => {});
+        } catch {
+            // The scanner can still confirm attendance on screen.
+        }
+    }
+
+    function playConfirmation() {
+        if (audio?.state !== 'running') return;
+
+        try {
+            const tone = audio.createOscillator();
+            const volume = audio.createGain();
+            const startTime = audio.currentTime;
+            const endTime = startTime + 0.18;
+
+            tone.frequency.value = 880;
+            volume.gain.setValueAtTime(0, startTime);
+            volume.gain.linearRampToValueAtTime(0.35, startTime + 0.01);
+            volume.gain.linearRampToValueAtTime(0, endTime);
+            tone.connect(volume).connect(audio.destination);
+            tone.start(startTime);
+            tone.stop(endTime);
+        } catch {
+            // Audio problems must never replace a confirmed attendance message.
+        }
     }
 
     function readCode(image, width, height, maxSize) {
@@ -66,8 +98,11 @@ export function mountAttendanceScanner(scanner) {
                 return;
             }
             const result = await response.json();
-            if (response.ok && ['evidentiran', 'vec_evidentiran'].includes(result.status)) {
-                show(`${result.polaznik} — ${result.message}`, result.status === 'evidentiran' ? 'success' : 'info');
+            if (response.ok && result.status === 'evidentiran') {
+                show(`${result.polaznik} — ${result.message}`, 'success');
+                playConfirmation();
+            } else if (response.ok && result.status === 'vec_evidentiran') {
+                show(`${result.polaznik} — ${result.message}`, 'info');
             } else if ([404, 409, 422].includes(response.status)) {
                 show(result.polaznik ? `${result.polaznik} — ${result.message}` : result.message, 'warning');
             } else {
@@ -117,6 +152,7 @@ export function mountAttendanceScanner(scanner) {
             return;
         }
 
+        enableSound();
         const attempt = ++cameraAttempt;
         start.disabled = true;
         stop.hidden = false;
@@ -151,6 +187,7 @@ export function mountAttendanceScanner(scanner) {
         show('Kamera je zaustavljena.');
     });
 
+    imageInput.addEventListener('click', enableSound);
     imageInput.addEventListener('change', async () => {
         const file = imageInput.files[0];
         if (!file || pending || readingImage) return;
