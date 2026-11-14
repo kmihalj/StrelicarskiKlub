@@ -189,7 +189,6 @@ Route::middleware(['auth', 'admin_or_member'])->group(function () {
 Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('skola/evidencija-dolazaka', [PolazniciSkoleController::class, 'evidencijaDolasaka'])->name('javno.skola.evidencija.index');
     Route::get('skola/evidencija-dolazaka/qr', [PolazniciSkoleController::class, 'qrSkener'])->name('admin.skola.evidencija.qr');
-    Route::get('skola/evidencija-dolazaka/qr/probni', [PolazniciSkoleController::class, 'qrProbni'])->name('admin.skola.evidencija.qr.probni');
     Route::post('skola/evidencija-dolazaka/qr', [PolazniciSkoleController::class, 'evidentirajQrDolazak'])
         ->middleware('throttle:120,1')->name('admin.skola.evidencija.qr.spremi');
 });

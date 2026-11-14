@@ -8,7 +8,6 @@ use App\Models\PolaznikPaymentCharge;
 use App\Models\PolaznikSkole;
 use App\Models\PolaznikSkoleDolazak;
 use App\Models\PolaznikSkoleDokument;
-use App\Models\User;
 use App\Services\SchoolPaymentService;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -36,7 +35,6 @@ use Throwable;
 class PolazniciSkoleController extends Controller
 {
     private const QR_PREFIKS = 'SKD1:';
-    private const QR_PROBNI_PREFIKS = 'SKDTEST1:';
     private const DOKUMENTI_EKSTENZIJE = 'pdf,doc,docx,jpg,jpeg,png,webp,xls,xlsx';
     private const DOKUMENTI_VRSTE = ['Upisnica', 'GDPR', 'Slika', 'Ostalo'];
 
@@ -145,25 +143,8 @@ class PolazniciSkoleController extends Controller
             $polaznik->refresh();
         }
 
-        return $this->qrSlika(self::QR_PREFIKS.$polaznik->qr_dolazak_token);
-    }
-
-    public function qrProbni(Request $request): Response
-    {
-        return $this->qrSlika($this->probniQrKod($request->user()));
-    }
-
-    private function probniQrKod(User $admin): string
-    {
-        $potpis = hash_hmac('sha256', 'skd-qr-probni:'.$admin->id, config('app.key'));
-
-        return self::QR_PROBNI_PREFIKS.substr($potpis, 0, 32);
-    }
-
-    private function qrSlika(string $kod): Response
-    {
         $qr = (new SvgWriter)->write(new QrCode(
-            data: $kod,
+            data: self::QR_PREFIKS.$polaznik->qr_dolazak_token,
             errorCorrectionLevel: ErrorCorrectionLevel::Medium,
             size: 420,
             margin: 56,
@@ -197,21 +178,8 @@ class PolazniciSkoleController extends Controller
     public function evidentirajQrDolazak(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'kod' => ['required', 'string', 'regex:/\A(?:SKD1|SKDTEST1):[a-f0-9]{32}\z/'],
+            'kod' => ['required', 'string', 'regex:/\ASKD1:[a-f0-9]{32}\z/'],
         ], ['kod.regex' => 'Ovaj QR kod ne pripada evidenciji škole streličarstva.']);
-
-        if (str_starts_with($validated['kod'], self::QR_PROBNI_PREFIKS)) {
-            $admin = $request->user();
-            if (!hash_equals($this->probniQrKod($admin), $validated['kod'])) {
-                return response()->json(['message' => 'Probni QR kod ne odgovara prijavljenom administratoru.'], 404);
-            }
-
-            return response()->json([
-                'status' => 'probni',
-                'polaznik' => $admin->name,
-                'message' => 'Probno skeniranje uspješno.',
-            ]);
-        }
 
         return DB::transaction(function () use ($validated): JsonResponse {
             $polaznik = $this->queryAktivniPolazniciSkole()

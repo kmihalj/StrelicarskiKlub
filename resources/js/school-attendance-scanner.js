@@ -36,7 +36,7 @@ export function mountAttendanceScanner(scanner) {
     }
 
     async function record(code) {
-        if (!/^(?:SKD1|SKDTEST1):[a-f0-9]{32}$/.test(code)) {
+        if (!/^SKD1:[a-f0-9]{32}$/.test(code)) {
             show('Ovaj QR kod ne pripada evidenciji škole streličarstva.', 'warning');
             return;
         }
@@ -66,8 +66,8 @@ export function mountAttendanceScanner(scanner) {
                 return;
             }
             const result = await response.json();
-            if (response.ok && ['evidentiran', 'vec_evidentiran', 'probni'].includes(result.status)) {
-                show(`${result.polaznik} — ${result.message}`, result.status === 'vec_evidentiran' ? 'info' : 'success');
+            if (response.ok && ['evidentiran', 'vec_evidentiran'].includes(result.status)) {
+                show(`${result.polaznik} — ${result.message}`, result.status === 'evidentiran' ? 'success' : 'info');
             } else if ([404, 409, 422].includes(response.status)) {
                 show(result.polaznik ? `${result.polaznik} — ${result.message}` : result.message, 'warning');
             } else {

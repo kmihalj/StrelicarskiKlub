@@ -61,22 +61,13 @@ class SchoolAttendanceQrTest extends TestCase
         });
     }
 
-    public function test_admin_can_show_and_scan_own_preview_without_recording_attendance(): void
+    public function test_admin_has_scanner_access_without_a_personal_attendance_card(): void
     {
-        $preview = route('admin.skola.evidencija.qr.probni');
-        $scan = route('admin.skola.evidencija.qr.spremi');
-        $admin = $this->user(1, ['name' => 'Krešimir Mihalj']);
-        $code = 'SKDTEST1:'.substr(hash_hmac('sha256', 'skd-qr-probni:'.$admin->id, config('app.key')), 0, 32);
-        $before = PolaznikSkoleDolazak::query()->whereNotNull('datum')->count();
-
-        $this->get($preview)->assertRedirect(route('login'));
-        $this->actingAs($this->user(2))->get($preview)->assertForbidden();
-        $this->actingAs($admin)->get(route('javno.naslovnaStranica'))->assertOk()->assertSee($preview);
-        $this->get($preview)->assertOk()->assertHeader('Content-Type', 'image/svg+xml');
-        $this->postJson($scan, ['kod' => $code])->assertOk()
-            ->assertJsonPath('status', 'probni')->assertJsonPath('polaznik', 'Krešimir Mihalj');
-        $this->actingAs($this->user(1))->postJson($scan, ['kod' => $code])->assertNotFound();
-        $this->assertSame($before, PolaznikSkoleDolazak::query()->whereNotNull('datum')->count());
+        $this->actingAs($this->user(1))->get(route('javno.naslovnaStranica'))
+            ->assertOk()->assertDontSeeText('QR Evidencija dolazaka');
+        $this->get(route('admin.skola.evidencija.qr'))->assertOk()->assertSeeText('Pokreni skeniranje');
+        $this->postJson(route('admin.skola.evidencija.qr.spremi'), ['kod' => 'SKDTEST1:'.str_repeat('a', 32)])
+            ->assertUnprocessable();
     }
 
     public function test_existing_manual_attendance_full_and_inactive_records_are_handled(): void

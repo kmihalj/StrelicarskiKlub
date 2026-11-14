@@ -283,7 +283,7 @@
 
         </div>
     </div>
-    @if($qrPolaznici->isNotEmpty() || (int) auth()->user()?->rola === 1)
+    @if($qrPolaznici->isNotEmpty())
         @include('javno.polazniciSkole.qrModal')
     @endif
 @endsection
