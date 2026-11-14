@@ -31,11 +31,12 @@
                             {{ $statusSkolaKorisnika['zadnjiDolazak']?->format('d.m.Y.') }}
                         @endif
                     </p>
-                    <p class="mb-0 mt-2">
+                    <p class="mb-0 mt-2 d-flex flex-wrap gap-2 justify-content-md-end">
                         <button type="button" class="btn btn-sm btn-danger"
                                 onclick="location.href='{{ route('javno.skola.polaznici.show', $statusSkolaKorisnika['polaznik']) }}'">
                             Moji dolasci
                         </button>
+                        @include('javno.polazniciSkole.qrLink', ['qrPolaznik' => $statusSkolaKorisnika['polaznik']])
                     </p>
                 </div>
             </div>

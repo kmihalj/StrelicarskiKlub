@@ -8,17 +8,25 @@ use App\Models\PolaznikPaymentCharge;
 use App\Models\PolaznikSkole;
 use App\Models\PolaznikSkoleDolazak;
 use App\Models\PolaznikSkoleDokument;
+use App\Models\User;
 use App\Services\SchoolPaymentService;
+use Carbon\Carbon;
 use Carbon\CarbonInterface;
+use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\SvgWriter;
 use InvalidArgumentException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
 
@@ -27,7 +35,8 @@ use Throwable;
  */
 class PolazniciSkoleController extends Controller
 {
-    private const BROJ_DOLAZAKA = 16;
+    private const QR_PREFIKS = 'SKD1:';
+    private const QR_PROBNI_PREFIKS = 'SKDTEST1:';
     private const DOKUMENTI_EKSTENZIJE = 'pdf,doc,docx,jpg,jpeg,png,webp,xls,xlsx';
     private const DOKUMENTI_VRSTE = ['Upisnica', 'GDPR', 'Slika', 'Ostalo'];
 
@@ -124,6 +133,116 @@ class PolazniciSkoleController extends Controller
         ]);
     }
 
+    public function qrDolasci(PolaznikSkole $polaznik): Response
+    {
+        abort_unless($this->jeVlastitiPolaznik($polaznik) || $this->jeRoditeljPovezanSaPolaznikom($polaznik), 403);
+        abort_unless($this->queryAktivniPolazniciSkole()->whereKey($polaznik->id)->exists(), 404);
+
+        if ($polaznik->qr_dolazak_token === null) {
+            // Usporedni zahtjevi za prikaz kartice koriste prvi spremljeni kod.
+            PolaznikSkole::query()->whereKey($polaznik->id)->whereNull('qr_dolazak_token')
+                ->update(['qr_dolazak_token' => bin2hex(random_bytes(16))]);
+            $polaznik->refresh();
+        }
+
+        return $this->qrSlika(self::QR_PREFIKS.$polaznik->qr_dolazak_token);
+    }
+
+    public function qrProbni(Request $request): Response
+    {
+        return $this->qrSlika($this->probniQrKod($request->user()));
+    }
+
+    private function probniQrKod(User $admin): string
+    {
+        $potpis = hash_hmac('sha256', 'skd-qr-probni:'.$admin->id, config('app.key'));
+
+        return self::QR_PROBNI_PREFIKS.substr($potpis, 0, 32);
+    }
+
+    private function qrSlika(string $kod): Response
+    {
+        $qr = (new SvgWriter)->write(new QrCode(
+            data: $kod,
+            errorCorrectionLevel: ErrorCorrectionLevel::Medium,
+            size: 420,
+            margin: 56,
+        ));
+
+        return response($qr->getString(), 200, [
+            'Content-Type' => $qr->getMimeType(),
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    public function qrSkener(): View
+    {
+        return view('javno.polazniciSkole.qrSkener');
+    }
+
+    public function qrSkenerManifest(): JsonResponse
+    {
+        return response()->json([
+            'name' => 'Evidencija dolazaka',
+            'short_name' => 'Evidencija dolazaka',
+            'start_url' => route('admin.skola.evidencija.qr'),
+            'scope' => url('/').'/',
+            'display' => 'standalone',
+            'background_color' => '#ffffff',
+            'icons' => [['src' => asset('favicon.png'), 'type' => 'image/png', 'sizes' => '512x512']],
+        ], 200, ['Content-Type' => 'application/manifest+json']);
+    }
+
+    public function evidentirajQrDolazak(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'kod' => ['required', 'string', 'regex:/\A(?:SKD1|SKDTEST1):[a-f0-9]{32}\z/'],
+        ], ['kod.regex' => 'Ovaj QR kod ne pripada evidenciji škole streličarstva.']);
+
+        if (str_starts_with($validated['kod'], self::QR_PROBNI_PREFIKS)) {
+            $admin = $request->user();
+            if (!hash_equals($this->probniQrKod($admin), $validated['kod'])) {
+                return response()->json(['message' => 'Probni QR kod ne odgovara prijavljenom administratoru.'], 404);
+            }
+
+            return response()->json([
+                'status' => 'probni',
+                'polaznik' => $admin->name,
+                'message' => 'Probno skeniranje uspješno.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($validated): JsonResponse {
+            $polaznik = $this->queryAktivniPolazniciSkole()
+                ->where('qr_dolazak_token', substr($validated['kod'], strlen(self::QR_PREFIKS)))
+                ->lockForUpdate()->first();
+            if ($polaznik === null) {
+                return response()->json(['message' => 'QR kod nije pronađen među aktivnim polaznicima škole.'], 404);
+            }
+
+            $datum = today('Europe/Zagreb');
+            $dolasci = $polaznik->dolasci()->whereNotNull('datum')->lockForUpdate()->get();
+            $podaci = [
+                'polaznik' => trim($polaznik->Ime.' '.$polaznik->Prezime),
+                'datum' => $datum->format('d.m.Y.'),
+            ];
+
+            if ($dolasci->contains(fn (PolaznikSkoleDolazak $dolazak): bool => $dolazak->datum->toDateString() === $datum->toDateString())) {
+                return response()->json(['status' => 'vec_evidentiran', 'message' => 'Već evidentiran danas.'] + $podaci);
+            }
+
+            $praznaMjesta = array_diff(range(1, PolaznikSkole::BROJ_DOLAZAKA), $dolasci->pluck('redni_broj')->all());
+            if ($praznaMjesta === []) {
+                return response()->json(['message' => 'Svih 16 dolazaka već je popunjeno.'] + $podaci, 409);
+            }
+
+            $polaznik->dolasci()->updateOrCreate(['redni_broj' => reset($praznaMjesta)], ['datum' => $datum->toDateString()]);
+
+            return response()->json(['status' => 'evidentiran', 'message' => 'Dolazak evidentiran.'] + $podaci, 201);
+        }, 3);
+    }
+
     /**
      * Sprema evidenciju dolazaka polaznika škole po rednim brojevima treninga.
      */
@@ -135,6 +254,8 @@ class PolazniciSkoleController extends Controller
             'dolasci' => ['nullable', 'array'],
             'dolasci.*' => ['nullable', 'array'],
             'dolasci.*.*' => ['nullable', 'date'],
+            'dolasci_verzija' => ['nullable', 'array'],
+            'dolasci_verzija.*' => ['nullable', 'string', 'size:64'],
         ]);
 
         $this->oznaciIsteklePolaznike();
@@ -145,15 +266,19 @@ class PolazniciSkoleController extends Controller
 
         try {
             DB::transaction(function () use ($request, $aktivniPolaznici): void {
-                foreach ((array)$request->input('dolasci', []) as $polaznikId => $dolasci) {
+                $dolasciZaSpremanje = (array)$request->input('dolasci', []);
+                ksort($dolasciZaSpremanje, SORT_NUMERIC);
+                foreach ($dolasciZaSpremanje as $polaznikId => $dolasci) {
                     $polaznik = $aktivniPolaznici->get((int)$polaznikId);
                     if (!$polaznik instanceof PolaznikSkole) {
                         continue;
                     }
 
-                    $this->syncDolasci($polaznik, is_array($dolasci) ? $dolasci : []);
+                    $this->syncDolasci($polaznik, is_array($dolasci) ? $dolasci : [], $request->input('dolasci_verzija.'.$polaznik->id));
                 }
-            });
+            }, 3);
+        } catch (ValidationException $exception) {
+            return redirect()->route('javno.skola.evidencija.index')->with('error', $exception->validator->errors()->first());
         } catch (Throwable $exception) {
             report($exception);
 
@@ -267,7 +392,9 @@ class PolazniciSkoleController extends Controller
                 $polaznik->u_skoli = $uSkoli;
                 $polaznik->save();
 
-                $this->syncDolasci($polaznik, $validated['dolasci'] ?? []);
+                if (array_key_exists('dolasci', $validated)) {
+                    $this->syncDolasci($polaznik, $validated['dolasci'] ?? []);
+                }
             });
         } catch (Throwable $exception) {
             report($exception);
@@ -621,20 +748,33 @@ class PolazniciSkoleController extends Controller
     /**
      * Sinkronizira 16 termina dolazaka polaznika prema trenutnom unosu u formi.
      */
-    private function syncDolasci(PolaznikSkole $polaznik, array $dolasci): void
+    private function syncDolasci(PolaznikSkole $polaznik, array $dolasci, ?string $verzija = null): void
     {
-        for ($i = 1; $i <= self::BROJ_DOLAZAKA; $i++) {
-            $datum = $dolasci[$i] ?? null;
+        PolaznikSkole::query()->whereKey($polaznik->id)->lockForUpdate()->firstOrFail();
+        $postojeci = $polaznik->dolasci()->lockForUpdate()->get()->keyBy('redni_broj');
+        if ($verzija !== null && !hash_equals(PolaznikSkoleDolazak::verzija($postojeci), $verzija)) {
+            throw ValidationException::withMessages(['dolasci' => 'Evidencija je u međuvremenu ažurirana. Provjerite prikazane dolaske pa ponovno unesite izmjene.']);
+        }
 
-            PolaznikSkoleDolazak::query()->updateOrCreate(
-                [
-                    'polaznik_skole_id' => $polaznik->id,
-                    'redni_broj' => $i,
-                ],
-                [
-                    'datum' => empty($datum) ? null : $datum,
-                ]
-            );
+        $datumi = [];
+        for ($i = 1; $i <= PolaznikSkole::BROJ_DOLAZAKA; $i++) {
+            $datumi[$i] = empty($dolasci[$i]) ? null : Carbon::parse($dolasci[$i])->toDateString();
+        }
+        $uneseni = array_filter($datumi);
+        if (count($uneseni) !== count(array_unique($uneseni))) {
+            throw ValidationException::withMessages(['dolasci' => 'Za istog polaznika može se upisati samo jedan dolazak po datumu.']);
+        }
+
+        $izmjene = array_filter($datumi, fn (?string $datum, int $redniBroj): bool => !$postojeci->has($redniBroj)
+            || $postojeci[$redniBroj]->datum?->toDateString() !== $datum, ARRAY_FILTER_USE_BOTH);
+        if ($izmjene === []) {
+            return;
+        }
+
+        // Datumi se mogu premještati među rednim brojevima u istom spremanju.
+        $polaznik->dolasci()->whereIn('redni_broj', array_keys($izmjene))->whereNotNull('datum')->update(['datum' => null]);
+        foreach ($izmjene as $redniBroj => $datum) {
+            $polaznik->dolasci()->updateOrCreate(['redni_broj' => $redniBroj], ['datum' => $datum]);
         }
     }
 
@@ -646,7 +786,7 @@ class PolazniciSkoleController extends Controller
         $poRednom = $polaznik->dolasci->keyBy('redni_broj');
         $dolasci = [];
 
-        for ($i = 1; $i <= self::BROJ_DOLAZAKA; $i++) {
+        for ($i = 1; $i <= PolaznikSkole::BROJ_DOLAZAKA; $i++) {
             $dolasci[$i] = $poRednom[$i]->datum ?? null;
         }
 
@@ -841,15 +981,7 @@ class PolazniciSkoleController extends Controller
      */
     private function queryAktivniPolazniciSkole(): Builder
     {
-        $granica = $this->granicaAktivnostiSkole();
-
-        return PolaznikSkole::query()
-            ->whereNull('prebacen_u_clana_id')
-            ->where('u_skoli', true)
-            ->where(function (Builder $query) use ($granica) {
-                $query->whereNull('datum_upisa')
-                    ->orWhereDate('datum_upisa', '>=', $granica->toDateString());
-            });
+        return PolaznikSkole::query()->aktivni();
     }
 
     /**

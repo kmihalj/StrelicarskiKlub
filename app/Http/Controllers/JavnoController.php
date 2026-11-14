@@ -365,6 +365,14 @@ class JavnoController extends Controller
 
         $stavkeRezultataIClanaka = $stavkeRezultataIClanaka->sortByDesc('datum')->values();
 
+        $qrPolaznikIds = $statusSkolaDjeca->pluck('polaznik.id');
+        if ($statusSkolaKorisnika !== null && (int)auth()->user()->rola === 4) {
+            $qrPolaznikIds->push($statusSkolaKorisnika['polaznik']->id);
+        }
+        $qrPolaznici = $qrPolaznikIds->isEmpty()
+            ? collect()
+            : PolaznikSkole::query()->aktivni()->whereKey($qrPolaznikIds->all())->pluck('id')->flip();
+
         return view('javno.naslovnaStranica', [
             'turniri' => $turniri,
             'klub' => $klub,
@@ -374,6 +382,7 @@ class JavnoController extends Controller
             'statusSkolaKorisnika' => $statusSkolaKorisnika,
             'statusLijecnickiDjeca' => $statusLijecnickiDjeca,
             'statusSkolaDjeca' => $statusSkolaDjeca,
+            'qrPolaznici' => $qrPolaznici,
             'statusPlacanjaKorisnika' => $statusPlacanjaKorisnika,
             'statusPlacanjaDjeca' => $statusPlacanjaDjeca,
             'prijaveTurniraKorisnika' => $prijaveTurniraKorisnika,

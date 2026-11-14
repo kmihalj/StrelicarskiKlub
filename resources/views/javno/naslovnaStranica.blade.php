@@ -223,12 +223,6 @@
                         @endforeach
                     </div>
                 @endif
-                <div class="d-lg-none">
-                    @include('javno.partials.klupskiZid', [
-                        'mozePisatiKlupskiZid' => $mozePisatiKlupskiZid,
-                        'mozeModeriratiKlupskiZid' => $mozeModeriratiKlupskiZid,
-                    ])
-                </div>
                 @if($korisnikPrijavljen)
                     <div class="d-lg-none">
                         @include('javno.partials.naslovnaMojiPodaci', [
@@ -251,6 +245,12 @@
                         @endforeach
                     </div>
                 @endif
+                <div class="d-lg-none">
+                    @include('javno.partials.klupskiZid', [
+                        'mozePisatiKlupskiZid' => $mozePisatiKlupskiZid,
+                        'mozeModeriratiKlupskiZid' => $mozeModeriratiKlupskiZid,
+                    ])
+                </div>
                 <div class="row justify-content-center p-2 shadow bg-danger fw-bolder">
                     <div class="col-lg-12 text-white">
                         Rezultati zadnjih 5 turnira i ostali članci
@@ -283,4 +283,7 @@
 
         </div>
     </div>
+    @if($qrPolaznici->isNotEmpty() || (int) auth()->user()?->rola === 1)
+        @include('javno.polazniciSkole.qrModal')
+    @endif
 @endsection

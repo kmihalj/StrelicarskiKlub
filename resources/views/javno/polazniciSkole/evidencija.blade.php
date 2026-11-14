@@ -80,6 +80,7 @@
 
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-3">
                     @if($mozeUredjivati)
+                        <a class="btn btn-primary" href="{{ route('admin.skola.evidencija.qr') }}">Skeniraj QR kod</a>
                         <button type="submit" class="btn btn-danger me-md-2" form="spremi_evidenciju_dolazaka">Spremi evidenciju</button>
                     @endif
                     <button type="button" class="btn btn-secondary skola-evidencija-nav-btn" onclick="location.href='{{ route('javno.skola.polaznici.index') }}'">Popis polaznika</button>
@@ -99,8 +100,10 @@
                         </div>
                         <div class="card-body">
                             @if($mozeUredjivati)
+                                <input type="hidden" name="dolasci_verzija[{{ $polaznik->id }}]"
+                                       value="{{ \App\Models\PolaznikSkoleDolazak::verzija($polaznik->dolasci) }}" form="spremi_evidenciju_dolazaka">
                                 <div class="row g-1">
-                                    @for($i = 1; $i <= 16; $i++)
+                                    @for($i = 1; $i <= PolaznikSkole::BROJ_DOLAZAKA; $i++)
                                         <div class="col-3">
                                             <input type="date"
                                                    class="form-control form-control-sm js-dolazak-input skola-dolazak-input"
@@ -121,7 +124,7 @@
                                 </div>
                             @else
                                 <div class="row g-1">
-                                    @for($i = 1; $i <= 16; $i++)
+                                    @for($i = 1; $i <= PolaznikSkole::BROJ_DOLAZAKA; $i++)
                                         <div class="col-3">
                                             <div class="border rounded p-1 h-100 small">
                                                 <div>{{ empty($dolasciPoRednom[$i]?->datum) ? '-' : $dolasciPoRednom[$i]->datum?->format('d.m.Y.') }}</div>
@@ -163,15 +166,17 @@
                         return;
                     }
 
+                    const today = @json(today('Europe/Zagreb')->toDateString());
+                    if (inputs.some((input) => input.value === today)) {
+                        return;
+                    }
+
                     const target = inputs.find(function (input) {
                         return !input.value;
-                    }) || inputs[inputs.length - 1];
-
-                    const today = new Date();
-                    const yyyy = today.getFullYear();
-                    const mm = String(today.getMonth() + 1).padStart(2, '0');
-                    const dd = String(today.getDate()).padStart(2, '0');
-                    target.value = yyyy + '-' + mm + '-' + dd;
+                    });
+                    if (target) {
+                        target.value = today;
+                    }
                 });
             });
         </script>

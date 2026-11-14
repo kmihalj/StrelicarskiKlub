@@ -59,6 +59,9 @@
                     </div>
                 @endif
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
+                    @if((int) auth()->user()?->rola === 1)
+                        @include('javno.polazniciSkole.qrProbniLink')
+                    @endif
                     @if(!empty($placanjeNotice))
                         <a class="btn btn-sm {{ $placanjeImaDugovanje ? 'btn-danger' : 'btn-success' }} d-inline-flex align-items-center justify-content-center"
                            href="{{ route('javno.clanovi.placanja', $statusLijecnickiKorisnika['clan']) }}"

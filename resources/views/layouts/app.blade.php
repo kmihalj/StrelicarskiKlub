@@ -8,7 +8,8 @@
     <!-- CSRF Token -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'Laravel') }}</title>
+    <title>@yield('page_title', config('app.name', 'Laravel'))</title>
+    @stack('head')
     @php
         $faviconUrl = $activeThemeFaviconUrl ?? asset('favicon.ico');
         $faviconType = $activeThemeFaviconType ?? 'image/x-icon';

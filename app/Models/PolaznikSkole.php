@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -13,8 +14,11 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  */
 class PolaznikSkole extends Model
 {
+    public const BROJ_DOLAZAKA = 16;
 
     protected $table = 'polaznici_skole';
+
+    protected $hidden = ['qr_dolazak_token'];
 
     protected $fillable = [
         'Ime',
@@ -36,6 +40,14 @@ class PolaznikSkole extends Model
         'u_skoli' => 'boolean',
         'prebacen_at' => 'datetime',
     ];
+
+    public function scopeAktivni(Builder $query): Builder
+    {
+        $granica = now()->startOfDay()->subMonthsNoOverflow(4)->toDateString();
+
+        return $query->whereNull('prebacen_u_clana_id')->where('u_skoli', true)
+            ->where(fn (Builder $upis) => $upis->whereNull('datum_upisa')->orWhereDate('datum_upisa', '>=', $granica));
+    }
 
     /**
      * Vraća evidenciju dolazaka polaznika škole na treninge.

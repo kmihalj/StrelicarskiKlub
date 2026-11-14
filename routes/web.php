@@ -175,6 +175,10 @@ Route::middleware(['auth', 'admin_member_or_school'])->group(function () {
     Route::get('skola/polaznici/{polaznik}', [PolazniciSkoleController::class, 'show'])->name('javno.skola.polaznici.show');
     Route::get('skola/polaznici/{polaznik}/dokumenti/{dokument}/pregled', [PolazniciSkoleController::class, 'preuzmiDokument'])->name('javno.skola.polaznici.preuzmi_dokument');
 });
+Route::get('skola/polaznici/{polaznik}/qr-dolasci', [PolazniciSkoleController::class, 'qrDolasci'])
+    ->middleware('auth')->name('skola.polaznici.qr_dolasci');
+Route::get('skola/evidencija-dolazaka/qr.webmanifest', [PolazniciSkoleController::class, 'qrSkenerManifest'])
+    ->name('skola.evidencija.qr_manifest');
 Route::middleware(['auth', 'admin_or_member'])->group(function () {
     Route::get('korisnik/prijave-turnira', [NadolazeciTurniriController::class, 'userIndex'])->name('javno.prijave_turnira.index');
     Route::post('korisnik/prijave-turnira', [NadolazeciTurniriController::class, 'userStore'])->name('javno.prijave_turnira.store');
@@ -184,6 +188,10 @@ Route::middleware(['auth', 'admin_or_member'])->group(function () {
 });
 Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('skola/evidencija-dolazaka', [PolazniciSkoleController::class, 'evidencijaDolasaka'])->name('javno.skola.evidencija.index');
+    Route::get('skola/evidencija-dolazaka/qr', [PolazniciSkoleController::class, 'qrSkener'])->name('admin.skola.evidencija.qr');
+    Route::get('skola/evidencija-dolazaka/qr/probni', [PolazniciSkoleController::class, 'qrProbni'])->name('admin.skola.evidencija.qr.probni');
+    Route::post('skola/evidencija-dolazaka/qr', [PolazniciSkoleController::class, 'evidentirajQrDolazak'])
+        ->middleware('throttle:120,1')->name('admin.skola.evidencija.qr.spremi');
 });
 Route::middleware('auth')->group(function () {
     Route::post('klupski-zid/poruke', [KlupskiZidController::class, 'store'])->name('javno.klupski_zid.store');
