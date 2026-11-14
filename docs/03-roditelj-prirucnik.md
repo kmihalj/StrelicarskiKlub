@@ -92,6 +92,8 @@ Kada je povezivanje napravljeno, roditelj otvara profil djeteta polaznika i vidi
 2. evidenciju dolazaka,
 3. stanje školarine i otvorene stavke.
 
+Za evidentiranje dolaska prijavite se na svoj roditeljski račun. Na naslovnici u bloku **Podaci djeteta škole streličarstva** odaberite **QR Evidencija dolazaka** uz ime djeteta koje je došlo na trening. Pokažite veliki QR kod treneru. Nakon skeniranja dolazak možete provjeriti pod **Dolasci djeteta**.
+
 Na slici ispod prikazano je: Pregled polaznika - djeteta.
 ![05. Pregled polaznika - djeteta](<screenshots/parent-school-role/05. pregled polaznika - djeteta.webp>)
 Na slici ispod prikazano je: Pregled školarine.

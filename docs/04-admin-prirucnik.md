@@ -107,6 +107,15 @@ Na slici ispod prikazano je: Polaznici škole.
 Na slici ispod prikazano je: Evidencija dolazaka.
 ![18. Evidencija dolazaka](<screenshots/admin-role/18.evidencija dolazaka.webp>)
 
+### Evidentiranje dolaska QR kodom
+
+1. Prijavite se kao administrator i otvorite **O nama → Evidencija dolazaka - škola → Skeniraj QR kod**.
+2. Odaberite **Pokreni skeniranje** i dopustite pristup kameri. Skener koristi prednju kameru ako je dostupna.
+3. Neka aktivni polaznik ili povezani roditelj na naslovnici otvori **QR Evidencija dolazaka** i prinese kod kameri. Ako je kod spremljen kao slika, možete odabrati **Učitaj sliku QR koda**.
+4. Provjerite ime prikazano uz poruku **Dolazak evidentiran.** Otvorite **Pregled dolazaka** da vidite današnji datum u prvom slobodnom mjestu tog polaznika.
+
+Poruka **Već evidentiran danas.** znači da je današnji dolazak već upisan, skeniranjem ili ručno. Ako je popunjeno svih 16 mjesta, skener javlja da je evidencija puna. Za ručni unos ili ispravak otvorite **Pregled dolazaka** i spremite izmjene gumbom **Spremi evidenciju**.
+
 Na profilu polaznika administrator može:
 
 1. uređivati osobne podatke,

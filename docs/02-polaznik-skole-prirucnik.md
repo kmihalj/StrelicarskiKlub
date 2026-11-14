@@ -46,7 +46,9 @@ Na slici ispod prikazano je: Sve plaćeno u profilu.
 
 ## 4. Dolasci i praktična uporaba
 
-Polaznik kroz svoj profil može redovito pratiti evidenciju dolazaka i promjene statusa školarine bez dodatne komunikacije za svaku pojedinu stavku. To olakšava praćenje obveza i daje jasan pregled što je već podmireno, a što još čeka potvrdu.
+Za evidentiranje dolaska na trening prijavite se na stranici kluba i na naslovnici u bloku **Moji podaci škole streličarstva** odaberite **QR Evidencija dolazaka**. Otvorit će se veliki QR kod s vašim imenom iznad njega. Pokažite zaslon treneru da skenira kod. Polaznik i njegov povezani roditelj mogu prikazati isti kod.
+
+Dolazak se sprema odmah nakon uspješnog skeniranja. Gumb **Moji dolasci** na naslovnici otvara profil s pregledom upisanih datuma. Za jedan datum evidentira se jedan dolazak. QR sadrži nasumičnu oznaku polaznika, a OIB ostaje u bazi.
 
 Ako se podaci ne prikazuju kako očekujete nakon registracije, najčešći uzrok je da korisnički račun još nije povezan s profilom polaznika. U tom slučaju administrator treba dovršiti povezivanje u modulu korisnika.
 
